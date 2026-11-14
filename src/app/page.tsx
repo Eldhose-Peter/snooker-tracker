@@ -164,8 +164,8 @@ export default function Home() {
         </aside>
       )}
 
-      {/* Main Content Area (Extra bottom padding on mobile for bottom navigation bar and home indicator) */}
-      <main className="flex-1 py-2 sm:py-6 pb-24 md:pb-6">
+      {/* Main Content Area (Optimized mobile padding to fit viewport comfortably without scrolling) */}
+      <main className="flex-1 py-1 sm:py-4 pb-20 md:pb-6">
         {activeTab === 'live' && hasActiveMatch && currentMatch && (
           <LiveScoreboard
             key={currentMatch.id}

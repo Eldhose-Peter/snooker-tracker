@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   BallType, 
   BALL_CONFIGS, 
@@ -33,7 +33,8 @@ import {
   ChevronRight, 
   ShieldAlert, 
   Users,
-  LogOut
+  LogOut,
+  MoreVertical
 } from 'lucide-react';
 
 interface LiveScoreboardProps {
@@ -119,10 +120,36 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     return savedSession?.redoStack || [];
   });
 
-  // Modals
+  // Modals & Menu State
   const [isFoulModalOpen, setIsFoulModalOpen] = useState(false);
   const [isWinModalOpen, setIsWinModalOpen] = useState(false);
   const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
+  const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close options menu on outside click or Escape key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOptionsMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOptionsMenuOpen(false);
+      }
+    };
+
+    if (isOptionsMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOptionsMenuOpen]);
 
   // Sync to local storage continuously to prevent data loss on browser close / reload / back
   useEffect(() => {
@@ -448,19 +475,11 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   const activePlayer = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
 
-  // Leader calculation (with tie support)
-  const maxScore = Math.max(...state.playerScores);
-  const leadingIndices = state.playerScores
-    .map((s, idx) => (s === maxScore ? idx : -1))
-    .filter(idx => idx !== -1);
-  const isLeaderTied = leadingIndices.length > 1;
-  const leaderNames = leadingIndices.map(idx => resolvedPlayers[idx]?.name || `P${idx + 1}`).join(' & ');
-
   // Determine current ball on description
   const getBallOnLabel = (): string => {
-    if (state.freeBallActive) return 'FREE BALL (Nominate Any Ball)';
-    if (state.tablePhase === 'RED') return 'RED BALL (1 pt)';
-    if (state.tablePhase === 'COLOR_AFTER_RED') return 'ANY COLOR (2 to 7 pts)';
+    if (state.freeBallActive) return 'FREE BALL (Any Ball)';
+    if (state.tablePhase === 'RED') return 'RED (1 pt)';
+    if (state.tablePhase === 'COLOR_AFTER_RED') return 'ANY COLOR (2-7 pts)';
     if (state.tablePhase === 'COLORS_SEQUENCE') {
       const ball = COLOR_ORDER[state.colorsSequenceIndex];
       return ball ? `${ball.toUpperCase()} (${BALL_CONFIGS[ball].points} pts)` : 'None';
@@ -469,12 +488,12 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4 space-y-3 sm:space-y-4">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-1.5 sm:py-3 space-y-2 sm:space-y-3">
       
       {/* ------------------------------------------------------------- */}
-      {/* MATCH HEADER & SERIES TRACKER */}
+      {/* MATCH HEADER & DISCREET TOP-RIGHT OPTIONS MENU (3-DOTS)       */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between px-3 py-2 bg-[#0d1611] border border-emerald-900/40 rounded-2xl text-xs gap-2 shadow-sm">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#0d1611] border border-emerald-900/40 rounded-xl text-xs gap-2 shadow-sm">
         <div className="flex items-center space-x-2 min-w-0">
           <span className="font-black text-emerald-400">Frame {currentFrameNum}</span>
           <span className="text-gray-600">|</span>
@@ -488,39 +507,111 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           </span>
         </div>
 
-        {/* Frames Tally & End Match Button */}
+        {/* Frames Tally & Discreet 3-Dots Options Menu */}
         <div className="flex items-center space-x-2 flex-shrink-0">
-          <div className="flex items-center space-x-2 font-mono text-xs font-bold">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 font-mono text-xs font-bold">
             {resolvedPlayers.map((p, idx) => (
               <div key={p.id} className="flex items-center space-x-1">
-                <span className="text-gray-400 truncate max-w-[50px] sm:max-w-[70px]">{p.name}:</span>
+                <span className="text-gray-400 truncate max-w-[50px] sm:max-w-[75px]">{p.name}:</span>
                 <span className="text-emerald-300 font-black">{playerFrames[idx] || 0}</span>
                 {idx < resolvedPlayers.length - 1 && <span className="text-gray-600">·</span>}
               </div>
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsEndMatchModalOpen(true)}
-            className="px-2.5 py-1 rounded-xl bg-red-950/70 hover:bg-red-900/90 border border-red-700/50 text-red-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
-            title="End or Concede Match Early"
-          >
-            <LogOut className="w-3 h-3" />
-            <span>End Match</span>
-          </button>
+          {/* 3-Dots Kebab Options Menu (Hides 'End Match' & secondary actions) */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
+              className="p-1.5 rounded-lg bg-gray-900/90 hover:bg-gray-800 border border-gray-700/80 text-gray-300 hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm"
+              title="Match Options (End Match, Concede, Free Ball)"
+              aria-label="Match Options"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {isOptionsMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-52 py-1 bg-[#0c1811] border border-emerald-600/60 rounded-xl shadow-2xl z-50 animate-fade-in text-xs space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOptionsMenuOpen(false);
+                    onToggleFreeBall();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-emerald-950/80 flex items-center gap-2 text-gray-200 hover:text-white transition cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                  <span>{state.freeBallActive ? 'Cancel Free Ball' : 'Nominate Free Ball'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOptionsMenuOpen(false);
+                    onConcede();
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-emerald-950/80 flex items-center gap-2 text-gray-200 hover:text-white transition cursor-pointer"
+                >
+                  <Flag className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <span>Concede Frame</span>
+                </button>
+
+                <div className="border-t border-emerald-900/60 my-1" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOptionsMenuOpen(false);
+                    setIsEndMatchModalOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-red-950/60 flex items-center gap-2 text-red-400 hover:text-red-300 transition cursor-pointer font-bold"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                  <span>End Match...</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* MULTIPLAYER SCORE CARDS (ACTIVE PLAYER GLOW) */}
+      {/* ULTRA-CLEAR ACTIVE SCORER BANNER (HIGH CONTRAST)              */}
+      {/* Eliminates marking errors: Prominent, unmistakable cue        */}
       {/* ------------------------------------------------------------- */}
-      <div className={`grid gap-2 sm:gap-3 ${
+      <div className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 text-black px-3.5 py-2 rounded-2xl flex items-center justify-between shadow-lg shadow-emerald-500/25 border-2 border-emerald-200">
+        <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
+          <span className="flex-shrink-0 text-[10px] sm:text-xs uppercase tracking-widest font-black bg-black text-emerald-300 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow">
+            <Zap className="w-3 h-3 fill-emerald-300 text-emerald-300" />
+            AT TABLE
+          </span>
+          <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-black/80 flex-shrink-0 hidden xs:inline">
+            SCORING FOR:
+          </span>
+          <span className="text-sm sm:text-base font-black tracking-wide text-black truncate underline decoration-black/40 decoration-2">
+            {activePlayer.name}
+          </span>
+        </div>
+
+        {/* Current Break Counter embedded directly in banner */}
+        <div className="flex items-center space-x-2 flex-shrink-0 pl-2">
+          <div className="text-right">
+            <span className="text-[9px] uppercase font-bold text-black/75 block leading-none">Break</span>
+            <span className="text-base sm:text-lg font-black text-black font-mono leading-tight">{state.currentBreak}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MULTIPLAYER SCORE CARDS (ACTIVE PLAYER GLOW, NO NICKNAMES)    */}
+      {/* ------------------------------------------------------------- */}
+      <div className={`grid gap-2 ${
         playerCount === 2 
           ? 'grid-cols-2' 
           : playerCount === 3 
-          ? 'grid-cols-1 sm:grid-cols-3' 
-          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+          ? 'grid-cols-3' 
+          : 'grid-cols-2 sm:grid-cols-4'
       }`}>
         {resolvedPlayers.map((player, idx) => {
           const isActive = state.activePlayerIndex === idx;
@@ -532,47 +623,46 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             <div
               key={player.id}
               onClick={() => onSwitchActivePlayer(idx)}
-              title="Click to set active player at table"
-              className={`relative p-3 sm:p-4 rounded-2xl border transition-all cursor-pointer ${
+              title={isActive ? `Scoring for ${player.name}` : `Click to switch turn to ${player.name}`}
+              className={`relative p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-500/30'
-                  : 'bg-[#0d1712]/85 border-gray-800 opacity-80 hover:opacity-100 hover:border-emerald-900/60'
+                  ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-2 border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-400/40'
+                  : 'bg-[#0d1712]/75 border-gray-800 opacity-65 hover:opacity-100 hover:border-emerald-800/60'
               }`}
             >
-              {/* Turn Sequence & At Table Badge */}
-              <div className="flex items-center justify-between mb-1.5">
+              {/* Turn Sequence & Frames Won */}
+              <div className="flex items-center justify-between mb-1">
                 <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
                   isActive ? 'bg-emerald-500/30 text-emerald-300' : 'bg-gray-800 text-gray-400'
                 }`}>
                   #{idx + 1}
                 </span>
 
-                {isActive && (
-                  <div className="px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black tracking-wider uppercase flex items-center gap-1 shadow">
-                    <Zap className="w-2.5 h-2.5 fill-black" /> At Table
-                  </div>
+                {isActive ? (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow">
+                    <Zap className="w-2.5 h-2.5 fill-black" /> ACTIVE
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-gray-500 hover:text-gray-300">
+                    Tap to switch
+                  </span>
                 )}
 
                 <div className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/40 text-emerald-300 font-mono font-bold">
-                  {framesWon} {framesWon === 1 ? 'frame' : 'frames'}
+                  {framesWon}F
                 </div>
               </div>
 
-              {/* Player Name */}
+              {/* Player Name ONLY (No Nicknames) */}
               <div className="min-w-0 pr-1">
-                <h2 className="text-sm sm:text-base font-bold text-white truncate">
+                <h2 className={`text-sm sm:text-base font-bold truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>
                   {player.name}
                 </h2>
-                {player.nickname && (
-                  <p className="text-[10px] text-emerald-400/80 truncate">
-                    &ldquo;{player.nickname}&rdquo;
-                  </p>
-                )}
               </div>
 
               {/* Score Display */}
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-3xl sm:text-5xl font-black text-white font-mono tracking-tight">
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-2xl sm:text-4xl font-black text-white font-mono tracking-tight">
                   {score}
                 </span>
                 {highBreak > 0 && (
@@ -588,129 +678,90 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* CURRENT BREAK ACCUMULATOR & BALL CHIPS */}
+      {/* SNOOKER TABLE MATH & TARGET HUD (COMPACT SINGLE ROW)          */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-card rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-md">
-        <div className="flex items-center space-x-3">
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/90 border border-emerald-600/40 flex items-center space-x-2">
-            <div className="text-left">
-              <span className="text-[9px] text-gray-400 uppercase font-semibold block leading-none">
-                {activePlayer.name}&apos;s
-              </span>
-              <span className="text-xs text-emerald-400 uppercase font-bold">
-                Break
-              </span>
-            </div>
-            <span className="text-2xl sm:text-3xl font-black text-yellow-400 font-mono">
-              {state.currentBreak}
-            </span>
-          </div>
-
-          {/* Balls potted in current break */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto py-1 max-w-[200px] sm:max-w-xs scrollbar-none">
-            {state.currentBreakBalls.length === 0 ? (
-              <span className="text-xs text-gray-500 italic">No balls potted yet in break</span>
-            ) : (
-              state.currentBreakBalls.map((b, idx) => (
-                <div
-                  key={idx}
-                  className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm border border-black/20"
-                  style={{ backgroundColor: BALL_CONFIGS[b].colorHex }}
-                  title={`${BALL_CONFIGS[b].name} (+${BALL_CONFIGS[b].points})`}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Ball On HUD Indicator */}
-        <div className="flex items-center space-x-2 self-end sm:self-auto">
-          <div className="text-right">
-            <span className="text-[10px] text-gray-400 uppercase font-bold block">Target</span>
-            <span className="text-xs sm:text-sm font-bold text-emerald-300">
-              {getBallOnLabel()}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* SNOOKER TABLE MATH HUD: REMAINING & SNOOKERS NEEDED */}
-      {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {/* Table Remaining Points */}
-        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl p-2.5 flex items-center justify-between">
-          <span className="text-xs text-gray-400 font-medium">Table Left:</span>
-          <span className="text-sm sm:text-base font-black text-white font-mono">
+        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+          <span className="text-[11px] text-gray-400 font-medium">Table Left:</span>
+          <span className="text-xs sm:text-sm font-black text-white font-mono">
             {state.pointsRemaining} pts
           </span>
         </div>
 
         {/* Reds Remaining */}
-        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl p-2.5 flex items-center justify-between">
-          <span className="text-xs text-gray-400 font-medium">Reds Left:</span>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-red-600 inline-block shadow-sm" />
-            <span className="text-sm sm:text-base font-black text-white font-mono">
+        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+          <span className="text-[11px] text-gray-400 font-medium">Reds Left:</span>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shadow-sm" />
+            <span className="text-xs sm:text-sm font-black text-white font-mono">
               {state.redsRemaining}
             </span>
           </div>
         </div>
 
-        {/* Snookers Alert or Difference */}
-        <div className="col-span-2 sm:col-span-1 bg-[#0b140f] border border-emerald-900/40 rounded-xl p-2.5 flex items-center justify-between">
-          {state.snookersNeeded.needed ? (
-            <div className="flex items-center space-x-1.5 text-amber-400 w-full min-w-0">
-              <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <div className="text-xs font-bold truncate">
-                {state.snookersNeeded.trailers.map((t, i) => {
-                  const p = resolvedPlayers[t.playerIndex];
-                  return (
-                    <span key={t.playerIndex}>
-                      {p?.name || `P${t.playerIndex + 1}`} ({t.count} snk){i < state.snookersNeeded.trailers.length - 1 ? ', ' : ''}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-gray-400 font-medium">
-                {isLeaderTied ? 'Tied for Lead:' : 'Leading:'}
-              </span>
-              <span className="text-xs sm:text-sm font-bold text-gray-200 truncate font-mono">
-                {isLeaderTied ? leaderNames : (resolvedPlayers[leadingIndices[0]]?.name || 'Player 1')} ({maxScore} pts)
-              </span>
-            </div>
-          )}
+        {/* Target Ball On */}
+        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between min-w-0">
+          <span className="text-[11px] text-gray-400 font-medium mr-1 flex-shrink-0">Target:</span>
+          <span className="text-xs sm:text-sm font-bold text-emerald-300 truncate font-mono">
+            {getBallOnLabel()}
+          </span>
         </div>
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* TOUCH-FRIENDLY SNOOKER BALLS GRID */}
-      {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-3xl p-2.5 sm:p-5 shadow-inner">
-        <div className="flex items-center justify-between px-1 mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300/80">
-            Tap Ball to Pot
+      {/* Snookers Alert Banner (Appears only when snookers needed) */}
+      {state.snookersNeeded.needed && (
+        <div className="bg-amber-950/60 border border-amber-600/40 rounded-xl px-3 py-1.5 flex items-center space-x-2 text-amber-300 text-xs">
+          <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span className="font-bold truncate">
+            Snookers Required: {state.snookersNeeded.trailers.map(t => `${resolvedPlayers[t.playerIndex]?.name || `P${t.playerIndex + 1}`} (${t.count})`).join(', ')}
           </span>
-          <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/70 px-2.5 py-0.5 rounded-full border border-emerald-800/40">
+        </div>
+      )}
+
+      {/* Free Ball Active Banner (With 1-tap dismiss) */}
+      {state.freeBallActive && (
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-xl px-3 py-1.5 flex items-center justify-between text-yellow-300 text-xs">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="font-bold">FREE BALL ACTIVE: Any nominated color acts as ball on</span>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleFreeBall}
+            className="text-[10px] bg-yellow-500 text-black px-2 py-0.5 rounded font-black hover:bg-yellow-400 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* TOUCH-FRIENDLY SNOOKER BALLS GRID                             */}
+      {/* Large, well-spaced buttons; unplayable balls are disabled     */}
+      {/* ------------------------------------------------------------- */}
+      <div className="baize-felt rounded-2xl p-2 sm:p-3.5 shadow-inner">
+        <div className="flex items-center justify-between px-1 mb-1.5">
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-300/80">
+            Tap Ball to Pot for <strong className="text-white underline">{activePlayer.name}</strong>
+          </span>
+          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/40">
             {getBallOnLabel()}
           </span>
         </div>
 
-        {/* Ergonomic 4-col layout on mobile (2 rows), 7-col on sm+ screens */}
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
+        {/* 4-col layout on mobile (2 compact rows), 7-col on sm+ screens */}
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
           
           {/* RED BALL (1 pt) - Large 2-column primary button on mobile */}
           <button
             type="button"
             disabled={!availableBalls.includes('red')}
             onClick={() => onPotBall('red')}
-            className={`col-span-2 sm:col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-2 sm:col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('red')
-                ? 'opacity-100 ring-2 ring-red-400/90 shadow-lg shadow-red-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-red-400/90 shadow-md shadow-red-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
           >
@@ -724,10 +775,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('yellow')}
             onClick={() => onPotBall('yellow')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('yellow')
-                ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-lg shadow-yellow-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-md shadow-yellow-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
           >
@@ -741,10 +792,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('green')}
             onClick={() => onPotBall('green')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('green')
-                ? 'opacity-100 ring-2 ring-green-400/90 shadow-lg shadow-green-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-green-400/90 shadow-md shadow-green-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
           >
@@ -758,10 +809,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('brown')}
             onClick={() => onPotBall('brown')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('brown')
-                ? 'opacity-100 ring-2 ring-amber-500/90 shadow-lg shadow-amber-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-amber-500/90 shadow-md shadow-amber-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
           >
@@ -775,10 +826,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('blue')}
             onClick={() => onPotBall('blue')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('blue')
-                ? 'opacity-100 ring-2 ring-blue-400/90 shadow-lg shadow-blue-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-blue-400/90 shadow-md shadow-blue-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
           >
@@ -792,10 +843,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('pink')}
             onClick={() => onPotBall('pink')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('pink')
-                ? 'opacity-100 ring-2 ring-pink-400/90 shadow-lg shadow-pink-950/60 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-pink-400/90 shadow-md shadow-pink-950/60 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
           >
@@ -809,10 +860,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('black')}
             onClick={() => onPotBall('black')}
-            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
+            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
               availableBalls.includes('black')
-                ? 'opacity-100 ring-2 ring-gray-400/90 shadow-lg shadow-black/80 hover:scale-105 active:scale-95'
-                : 'opacity-25 grayscale cursor-not-allowed'
+                ? 'opacity-100 ring-2 ring-gray-400/90 shadow-md shadow-black/80 hover:scale-105 active:scale-95'
+                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
           >
@@ -825,38 +876,40 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* PRIMARY CONTROLS: MISS, QUICK FOUL, UNDO, REDO, FOUL MODAL    */}
+      {/* STREAMLINED PRIMARY CONTROLS: MISS, FOUL, UNDO, REDO          */}
+      {/* Drastically reduced clutter: 1 row desktop, 2 tidy rows mobile */}
       {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-12 gap-1.5 sm:gap-2">
         
         {/* MISS / END TURN (Fast 1-tap shot miss) */}
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-2xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-black text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-6 sm:col-span-4 py-2.5 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
         >
           <ChevronRight className="w-4 h-4 text-emerald-400" />
-          <span>Miss / Next Turn</span>
+          <span>Miss / Switch</span>
         </button>
 
         {/* QUICK FOUL (+4) (Fast 1-tap standard snooker penalty) */}
         <button
           type="button"
           onClick={onQuickFoul4}
-          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-2xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-black text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-4 sm:col-span-3 py-2.5 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
           title="Instant 4-point penalty to opponent"
         >
-          <AlertTriangle className="w-4 h-4 text-red-400" />
-          <span>Foul (+4 Pts)</span>
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+          <span>Foul (+4)</span>
         </button>
 
-        {/* FOUL OPTIONS MODAL (For 5, 6, 7 pts, or multiplayer targeting) */}
+        {/* FOUL OPTIONS MODAL (For 5, 6, 7 pts or multiplayer target) */}
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-2 sm:col-span-2 py-2.5 sm:py-3 px-2 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none"
+          className="col-span-2 sm:col-span-1 py-2.5 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
+          title="Custom foul points (5, 6, 7 pts)"
         >
-          <span>Foul Options...</span>
+          <span>···</span>
         </button>
 
         {/* UNDO BUTTON (High prominence for quick corrections) */}
@@ -864,7 +917,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-2 sm:col-span-3 py-2.5 sm:py-3 px-2 rounded-2xl border active:scale-95 font-black text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
+          className={`col-span-8 sm:col-span-3 py-2.5 px-3 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             undoStack.length > 0
               ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 shadow-md shadow-blue-950'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
@@ -880,7 +933,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={redoStack.length === 0}
           onClick={onRedo}
-          className={`col-span-2 sm:col-span-3 py-2.5 sm:py-3 px-2 rounded-2xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
+          className={`col-span-4 sm:col-span-1 py-2.5 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
             redoStack.length > 0
               ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 shadow-md'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
@@ -888,59 +941,21 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           title="Redo action (Ctrl+Y)"
         >
           <RotateCw className="w-3.5 h-3.5" />
-          <span>Redo{redoStack.length > 0 ? ` (${redoStack.length})` : ''}</span>
+          <span>Redo</span>
         </button>
-
-        {/* FOOTER ACTIONS: FREE BALL, CONCEDE FRAME & END MATCH */}
-        <div className="col-span-6 flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-emerald-950/80">
-          <button
-            type="button"
-            onClick={onToggleFreeBall}
-            className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer select-none ${
-              state.freeBallActive
-                ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-950'
-                : 'bg-gray-900/80 text-gray-400 border-gray-800 hover:text-gray-200 hover:border-gray-700'
-            }`}
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${state.freeBallActive ? 'text-black' : 'text-yellow-400'}`} />
-            <span>{state.freeBallActive ? 'Free Ball Active' : 'Nominate Free Ball'}</span>
-          </button>
-
-          <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              onClick={onConcede}
-              className="py-1.5 px-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-gray-900 text-xs font-semibold flex items-center space-x-1 transition cursor-pointer"
-            >
-              <Flag className="w-3.5 h-3.5" />
-              <span>Concede Frame</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsEndMatchModalOpen(true)}
-              className="py-1.5 px-2.5 rounded-xl text-red-400/90 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-900/50 text-xs font-semibold flex items-center space-x-1 transition cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>End Match Early</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* LAST ACTION FEEDBACK */}
+      {/* LAST ACTION FEEDBACK                                          */}
       {/* ------------------------------------------------------------- */}
       {state.lastActionDescription && (
-        <div className="text-center py-1">
-          <p className="text-xs text-gray-400 font-mono tracking-tight">
-            {state.lastActionDescription}
-          </p>
-        </div>
+        <p className="text-[11px] text-gray-500 text-center font-mono truncate px-2">
+          {state.lastActionDescription}
+        </p>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* MODALS */}
+      {/* MODALS                                                        */}
       {/* ------------------------------------------------------------- */}
       <FoulModal
         isOpen={isFoulModalOpen}

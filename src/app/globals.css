@@ -83,3 +83,69 @@ body {
 .mb-safe {
   margin-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Animated Radiating Ripple Rings for Start Match Button */
+@keyframes radiatingRipple {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.9;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.68);
+    opacity: 0;
+  }
+}
+
+@keyframes startBtnPulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.45), 0 0 50px rgba(16, 185, 129, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(16, 185, 129, 0.75), 0 0 75px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    transform: scale(1.03);
+  }
+}
+
+.radiating-circle {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.radiating-ring-1 {
+  animation: radiatingRipple 2.4s cubic-bezier(0.15, 0.85, 0.35, 1) infinite;
+}
+
+.radiating-ring-2 {
+  animation: radiatingRipple 2.4s cubic-bezier(0.15, 0.85, 0.35, 1) infinite;
+  animation-delay: 0.8s;
+}
+
+.radiating-ring-3 {
+  animation: radiatingRipple 2.4s cubic-bezier(0.15, 0.85, 0.35, 1) infinite;
+  animation-delay: 1.6s;
+}
+
+.start-btn-radiate {
+  animation: startBtnPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

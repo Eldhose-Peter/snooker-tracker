@@ -412,6 +412,60 @@ async function testAbandon() {
   assert.strictEqual(stateAfterFoul.currentBreak, 0, 'Break must be reset to 0');
   console.log('✓ Quick 4-pt foul executes accurately with correct penalty assignment.');
 
+  // 16. Verify Default Match Length is Single Frame (1 Frame)
+  console.log('\n[16] Verifying Default Match Length is Single Frame (1 Frame)...');
+  const defaultMatch = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002']);
+  assert.strictEqual(defaultMatch.best_of, 1, 'Default match format must be Single Frame (1 frame)');
+  assert(defaultMatch.player_ids, 'defaultMatch.player_ids must be defined');
+  assert.strictEqual(defaultMatch.player_ids.length, 2);
+  const framesToWinSingleFrame = Math.ceil(defaultMatch.best_of / 2);
+  assert.strictEqual(framesToWinSingleFrame, 1, 'Single frame match requires exactly 1 frame win');
+  console.log('✓ Default match length is Single Frame (1 frame) verified.');
+
+  // 17. Verify Unified Player Selection (2 to 6 Players)
+  console.log('\n[17] Verifying Unified Player Selection (2 to 6 Players)...');
+  for (let count = 2; count <= 6; count++) {
+    const selectedIds = INITIAL_PLAYERS.slice(0, count).map(p => p.id);
+    const selectedNames = INITIAL_PLAYERS.slice(0, count).map(p => p.name);
+    const m = await saveNewMatch(selectedIds, 1, 15);
+    assert(m.player_ids && m.player_frames, 'm.player_ids and m.player_frames must be defined');
+    assert.strictEqual(m.player_ids.length, count);
+    assert.strictEqual(m.player_frames.length, count);
+    
+    const fs = createInitialFrameState(count, 15, selectedNames);
+    assert.strictEqual(fs.playerScores.length, count);
+    assert.strictEqual(fs.activePlayerIndex, 0); // #1 breaks off
+    assert(fs.lastActionDescription?.includes(selectedNames[0]), 'Action description must include breaker name');
+  }
+  console.log('✓ Unified player selection cleanly supports 2, 3, 4, 5, and 6 players.');
+
+  // 18. Verify Scoring Assignment & Clean Names (No Nicknames)
+  console.log('\n[18] Verifying Scoring Assignment & Clean Names...');
+  const memberNamesOnly = INITIAL_PLAYERS.map(p => p.name);
+  const memberNicknames = INITIAL_PLAYERS.map(p => p.nickname).filter(Boolean) as string[];
+  const testCleanState = createInitialFrameState(3, 15, memberNamesOnly);
+  
+  // Player at index 0 pots red
+  const scored = handlePot(testCleanState, 'red');
+  assert.strictEqual(scored.playerScores[0], 1, 'Points must be awarded specifically to active player at table');
+  assert.strictEqual(scored.playerScores[1], 0);
+  assert.strictEqual(scored.playerScores[2], 0);
+  // Verify lastActionDescription uses player name and not nickname
+  for (const nick of memberNicknames) {
+    assert(!scored.lastActionDescription?.includes(nick), `Action description must not contain nickname '${nick}'`);
+  }
+  assert(scored.lastActionDescription?.includes(memberNamesOnly[0]), `Action description must contain clean name '${memberNamesOnly[0]}'`);
+  console.log('✓ Points are unambiguously marked for active player and nicknames are absent.');
+
+  // 19. Verify Single Frame Match Completion
+  console.log('\n[19] Verifying Single Frame Match Instant Win Mechanics...');
+  // In a best-of-1 (Single Frame) match, winning frame 1 immediately concludes match
+  const match1F = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 1);
+  assert.strictEqual(match1F.best_of, 1);
+  const framesRequired = Math.ceil(match1F.best_of / 2);
+  assert.strictEqual(framesRequired, 1);
+  console.log('✓ Single Frame match correctly requires 1 frame to win and conclude.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

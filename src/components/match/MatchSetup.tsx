@@ -5,16 +5,13 @@ import { Player, Match } from '@/types/snooker';
 import { fetchPlayers, saveNewMatch, createPlayer, getLiveSession, abandonMatch, ActiveLiveSession } from '@/lib/storage';
 import { 
   Play, 
-  Users, 
   UserPlus, 
   X, 
   Shuffle, 
-  ArrowUp, 
-  ArrowDown, 
-  Zap, 
   ArrowLeftRight, 
   Sparkles,
-  Trophy
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface MatchSetupProps {
@@ -23,24 +20,15 @@ interface MatchSetupProps {
 
 export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<ActiveLiveSession | null>(null);
 
-  // Setup mode: '1v1' or 'multiplayer'
-  const [gameMode, setGameMode] = useState<'1v1' | 'multiplayer'>('1v1');
-
-  // 1v1 Mode state
-  const [player1, setPlayer1] = useState<Player | null>(null);
-  const [player2, setPlayer2] = useState<Player | null>(null);
-
-  // Multiplayer Mode state
-  const [multiPlayers, setMultiPlayers] = useState<Player[]>([]);
-  const [justShuffled, setJustShuffled] = useState(false);
-
-  // Match configuration
-  const [bestOf, setBestOf] = useState<number>(3);
+  // Match configuration: Default match format to 'Single Frame' (1 frame)
+  const [bestOf, setBestOf] = useState<number>(1);
   const [redsCount, setRedsCount] = useState<number>(15);
   const [starting, setStarting] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
 
   // Quick Add Player Modal
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -57,10 +45,9 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
         setActiveSession(session);
       }
       setAllPlayers(data);
+      // Default to the first two players (Eldho and Thoma)
       if (data.length >= 2) {
-        setPlayer1(data[0]);
-        setPlayer2(data[1]);
-        setMultiPlayers(data.slice(0, 3));
+        setSelectedPlayers([data[0], data[1]]);
       }
       setLoading(false);
     });
@@ -70,92 +57,56 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
     };
   }, []);
 
-  // Quick 1-tap matchup pairings (popular / friend matchups)
-  const quickPairings = [
-    { p1: 'Eldho', p2: 'Thoma', label: 'Eldho vs Thoma' },
-    { p1: 'Raju', p2: 'Adi', label: 'Raju vs Adi' },
-    { p1: 'BM', p2: 'Sam', label: 'BM vs Sam' },
-  ];
-
-  const handleApplyPairing = (p1Name: string, p2Name: string) => {
-    const found1 = allPlayers.find(p => p.name.toLowerCase() === p1Name.toLowerCase());
-    const found2 = allPlayers.find(p => p.name.toLowerCase() === p2Name.toLowerCase());
-    if (found1 && found2) {
-      setPlayer1(found1);
-      setPlayer2(found2);
-      setGameMode('1v1');
-    }
-  };
-
-  // 1v1 Member toggle logic
-  const handleSelect1v1Member = (player: Player) => {
-    if (player1?.id === player.id) {
-      // Already player 1, do nothing or swap
-      return;
-    }
-    if (player2?.id === player.id) {
-      // Tapped player 2 -> promote to player 1 (breaker)
-      setPlayer1(player2);
-      setPlayer2(player1);
-      return;
-    }
-    // New player tapped -> replace player 2
-    setPlayer2(player);
-  };
-
-  const handleSwapBreaker = () => {
-    if (!player1 || !player2) return;
-    const temp = player1;
-    setPlayer1(player2);
-    setPlayer2(temp);
-  };
-
-  // Multiplayer Toggle Logic
-  const handleToggleMultiMember = (player: Player) => {
-    if (multiPlayers.some(p => p.id === player.id)) {
-      if (multiPlayers.length <= 2) {
-        return; // maintain at least 2 players in multiplayer
-      }
-      setMultiPlayers(prev => prev.filter(p => p.id !== player.id));
+  // Tap member: Add or remove from match
+  const handleTogglePlayer = (player: Player) => {
+    const isSelected = selectedPlayers.some(p => p.id === player.id);
+    if (isSelected) {
+      setSelectedPlayers(prev => prev.filter(p => p.id !== player.id));
     } else {
-      setMultiPlayers(prev => [...prev, player]);
+      if (selectedPlayers.length >= 6) return;
+      setSelectedPlayers(prev => [...prev, player]);
     }
   };
 
-  const handleMoveUpMulti = (index: number) => {
-    if (index <= 0) return;
-    setMultiPlayers(prev => {
+  // Reordering: Randomise order
+  const handleRandomise = () => {
+    if (selectedPlayers.length < 2) return;
+    setIsShuffling(true);
+    setSelectedPlayers(prev => {
       const copy = [...prev];
-      const temp = copy[index - 1];
-      copy[index - 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
-  };
-
-  const handleMoveDownMulti = (index: number) => {
-    if (index >= multiPlayers.length - 1) return;
-    setMultiPlayers(prev => {
-      const copy = [...prev];
-      const temp = copy[index + 1];
-      copy[index + 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
-  };
-
-  const handleRandomiseMulti = () => {
-    if (multiPlayers.length < 2) return;
-    setMultiPlayers(prev => {
-      const shuffled = [...prev];
-      for (let i = shuffled.length - 1; i > 0; i--) {
+      for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [copy[i], copy[j]] = [copy[j], copy[i]];
       }
-      return shuffled;
+      return copy;
     });
-    setJustShuffled(true);
-    setTimeout(() => setJustShuffled(false), 1000);
+    setTimeout(() => setIsShuffling(false), 500);
+  };
+
+  // Reordering: Swap breaker (#1 & #2)
+  const handleSwapBreaker = () => {
+    if (selectedPlayers.length < 2) return;
+    setSelectedPlayers(prev => {
+      const copy = [...prev];
+      const temp = copy[0];
+      copy[0] = copy[1];
+      copy[1] = temp;
+      return copy;
+    });
+  };
+
+  // Reordering: Shift player left/right in sequence
+  const handleShiftPlayer = (index: number, direction: 'left' | 'right', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetIdx = direction === 'left' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= selectedPlayers.length) return;
+    setSelectedPlayers(prev => {
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
   };
 
   // Quick Add Friend
@@ -167,26 +118,19 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
     setQuickNickname('');
     setIsQuickAddOpen(false);
     setAllPlayers(prev => [...prev, created]);
-    if (gameMode === '1v1') {
-      setPlayer2(created);
-    } else {
-      setMultiPlayers(prev => [...prev, created]);
+    if (selectedPlayers.length < 6) {
+      setSelectedPlayers(prev => [...prev, created]);
     }
   };
 
-  // Start Match Handler
+  // Start Match
   const handleStartMatch = async () => {
-    const finalPlayers: Player[] = gameMode === '1v1'
-      ? (player1 && player2 ? [player1, player2] : [])
-      : multiPlayers;
-
-    if (finalPlayers.length < 2) return;
-
+    if (selectedPlayers.length < 2) return;
     setStarting(true);
-    const playerIds = finalPlayers.map(p => p.id);
+    const playerIds = selectedPlayers.map(p => p.id);
     const newMatch = await saveNewMatch(playerIds, bestOf, redsCount);
     setStarting(false);
-    onStartMatch(newMatch, finalPlayers);
+    onStartMatch(newMatch, selectedPlayers);
   };
 
   // Resume In-Progress Match
@@ -205,474 +149,371 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
   };
 
   const formatOptions = [
-    { value: 1, label: '1 Frame', sub: 'Single frame' },
-    { value: 3, label: 'Best of 3', sub: 'First to 2' },
-    { value: 5, label: 'Best of 5', sub: 'First to 3' },
+    { value: 1, label: 'Single Frame' },
+    { value: 3, label: 'Best of 3' },
+    { value: 5, label: 'Best of 5' },
   ];
 
   const redsOptions = [
-    { value: 15, label: '15 Reds', sub: 'Standard 147' },
-    { value: 10, label: '10 Reds', sub: 'Fast 107' },
-    { value: 6, label: '6 Reds', sub: 'Quick Shootout' },
+    { value: 15, label: '15 Reds' },
+    { value: 10, label: '10 Reds' },
+    { value: 6, label: '6 Reds' },
   ];
 
-  const effectivePlayers = gameMode === '1v1'
-    ? (player1 && player2 ? [player1, player2] : [])
-    : multiPlayers;
+  const isValidMatch = selectedPlayers.length >= 2;
 
   return (
-    <div className="w-full max-w-xl mx-auto px-3 sm:px-4 py-2 sm:py-4 space-y-4 animate-fade-in">
+    <div className="w-full max-w-lg mx-auto px-3 sm:px-4 py-1.5 sm:py-3 space-y-3 sm:space-y-4 animate-fade-in">
       
       {/* ------------------------------------------------------------- */}
-      {/* ACTIVE LIVE MATCH IN PROGRESS BANNER (PREVENT DATA LOSS)      */}
+      {/* ACTIVE LIVE MATCH BANNER (COMPACT RESUME PROMPT)              */}
       {/* ------------------------------------------------------------- */}
       {activeSession && (
-        <div className="bg-gradient-to-r from-emerald-950 via-[#0e271a] to-[#081810] border-2 border-emerald-500/70 rounded-2xl p-3.5 sm:p-4 shadow-xl space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block" />
-              Live Match In Progress
-            </span>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-              Frame {activeSession.currentFrameNum}
-            </span>
+        <div className="bg-emerald-950/70 border border-emerald-500/50 rounded-xl px-3 py-2 flex items-center justify-between gap-2 shadow-lg">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping flex-shrink-0" />
+            <div className="min-w-0 text-xs">
+              <span className="font-bold text-white truncate block">
+                Resume: {activeSession.players.map(p => p.name).join(' vs ')}
+              </span>
+              <span className="text-[10px] text-emerald-400">
+                Frame {activeSession.currentFrameNum} in progress
+              </span>
+            </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 pr-2">
-              <p className="text-sm sm:text-base font-black text-white truncate">
-                {activeSession.players.map(p => p.name).join(' vs ')}
-              </p>
-              <p className="text-[11px] text-gray-300 font-mono mt-0.5">
-                {activeSession.playerFrames.map((f, i) => `${activeSession.players[i]?.name}: ${f}F`).join(' · ')}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                type="button"
-                onClick={handleAbandonSession}
-                className="px-2.5 py-1.5 rounded-xl border border-red-800/40 text-red-400 hover:bg-red-950/60 text-xs font-semibold transition"
-                title="Discard this match"
-              >
-                Discard
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResumeSession}
-                className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-md transition flex items-center gap-1 cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 fill-black" />
-                <span>Resume</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleAbandonSession}
+              className="px-2 py-1 rounded-lg border border-red-800/40 text-red-400 hover:bg-red-950/60 text-[11px] font-semibold transition"
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              onClick={handleResumeSession}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[11px] shadow transition flex items-center gap-1 cursor-pointer"
+            >
+              <Play className="w-3 h-3 fill-black" />
+              <span>Resume</span>
+            </button>
           </div>
         </div>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* TITLE & ADD FRIEND BUTTON                                    */}
+      {/* HEADER & ROSTER MEMBER SELECTION (1 TAP TO PICK PLAYERS)      */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            Start Snooker Match
-          </h2>
-          <p className="text-xs text-gray-400">
-            Select players and break-off order to begin live tracking
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsQuickAddOpen(true)}
-          className="px-2.5 py-1.5 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white text-xs font-medium flex items-center gap-1 transition cursor-pointer"
-          title="Add a new friend to roster"
-        >
-          <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden xs:inline">Add Friend</span>
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="py-12 text-center text-emerald-400 font-semibold animate-pulse">
-          Loading player roster...
-        </div>
-      ) : (
-        <div className="space-y-4">
-          
-          {/* ----------------------------------------------------------- */}
-          {/* MODE TOGGLE: 1v1 vs MULTIPLAYER RING                        */}
-          {/* ----------------------------------------------------------- */}
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#0c1611] border border-emerald-950/80">
-            <button
-              type="button"
-              onClick={() => setGameMode('1v1')}
-              className={`py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                gameMode === '1v1'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Trophy className="w-3.5 h-3.5" />
-              <span>1 vs 1 Match</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setGameMode('multiplayer')}
-              className={`py-2 rounded-xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                gameMode === 'multiplayer'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Multiplayer (3+ Players)</span>
-            </button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-1.5">
+              <span>Select Players</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 font-semibold">
+                {selectedPlayers.length} of {allPlayers.length} selected
+              </span>
+            </h2>
+            <p className="text-[11px] text-gray-400">
+              Tap members to add or remove (2 to 6 players)
+            </p>
           </div>
 
-          {/* ----------------------------------------------------------- */}
-          {/* 1v1 MATCH SETUP (FAST 2-TAP SELECTION)                      */}
-          {/* ----------------------------------------------------------- */}
-          {gameMode === '1v1' && (
-            <div className="bg-[#0d1712] border border-emerald-900/40 rounded-3xl p-3.5 sm:p-5 shadow-xl space-y-4">
-              
-              {/* Quick Pairings (1-Tap Presets) */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
-                  Quick Matchups:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {quickPairings.map(pair => (
-                    <button
-                      key={pair.label}
-                      type="button"
-                      onClick={() => handleApplyPairing(pair.p1, pair.p2)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1 cursor-pointer ${
-                        player1?.name === pair.p1 && player2?.name === pair.p2
-                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                          : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:border-gray-700'
-                      }`}
-                    >
-                      <Sparkles className="w-3 h-3 text-emerald-400" />
-                      <span>{pair.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => setIsQuickAddOpen(true)}
+            className="px-2.5 py-1 rounded-lg bg-gray-900 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white text-xs font-medium flex items-center gap-1 transition cursor-pointer"
+            title="Add a new friend to roster"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-xs">Add</span>
+          </button>
+        </div>
 
-              {/* Selected Players Matchup Cards */}
-              <div className="grid grid-cols-2 gap-2 relative">
-                
-                {/* Player 1 (Breaker) */}
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#122e1e] to-[#0c1f15] border-2 border-emerald-500/70 shadow-md">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono font-black text-black bg-emerald-400 px-1.5 py-0.2 rounded">
-                      #1 BREAKER
-                    </span>
-                    <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-                  </div>
-                  <div className="text-base sm:text-lg font-black text-white truncate">
-                    {player1?.name || 'Select Player 1'}
-                  </div>
-                  <div className="text-[10px] text-emerald-400/80 truncate">
-                    {player1?.nickname ? `"${player1.nickname}"` : 'Breaks off frame'}
-                  </div>
-                </div>
+        {loading ? (
+          <div className="py-8 text-center text-emerald-400 text-xs font-semibold animate-pulse">
+            Loading roster...
+          </div>
+        ) : (
+          /* Unified interactive member grid */
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
+            {allPlayers.map((p) => {
+              const selectedIndex = selectedPlayers.findIndex(sp => sp.id === p.id);
+              const isSelected = selectedIndex !== -1;
+              const isBreaker = selectedIndex === 0;
 
-                {/* Player 2 */}
-                <div className="p-3 rounded-2xl bg-[#112218] border border-emerald-900/60 shadow">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono font-bold text-gray-400 bg-gray-800 px-1.5 py-0.2 rounded">
-                      #2 OPPONENT
-                    </span>
-                  </div>
-                  <div className="text-base sm:text-lg font-black text-white truncate">
-                    {player2?.name || 'Select Player 2'}
-                  </div>
-                  <div className="text-[10px] text-gray-400 truncate">
-                    {player2?.nickname ? `"${player2.nickname}"` : 'Shoots second'}
-                  </div>
-                </div>
-
-                {/* Swap Breaker Button Floating Center */}
+              return (
                 <button
+                  key={p.id}
                   type="button"
-                  onClick={handleSwapBreaker}
-                  title="Swap who breaks off"
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 border-2 border-[#0d1712] text-white flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer z-10"
-                >
-                  <ArrowLeftRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Roster Member Grid (Tap to Select / Change) */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-                  Tap Member to Set Player / Opponent:
-                </span>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                  {allPlayers.map((p) => {
-                    const isP1 = player1?.id === p.id;
-                    const isP2 = player2?.id === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleSelect1v1Member(p)}
-                        className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-center relative cursor-pointer ${
-                          isP1
-                            ? 'bg-emerald-950 border-emerald-500 ring-2 ring-emerald-500/40 text-white font-bold'
-                            : isP2
-                            ? 'bg-emerald-950/70 border-emerald-600/60 text-emerald-200 font-bold'
-                            : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
-                        }`}
-                      >
-                        {isP1 && (
-                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-black text-[9px] font-black flex items-center justify-center shadow">
-                            1
-                          </span>
-                        )}
-                        {isP2 && (
-                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-700 text-white text-[9px] font-bold flex items-center justify-center shadow">
-                            2
-                          </span>
-                        )}
-                        <span className="text-xs sm:text-sm font-bold truncate w-full">
-                          {p.name}
-                        </span>
-                        {p.nickname && (
-                          <span className="text-[9px] text-gray-500 truncate w-full">
-                            {p.nickname}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* ----------------------------------------------------------- */}
-          {/* MULTIPLAYER SETUP (3+ PLAYERS RING)                         */}
-          {/* ----------------------------------------------------------- */}
-          {gameMode === 'multiplayer' && (
-            <div className="bg-[#0d1712] border border-emerald-900/40 rounded-3xl p-3.5 sm:p-5 shadow-xl space-y-4">
-              
-              <div className="flex items-center justify-between border-b border-emerald-950/80 pb-2.5">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Turn Sequence ({multiPlayers.length} Players)
-                  </span>
-                  <p className="text-[10px] text-gray-400">
-                    #1 breaks off. Players rotate turns in this order.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleRandomiseMulti}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                    justShuffled
-                      ? 'bg-amber-500 text-black border-amber-400 scale-105'
-                      : 'bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border-emerald-700/50'
+                  onClick={() => handleTogglePlayer(p)}
+                  className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center relative cursor-pointer select-none active:scale-95 ${
+                    isSelected
+                      ? 'bg-gradient-to-b from-[#133020] to-[#0a1e13] border-emerald-400 ring-2 ring-emerald-500/40 text-white shadow-lg'
+                      : 'bg-[#0b1410] border-emerald-950/70 text-gray-400 hover:border-gray-700 hover:text-gray-200'
                   }`}
                 >
-                  <Shuffle className={`w-3.5 h-3.5 ${justShuffled ? 'animate-spin' : ''}`} />
-                  <span>{justShuffled ? 'Shuffled!' : 'Shuffle'}</span>
+                  {/* Order indicator badge */}
+                  {isSelected ? (
+                    <span className={`absolute -top-1.5 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-black tracking-tight shadow ${
+                      isBreaker 
+                        ? 'bg-emerald-400 text-black ring-1 ring-emerald-300' 
+                        : 'bg-emerald-900 text-emerald-200 border border-emerald-500/50'
+                    }`}>
+                      {isBreaker ? '#1 BREAK' : `#${selectedIndex + 1}`}
+                    </span>
+                  ) : (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-900 border border-gray-700 text-gray-500 text-[9px] flex items-center justify-center">
+                      +
+                    </span>
+                  )}
+
+                  <span className="text-xs sm:text-sm font-black truncate w-full">
+                    {p.name}
+                  </span>
+                  <span className="text-[9px] text-gray-400 truncate w-full">
+                    {p.nickname || 'Player'}
+                  </span>
                 </button>
-              </div>
-
-              {/* Sequence List */}
-              <div className="space-y-1.5">
-                {multiPlayers.map((player, idx) => {
-                  const isBreak = idx === 0;
-                  return (
-                    <div
-                      key={player.id}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition ${
-                        isBreak
-                          ? 'bg-[#122e1e] border-emerald-500/60'
-                          : 'bg-[#112218] border-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0">
-                        <span className={`w-6 h-6 rounded-lg font-mono font-black text-xs flex items-center justify-center ${
-                          isBreak ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'
-                        }`}>
-                          #{idx + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <span className="text-sm font-bold text-white truncate block">
-                            {player.name}
-                          </span>
-                          {isBreak && (
-                            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider block">
-                              Breaks Off
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveUpMulti(idx)}
-                          disabled={idx === 0}
-                          className="p-1 rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-300 disabled:opacity-30 border border-gray-800"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveDownMulti(idx)}
-                          disabled={idx === multiPlayers.length - 1}
-                          className="p-1 rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-300 disabled:opacity-30 border border-gray-800"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleMultiMember(player)}
-                          disabled={multiPlayers.length <= 2}
-                          className="p-1 rounded-lg bg-red-950/40 text-red-400 hover:bg-red-900/60 disabled:opacity-30 border border-red-800/30"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Roster chips to add/remove */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
-                  Tap to Add / Remove Roster Members:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {allPlayers.map((p) => {
-                    const isIncluded = multiPlayers.some(sp => sp.id === p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleToggleMultiMember(p)}
-                        className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-                          isIncluded
-                            ? 'bg-emerald-950 border-emerald-500 text-emerald-300 font-bold'
-                            : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700'
-                        }`}
-                      >
-                        {isIncluded ? '✓ ' : '+ '}
-                        {p.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* ----------------------------------------------------------- */}
-          {/* MATCH CONFIG: LENGTH & REDS                                 */}
-          {/* ----------------------------------------------------------- */}
-          <div className="bg-[#0d1712] border border-emerald-900/40 rounded-3xl p-3.5 sm:p-5 shadow-xl space-y-4">
-            
-            {/* Format (Best Of) */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-                Match Format (Frames)
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {formatOptions.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setBestOf(opt.value)}
-                    className={`py-2 px-2.5 rounded-xl border text-center transition cursor-pointer ${
-                      bestOf === opt.value
-                        ? 'bg-emerald-600 border-emerald-400 text-white font-black shadow-md'
-                        : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700'
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm font-bold block">{opt.label}</span>
-                    <span className="text-[9px] text-gray-300/80 block mt-0.5">{opt.sub}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Red Balls Count */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-                Reds on Table
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {redsOptions.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setRedsCount(opt.value)}
-                    className={`py-2 px-2.5 rounded-xl border text-center transition cursor-pointer ${
-                      redsCount === opt.value
-                        ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200 font-black shadow-sm ring-1 ring-emerald-500/30'
-                        : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shadow-sm" />
-                      <span className="text-xs sm:text-sm font-bold">{opt.label}</span>
-                    </div>
-                    <span className="text-[9px] text-gray-400 block">{opt.sub}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
+              );
+            })}
           </div>
+        )}
+      </div>
 
-          {/* ----------------------------------------------------------- */}
-          {/* PRIMARY START MATCH CTA (INSTANT LAUNCH)                     */}
-          {/* ----------------------------------------------------------- */}
-          <div className="pt-1">
-            <button
-              type="button"
-              disabled={starting || effectivePlayers.length < 2}
-              onClick={handleStartMatch}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-400 hover:from-emerald-400 hover:to-green-300 text-black font-black text-base shadow-xl shadow-emerald-950/80 flex items-center justify-center space-x-2 transition disabled:opacity-50 cursor-pointer active:scale-[0.99]"
-            >
-              <Play className="w-5 h-5 fill-black" />
-              <span>
-                {starting
-                  ? 'Starting Match...'
-                  : `Start Match: ${effectivePlayers.map(p => p.name).join(' vs ')}`}
-              </span>
-            </button>
+      {/* ------------------------------------------------------------- */}
+      {/* PLAYING SEQUENCE & REORDER / RANDOMISE CONTROLS               */}
+      {/* ------------------------------------------------------------- */}
+      <div className="bg-[#0b1410] border border-emerald-950/80 rounded-2xl p-2.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            Turn Order (#1 Breaks Off)
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            {selectedPlayers.length === 2 && (
+              <button
+                type="button"
+                onClick={handleSwapBreaker}
+                className="px-2 py-0.5 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[11px] font-bold text-gray-300 hover:text-white flex items-center gap-1 transition cursor-pointer"
+                title="Swap who breaks off"
+              >
+                <ArrowLeftRight className="w-3 h-3 text-emerald-400" />
+                <span>Swap</span>
+              </button>
+            )}
+
+            {selectedPlayers.length >= 2 && (
+              <button
+                type="button"
+                onClick={handleRandomise}
+                className={`px-2 py-0.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                  isShuffling
+                    ? 'bg-amber-500 text-black border-amber-400'
+                    : 'bg-emerald-950 hover:bg-emerald-900 border-emerald-700/60 text-emerald-300'
+                }`}
+                title="Randomise turn sequence"
+              >
+                <Shuffle className={`w-3 h-3 ${isShuffling ? 'animate-spin' : ''}`} />
+                <span>Shuffle</span>
+              </button>
+            )}
           </div>
-
         </div>
-      )}
+
+        {/* Selected sequence pills with quick reorder arrows */}
+        {selectedPlayers.length === 0 ? (
+          <p className="text-center py-2 text-xs text-gray-500">
+            Tap members above to select players
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedPlayers.map((player, idx) => {
+              const isBreaker = idx === 0;
+              return (
+                <div
+                  key={player.id}
+                  className={`flex items-center gap-1 pl-2 pr-1 py-1 rounded-xl text-xs font-semibold border transition ${
+                    isBreaker
+                      ? 'bg-[#133020] border-emerald-500 text-white shadow-sm'
+                      : 'bg-gray-900/80 border-gray-800 text-gray-300'
+                  }`}
+                >
+                  <span className={`text-[10px] font-mono font-bold ${
+                    isBreaker ? 'text-emerald-400' : 'text-gray-400'
+                  }`}>
+                    #{idx + 1}
+                  </span>
+                  <span className="font-bold">{player.name}</span>
+                  {isBreaker && (
+                    <span className="text-[8px] bg-emerald-400 text-black font-black px-1 rounded uppercase">
+                      Break
+                    </span>
+                  )}
+
+                  {/* Move Left / Right Arrows when multiple players */}
+                  {selectedPlayers.length > 2 && (
+                    <div className="flex items-center ml-0.5">
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleShiftPlayer(idx, 'left', e)}
+                          className="p-0.5 text-gray-400 hover:text-white rounded hover:bg-gray-800"
+                          title="Move earlier"
+                        >
+                          <ChevronLeft className="w-3 h-3" />
+                        </button>
+                      )}
+                      {idx < selectedPlayers.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleShiftPlayer(idx, 'right', e)}
+                          className="p-0.5 text-gray-400 hover:text-white rounded hover:bg-gray-800"
+                          title="Move later"
+                        >
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePlayer(player)}
+                    className="p-0.5 text-gray-500 hover:text-red-400 rounded transition ml-0.5"
+                    title="Remove"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MATCH SETTINGS: FORMAT & REDS (COMPACT SEGMENTED PILLS)      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Frame Length */}
+        <div className="bg-[#0b1410] border border-emerald-950/80 rounded-2xl p-2 space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block px-0.5">
+            Format
+          </label>
+          <div className="grid grid-cols-3 gap-1">
+            {formatOptions.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setBestOf(opt.value)}
+                className={`py-1.5 px-1 rounded-lg text-center transition cursor-pointer text-xs font-bold leading-tight ${
+                  bestOf === opt.value
+                    ? 'bg-emerald-600 border border-emerald-400 text-white shadow'
+                    : 'bg-gray-900/60 border border-gray-800/80 text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Reds Count */}
+        <div className="bg-[#0b1410] border border-emerald-950/80 rounded-2xl p-2 space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block px-0.5">
+            Reds
+          </label>
+          <div className="grid grid-cols-3 gap-1">
+            {redsOptions.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRedsCount(opt.value)}
+                className={`py-1.5 px-1 rounded-lg text-center transition cursor-pointer text-xs font-bold leading-tight ${
+                  redsCount === opt.value
+                    ? 'bg-emerald-950 border border-emerald-500 text-emerald-200 shadow'
+                    : 'bg-gray-900/60 border border-gray-800/80 text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* THE BIG START MATCH BUTTON RADIATING IN CIRCLES               */}
+      {/* ------------------------------------------------------------- */}
+      <div className="relative flex flex-col items-center justify-center pt-3 pb-1">
+        
+        {/* Animated concentric ripple rings radiating outward */}
+        {isValidMatch && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none -mt-4">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 radiating-circle border-2 border-emerald-400/80 radiating-ring-1" />
+            <div className="w-28 h-28 sm:w-32 sm:h-32 radiating-circle border-2 border-emerald-500/60 radiating-ring-2" />
+            <div className="w-28 h-28 sm:w-32 sm:h-32 radiating-circle border border-emerald-300/40 radiating-ring-3" />
+          </div>
+        )}
+
+        {/* The BIG Button */}
+        <button
+          type="button"
+          disabled={starting || !isValidMatch}
+          onClick={handleStartMatch}
+          className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center text-center shadow-2xl transition-all duration-300 active:scale-95 cursor-pointer select-none ${
+            isValidMatch
+              ? 'bg-gradient-to-br from-emerald-300 via-emerald-500 to-green-600 hover:from-emerald-200 hover:to-emerald-400 text-black start-btn-radiate'
+              : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700 opacity-50'
+          }`}
+          title={isValidMatch ? 'Start Snooker Match' : 'Select at least 2 players'}
+        >
+          <Play className="w-8 h-8 sm:w-9 sm:h-9 fill-black ml-0.5 mb-0.5 drop-shadow-sm" />
+          <span className="text-xs sm:text-sm font-black uppercase tracking-wider leading-none text-black">
+            {starting ? 'Starting...' : 'Start'}
+          </span>
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider leading-none text-emerald-950 mt-0.5">
+            Match
+          </span>
+        </button>
+
+        {/* Matchup Summary Badge directly below radiating button */}
+        <div className="mt-3 text-center">
+          {isValidMatch ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-semibold shadow">
+              <span className="font-bold text-white">
+                {selectedPlayers.length === 2
+                  ? `${selectedPlayers[0].name} vs ${selectedPlayers[1].name}`
+                  : selectedPlayers.map(p => p.name).join(' → ')}
+              </span>
+              <span className="text-emerald-500">•</span>
+              <span className="text-gray-300 font-normal">
+                {bestOf === 1 ? '1 Frame' : `Best of ${bestOf}`} ({redsCount} Reds)
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-amber-400 font-semibold">
+              Tap {2 - selectedPlayers.length} more player{2 - selectedPlayers.length > 1 ? 's' : ''} to start
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* ------------------------------------------------------------- */}
       {/* QUICK ADD FRIEND MODAL                                        */}
       {/* ------------------------------------------------------------- */}
       {isQuickAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0e1913] border border-emerald-600/40 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-emerald-900/40 pb-2.5">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="bg-[#0e1913] border border-emerald-600/40 rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-emerald-900/40 pb-2">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                 <UserPlus className="w-4 h-4 text-emerald-400" />
                 Add Player to Roster
               </h3>
               <button 
                 onClick={() => setIsQuickAddOpen(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white p-1"
               >
                 <X className="w-4 h-4" />
               </button>

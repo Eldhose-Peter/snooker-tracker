@@ -353,8 +353,8 @@ export async function saveNewMatch(
 ): Promise<Match>;
 export async function saveNewMatch(
   playerIdsOrP1: string[] | string, 
-  player2IdOrBestOf: string | number = 3, 
-  bestOfParam: number = 3, 
+  player2IdOrBestOf: string | number = 1, 
+  bestOfParam: number = 1, 
   redsCountParam: number = 15
 ): Promise<Match> {
   let playerIds: string[];
