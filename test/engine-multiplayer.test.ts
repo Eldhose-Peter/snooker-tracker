@@ -540,6 +540,24 @@ async function testAbandon() {
   assert(scoreboardSource.includes('animate-pop-feedback'), 'LiveScoreboard must render animated pop feedback banner');
   console.log('✓ Ball active tap brightness enhancement confirmed and Target section absence verified.');
 
+  // 25. Verify Score Increase Animation & Bottom Feedback Layout
+  console.log('\n[25] Verifying Score Increase Animation & Bottom Feedback Layout...');
+  assert(css.includes('scoreRise'), 'globals.css must define scoreRise keyframe animation');
+  assert(css.includes('animate-score-rise'), 'globals.css must define animate-score-rise class');
+  assert(css.includes('scorePulse'), 'globals.css must define scorePulse keyframe animation');
+  assert(css.includes('animate-score-pulse'), 'globals.css must define animate-score-pulse class');
+
+  assert(scoreboardSource.includes('animate-score-rise'), 'LiveScoreboard must render animated score rising indicator');
+  assert(scoreboardSource.includes('animate-score-pulse'), 'LiveScoreboard must pulse score digits on score increase');
+
+  // Verify feedback is placed below the action controls
+  const controlsIndex = scoreboardSource.indexOf('STREAMLINED PRIMARY CONTROLS');
+  const feedbackIndex = scoreboardSource.indexOf('ACTION FEEDBACK BANNER & TOAST (AT BOTTOM)');
+  assert(controlsIndex !== -1, 'LiveScoreboard must contain primary controls');
+  assert(feedbackIndex !== -1, 'LiveScoreboard must contain bottom feedback section');
+  assert(feedbackIndex > controlsIndex, 'Feedback banner must be located below controls');
+  console.log('✓ Individual score card increase animations and bottom feedback position verified.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

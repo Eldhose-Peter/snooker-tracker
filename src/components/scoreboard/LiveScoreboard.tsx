@@ -47,6 +47,27 @@ interface ActionFeedback {
   ballHex?: string;
 }
 
+const getScoreIncreaseColor = (points: number): string => {
+  switch (points) {
+    case 1:
+      return 'text-red-400 drop-shadow-[0_2px_8px_rgba(239,68,68,0.95)]';
+    case 2:
+      return 'text-yellow-300 drop-shadow-[0_2px_8px_rgba(253,224,71,0.95)]';
+    case 3:
+      return 'text-emerald-400 drop-shadow-[0_2px_8px_rgba(52,211,153,0.95)]';
+    case 4:
+      return 'text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.95)]';
+    case 5:
+      return 'text-blue-400 drop-shadow-[0_2px_8px_rgba(96,165,250,0.95)]';
+    case 6:
+      return 'text-pink-400 drop-shadow-[0_2px_8px_rgba(244,114,182,0.95)]';
+    case 7:
+      return 'text-emerald-300 drop-shadow-[0_2px_8px_rgba(110,231,183,0.95)]';
+    default:
+      return 'text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.95)]';
+  }
+};
+
 interface LiveScoreboardProps {
   match: Match;
   players?: Player[]; // sequence of players
@@ -193,11 +214,46 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     }, 1800);
   }, []);
 
+  // Score increase animations per player index
+  const [scoreAnims, setScoreAnims] = useState<Record<number, { id: number; points: number }>>({});
+  const animTimeoutRefs = useRef<Record<number, NodeJS.Timeout>>({});
+
+  const triggerScoreIncreases = useCallback((prevScores: number[], newScores: number[]) => {
+    const newAnims: Record<number, { id: number; points: number }> = {};
+    let hasAny = false;
+    const len = Math.max(prevScores.length, newScores.length);
+
+    for (let i = 0; i < len; i++) {
+      const diff = (newScores[i] || 0) - (prevScores[i] || 0);
+      if (diff > 0) {
+        const animId = Date.now() + Math.random() + i;
+        newAnims[i] = { id: animId, points: diff };
+        hasAny = true;
+
+        if (animTimeoutRefs.current[i]) {
+          clearTimeout(animTimeoutRefs.current[i]);
+        }
+        animTimeoutRefs.current[i] = setTimeout(() => {
+          setScoreAnims(prev => {
+            const next = { ...prev };
+            delete next[i];
+            return next;
+          });
+        }, 1000);
+      }
+    }
+
+    if (hasAny) {
+      setScoreAnims(prev => ({ ...prev, ...newAnims }));
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (feedbackTimeoutRef.current) {
         clearTimeout(feedbackTimeoutRef.current);
       }
+      Object.values(animTimeoutRefs.current).forEach(clearTimeout);
     };
   }, []);
 
@@ -213,6 +269,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   // Push state to undo stack before mutating and clear redo stack
   const applyStateMutation = useCallback((nextState: FrameState) => {
+    triggerScoreIncreases(state.playerScores, nextState.playerScores);
     setUndoStack((prev) => [...prev, state]);
     setRedoStack([]); // Clear redo stack on new action
     setState(nextState);
@@ -221,7 +278,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     if (nextState.isFrameOver && nextState.winnerIndex !== null) {
       setIsWinModalOpen(true);
     }
-  }, [state]);
+  }, [state, triggerScoreIncreases]);
 
   // Actions
   const onPotBall = (ball: BallType) => {
@@ -327,6 +384,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     setUndoStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => [...prev, state]);
     setIsWinModalOpen(false);
+    Object.values(animTimeoutRefs.current).forEach(clearTimeout);
+    animTimeoutRefs.current = {};
+    setScoreAnims({});
     setState(previous);
 
     const prevActiveName = resolvedPlayers[previous.activePlayerIndex]?.name || `Player ${previous.activePlayerIndex + 1}`;
@@ -345,6 +405,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     if (redoStack.length === 0) return;
     triggerHaptic(12);
     const next = redoStack[redoStack.length - 1];
+    triggerScoreIncreases(state.playerScores, next.playerScores);
     setRedoStack((prev) => prev.slice(0, -1));
     setUndoStack((prev) => [...prev, state]);
     setState(next);
@@ -361,7 +422,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       borderClass: 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-950',
       icon: 'redo',
     });
-  }, [redoStack, state, resolvedPlayers, showFeedback]);
+  }, [redoStack, state, resolvedPlayers, showFeedback, triggerScoreIncreases]);
 
   // Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
   useEffect(() => {
@@ -458,6 +519,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     }
 
     setIsWinModalOpen(false);
+    Object.values(animTimeoutRefs.current).forEach(clearTimeout);
+    animTimeoutRefs.current = {};
+    setScoreAnims({});
     const nextFrameNum = currentFrameNum + 1;
     setCurrentFrameNum(nextFrameNum);
 
@@ -757,8 +821,21 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                   </div>
                 </div>
 
-                <div className="text-right flex-shrink-0 pl-1">
-                  <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${isActive ? 'text-emerald-300' : 'text-white'}`}>
+                <div className="relative text-right flex-shrink-0 pl-1">
+                  {scoreAnims[idx] && (
+                    <div
+                      key={`rise-${scoreAnims[idx].id}`}
+                      className={`absolute -top-3.5 right-0 font-mono font-black text-sm sm:text-base pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
+                    >
+                      +{scoreAnims[idx].points}
+                    </div>
+                  )}
+                  <span
+                    key={`score-val-${score}-${scoreAnims[idx]?.id || 0}`}
+                    className={`inline-block font-mono font-black text-2xl sm:text-3xl tracking-tight origin-right ${
+                      scoreAnims[idx] ? 'animate-score-pulse' : ''
+                    } ${isActive ? 'text-emerald-300' : 'text-white'}`}
+                  >
                     {score}
                   </span>
                 </div>
@@ -821,9 +898,24 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                       🔥{highBreak}
                     </span>
                   )}
-                  <span className={`font-mono font-black text-sm sm:text-base ${isActive ? 'text-emerald-300 text-base sm:text-lg' : 'text-white'}`}>
-                    {score}
-                  </span>
+                  <div className="relative inline-flex items-center justify-end">
+                    {scoreAnims[idx] && (
+                      <div
+                        key={`rise-${scoreAnims[idx].id}`}
+                        className={`absolute -top-3 right-0 font-mono font-black text-xs sm:text-sm pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
+                      >
+                        +{scoreAnims[idx].points}
+                      </div>
+                    )}
+                    <span
+                      key={`score-val-${score}-${scoreAnims[idx]?.id || 0}`}
+                      className={`inline-block font-mono font-black tracking-tight origin-right ${
+                        scoreAnims[idx] ? 'animate-score-pulse' : ''
+                      } ${isActive ? 'text-emerald-300 text-base sm:text-lg' : 'text-white text-sm sm:text-base'}`}
+                    >
+                      {score}
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -866,70 +958,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           </div>
         </div>
       </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* PROMINENT INSTANT ACTION FEEDBACK BANNER                      */}
-      {/* ------------------------------------------------------------- */}
-      <div className="relative min-h-[32px] sm:min-h-[36px] flex items-center justify-center">
-        {feedback ? (
-          <div
-            key={feedback.id}
-            className={`w-full px-2.5 sm:px-3 py-1 rounded-xl border flex items-center justify-between gap-2 animate-pop-feedback transition-all ${feedback.bgClass} ${feedback.borderClass}`}
-          >
-            <div className="flex items-center space-x-2 min-w-0">
-              {feedback.ballHex && (
-                <span
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/60 shadow-sm flex-shrink-0 inline-block"
-                  style={{ backgroundColor: feedback.ballHex }}
-                />
-              )}
-              {feedback.icon === 'miss' && <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-              {feedback.icon === 'foul' && <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />}
-              {feedback.icon === 'switch' && <Users className="w-4 h-4 text-emerald-300 flex-shrink-0" />}
-              {feedback.icon === 'undo' && <RotateCcw className="w-4 h-4 text-white flex-shrink-0" />}
-              {feedback.icon === 'redo' && <RotateCw className="w-4 h-4 text-white flex-shrink-0" />}
-              
-              <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${feedback.textClass}`}>
-                {feedback.badge}
-              </span>
-            </div>
-
-            <span className={`text-[11px] sm:text-xs font-bold truncate opacity-95 ${feedback.textClass}`}>
-              {feedback.detail}
-            </span>
-          </div>
-        ) : (
-          <div className="w-full px-3 py-1 rounded-xl bg-[#09120c]/70 border border-emerald-950/80 flex items-center justify-between text-gray-400 text-[10px] sm:text-[11px] font-mono">
-            <span className="truncate">
-              {state.lastActionDescription || 'Table live • Tap a ball to score'}
-            </span>
-            <span className="text-[10px] text-emerald-400 font-semibold flex-shrink-0 ml-1">
-              READY
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Centered Instant Pop Toast (Ultra-High Prominence) */}
-      {feedback && (
-        <div
-          key={`float-${feedback.id}`}
-          className="fixed top-14 sm:top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
-        >
-          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider backdrop-blur-md ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
-            {feedback.ballHex && (
-              <span
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
-                style={{ backgroundColor: feedback.ballHex }}
-              />
-            )}
-            <span className="whitespace-nowrap">{feedback.badge}</span>
-            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1.5 border-l border-white/30 truncate max-w-[50vw] sm:max-w-none">
-              {feedback.detail}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Snookers Alert Banner (Appears only when snookers needed) */}
       {state.snookersNeeded.needed && (
@@ -1155,6 +1183,70 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           <span>Redo</span>
         </button>
       </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* ACTION FEEDBACK BANNER & TOAST (AT BOTTOM)                    */}
+      {/* ------------------------------------------------------------- */}
+      <div className="relative min-h-[32px] sm:min-h-[36px] flex items-center justify-center">
+        {feedback ? (
+          <div
+            key={feedback.id}
+            className={`w-full px-2.5 sm:px-3 py-1 rounded-xl border flex items-center justify-between gap-2 animate-pop-feedback transition-all ${feedback.bgClass} ${feedback.borderClass}`}
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              {feedback.ballHex && (
+                <span
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/60 shadow-sm flex-shrink-0 inline-block"
+                  style={{ backgroundColor: feedback.ballHex }}
+                />
+              )}
+              {feedback.icon === 'miss' && <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+              {feedback.icon === 'foul' && <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />}
+              {feedback.icon === 'switch' && <Users className="w-4 h-4 text-emerald-300 flex-shrink-0" />}
+              {feedback.icon === 'undo' && <RotateCcw className="w-4 h-4 text-white flex-shrink-0" />}
+              {feedback.icon === 'redo' && <RotateCw className="w-4 h-4 text-white flex-shrink-0" />}
+              
+              <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${feedback.textClass}`}>
+                {feedback.badge}
+              </span>
+            </div>
+
+            <span className={`text-[11px] sm:text-xs font-bold truncate opacity-95 ${feedback.textClass}`}>
+              {feedback.detail}
+            </span>
+          </div>
+        ) : (
+          <div className="w-full px-3 py-1 rounded-xl bg-[#09120c]/70 border border-emerald-950/80 flex items-center justify-between text-gray-400 text-[10px] sm:text-[11px] font-mono">
+            <span className="truncate">
+              {state.lastActionDescription || 'Table live • Tap a ball to score'}
+            </span>
+            <span className="text-[10px] text-emerald-400 font-semibold flex-shrink-0 ml-1">
+              READY
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Centered Instant Pop Toast (Positioned at bottom so it never blocks cards or balls) */}
+      {feedback && (
+        <div
+          key={`float-${feedback.id}`}
+          className="fixed bottom-20 sm:bottom-22 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
+        >
+          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider backdrop-blur-md ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
+            {feedback.ballHex && (
+              <span
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
+                style={{ backgroundColor: feedback.ballHex }}
+              />
+            )}
+            <span className="whitespace-nowrap">{feedback.badge}</span>
+            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1.5 border-l border-white/30 truncate max-w-[50vw] sm:max-w-none">
+              {feedback.detail}
+            </span>
+          </div>
+        </div>
+      )}
 
 
       {/* ------------------------------------------------------------- */}
