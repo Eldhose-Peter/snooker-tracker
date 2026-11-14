@@ -190,7 +190,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     setFeedback(newFb);
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-    }, 2200);
+    }, 4200);
   }, []);
 
   useEffect(() => {

@@ -175,11 +175,11 @@ body {
     transform: translate(-50%, 10px) scale(0.88);
     opacity: 0;
   }
-  18% {
+  10% {
     transform: translate(-50%, 0) scale(1.05);
     opacity: 1;
   }
-  75% {
+  88% {
     transform: translate(-50%, 0) scale(1);
     opacity: 1;
   }
@@ -190,5 +190,5 @@ body {
 }
 
 .animate-float-toast {
-  animation: floatToast 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: floatToast 3.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
