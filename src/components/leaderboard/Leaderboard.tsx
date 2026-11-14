@@ -232,6 +232,7 @@ export const Leaderboard: React.FC = () => {
                   </div>
 
                   {/* Avatar */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={player.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.name}`}
                     alt={player.name}

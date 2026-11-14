@@ -190,7 +190,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     setFeedback(newFb);
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-    }, 4200);
+    }, 1800);
   }, []);
 
   useEffect(() => {
@@ -245,7 +245,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     const s = styleMap[ball];
     showFeedback({
       badge: `+${ballConfig.points} ${ball.toUpperCase()}`,
-      detail: `${activeName} • Break: ${nextState.currentBreak} pts`,
+      detail: nextState.isFrameOver 
+        ? `${activeName} won Frame ${currentFrameNum}!` 
+        : `${activeName} • Break: ${nextState.currentBreak} pts`,
       bgClass: s.bg,
       textClass: s.text,
       borderClass: s.border,
@@ -912,17 +914,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {feedback && (
         <div
           key={`float-${feedback.id}`}
-          className="fixed top-14 sm:top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast"
+          className="fixed top-14 sm:top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
         >
-          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
+          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider backdrop-blur-md ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
             {feedback.ballHex && (
               <span
                 className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
                 style={{ backgroundColor: feedback.ballHex }}
               />
             )}
-            <span>{feedback.badge}</span>
-            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1 border-l border-white/30">
+            <span className="whitespace-nowrap">{feedback.badge}</span>
+            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1.5 border-l border-white/30 truncate max-w-[50vw] sm:max-w-none">
               {feedback.detail}
             </span>
           </div>
@@ -1094,7 +1096,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 active:brightness-125 active:ring-2 active:ring-emerald-400 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-90 active:brightness-135 active:bg-amber-950 active:border-amber-400 active:ring-2 active:ring-amber-400/80 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
         >
           <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
           <span>Miss / Switch</span>
@@ -1104,7 +1106,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onQuickFoul4}
-          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 active:brightness-125 active:ring-2 active:ring-red-400 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
+          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-90 active:brightness-140 active:ring-4 active:ring-red-400 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
           title="Instant 4-point penalty to opponent"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
@@ -1115,7 +1117,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 active:scale-95 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
+          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 active:scale-90 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
           title="Custom foul points (5, 6, 7 pts)"
         >
           <span>···</span>
@@ -1128,7 +1130,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           onClick={onUndo}
           className={`col-span-8 sm:col-span-3 h-9 sm:h-10 px-2 sm:px-3 rounded-xl border font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             undoStack.length > 0
-              ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 active:scale-95 active:brightness-125 active:ring-2 active:ring-blue-400 shadow-md shadow-blue-950'
+              ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 active:scale-90 active:brightness-135 active:ring-2 active:ring-blue-400 shadow-md shadow-blue-950'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Undo last action (Ctrl+Z)"
@@ -1144,7 +1146,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           onClick={onRedo}
           className={`col-span-4 sm:col-span-1 h-9 sm:h-10 px-2 rounded-xl border font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
             redoStack.length > 0
-              ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 active:scale-95 active:brightness-125 active:ring-2 active:ring-purple-400 shadow-md'
+              ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 active:scale-90 active:brightness-135 active:ring-2 active:ring-purple-400 shadow-md'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Redo action (Ctrl+Y)"

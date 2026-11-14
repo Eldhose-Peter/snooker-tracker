@@ -524,6 +524,22 @@ async function testAbandon() {
   assert.strictEqual(completedMatches.length, 0, 'Completed match history must start completely empty');
   console.log('✓ Match history starts completely clear (0 completed matches).');
 
+  // 24. Verify Active Press Feedback & Removal of Target Section in Source
+  console.log('\n[24] Verifying Active Press Feedback & HUD Layout Integrity...');
+  const fs = await import('node:fs');
+  const css = fs.readFileSync('src/app/globals.css', 'utf8');
+  assert(css.includes('.snooker-ball:active'), 'globals.css must define .snooker-ball:active');
+  assert(css.includes('brightness(1.35)'), '.snooker-ball:active must enhance brightness on tap (not dim)');
+  assert(css.includes('floatToast'), 'globals.css must define floatToast animation');
+  assert(css.includes('popFeedback'), 'globals.css must define popFeedback animation');
+
+  const scoreboardSource = fs.readFileSync('src/components/scoreboard/LiveScoreboard.tsx', 'utf8');
+  assert(!scoreboardSource.includes('getBallOnLabel'), 'Target ball on label must be completely removed from LiveScoreboard');
+  assert(!scoreboardSource.includes('Target:'), 'HUD must not contain any Target section');
+  assert(scoreboardSource.includes('animate-float-toast'), 'LiveScoreboard must render animated floating toast for prominent feedback');
+  assert(scoreboardSource.includes('animate-pop-feedback'), 'LiveScoreboard must render animated pop feedback banner');
+  console.log('✓ Ball active tap brightness enhancement confirmed and Target section absence verified.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

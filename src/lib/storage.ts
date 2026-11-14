@@ -96,6 +96,7 @@ function ensureLocalSeed(): void {
     window.localStorage.removeItem('snooker_tracker_players');
     window.localStorage.removeItem('snooker_tracker_matches');
     window.localStorage.removeItem('snooker_tracker_frames');
+    window.localStorage.removeItem('snooker_active_live_session');
     window.localStorage.removeItem('snooker_tracker_players_v2');
     window.localStorage.removeItem('snooker_tracker_matches_v2');
     window.localStorage.removeItem('snooker_tracker_frames_v2');
@@ -109,7 +110,12 @@ function ensureLocalSeed(): void {
     p.name.includes('Alex') || p.name.includes('Liam') || p.name.includes('Marcus') || p.name.includes('Davey')
   );
 
-  if (needsReseed) {
+  const existingMatches = getLocal<Match[]>(MATCHES_KEY, []);
+  const hasLegacyMockMatches = existingMatches.some(m => 
+    m.id.startsWith('m1000') || m.id.startsWith('m2000') || m.id.startsWith('m3000')
+  );
+
+  if (needsReseed || hasLegacyMockMatches) {
     setLocal(PLAYERS_KEY, INITIAL_PLAYERS);
     setLocal(MATCHES_KEY, INITIAL_MATCHES);
     setLocal(FRAMES_KEY, INITIAL_FRAMES);
