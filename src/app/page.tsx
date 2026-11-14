@@ -165,7 +165,7 @@ export default function Home() {
       )}
 
       {/* Main Content Area (Optimized mobile padding to fit viewport comfortably without scrolling) */}
-      <main className={`flex-1 py-1 sm:py-3.5 ${activeTab === 'live' ? 'pb-16 sm:pb-20 md:pb-6' : 'pb-20 md:pb-6'}`}>
+      <main className={`flex-1 ${activeTab === 'live' ? 'py-0.5 sm:py-2 pb-16 sm:pb-20 md:pb-6' : 'py-1 sm:py-3.5 pb-20 md:pb-6'}`}>
         {activeTab === 'live' && hasActiveMatch && currentMatch && (
           <LiveScoreboard
             key={currentMatch.id}

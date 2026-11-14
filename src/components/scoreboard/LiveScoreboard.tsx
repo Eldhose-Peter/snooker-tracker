@@ -482,7 +482,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     if (state.tablePhase === 'COLOR_AFTER_RED') return 'COLOR (2-7)';
     if (state.tablePhase === 'COLORS_SEQUENCE') {
       const ball = COLOR_ORDER[state.colorsSequenceIndex];
-      return ball ? `${ball.toUpperCase()} (${BALL_CONFIGS[ball].points} pts)` : 'None';
+      return ball ? `${ball.toUpperCase()} (${BALL_CONFIGS[ball].points})` : 'None';
     }
     return 'Frame Over';
   };
@@ -604,10 +604,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 key={player.id}
                 onClick={() => onSwitchActivePlayer(idx)}
                 title={isActive ? `Scoring for ${player.name}` : `Tap to switch turn to ${player.name}`}
-                className={`relative px-2.5 sm:px-3 py-1.5 h-[50px] sm:h-[54px] rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between ${
+                className={`relative px-2.5 sm:px-3 py-1.5 h-[50px] sm:h-[54px] rounded-xl border-2 transition-all cursor-pointer select-none flex items-center justify-between ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#103822] via-[#14472b] to-[#0a2315] border-2 border-emerald-400 shadow-md shadow-emerald-950 ring-2 ring-emerald-400/40'
-                    : 'bg-[#0d1712]/75 border-gray-800 opacity-70 hover:opacity-100 hover:border-emerald-800/60'
+                    ? 'bg-gradient-to-r from-[#103822] via-[#14472b] to-[#0a2315] border-emerald-400 shadow-md shadow-emerald-950 ring-2 ring-emerald-400/40'
+                    : 'bg-[#0d1712]/75 border-gray-800/80 opacity-70 hover:opacity-100 hover:border-emerald-800/60'
                 }`}
               >
                 <div className="min-w-0 pr-1.5 flex flex-col justify-center">
@@ -659,6 +659,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             ? 'grid-cols-3'
             : playerCount === 4
             ? 'grid-cols-2 sm:grid-cols-4'
+            : playerCount === 5
+            ? 'grid-cols-6 sm:grid-cols-5'
             : 'grid-cols-3 sm:grid-cols-6'
         }`}>
           {resolvedPlayers.map((player, idx) => {
@@ -666,31 +668,34 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             const score = state.playerScores[idx] ?? 0;
             const highBreak = state.playerHighestBreaks[idx] ?? 0;
             const framesWon = playerFrames[idx] ?? 0;
+            const spanClass = playerCount === 5 
+              ? (idx < 3 ? 'col-span-2 sm:col-span-1' : 'col-span-3 sm:col-span-1')
+              : '';
 
             return (
               <div
                 key={player.id}
                 onClick={() => onSwitchActivePlayer(idx)}
                 title={isActive ? `Scoring for ${player.name}` : `Tap to switch to ${player.name}`}
-                className={`relative px-2 sm:px-2.5 h-10 sm:h-11 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between ${
+                className={`relative px-2 sm:px-2.5 h-[38px] sm:h-10 rounded-xl border-2 transition-all cursor-pointer select-none flex items-center justify-between ${spanClass} ${
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-950 via-[#103822] to-emerald-950 border-2 border-emerald-400 shadow-md shadow-emerald-950 ring-1 ring-emerald-400/50'
+                    ? 'bg-gradient-to-r from-emerald-950 via-[#103822] to-emerald-950 border-emerald-400 shadow-md shadow-emerald-950 ring-1 ring-emerald-400/50'
                     : 'bg-[#0d1712]/80 border-gray-800/80 hover:border-emerald-700/60 hover:bg-[#122218]/80'
                 }`}
               >
                 <div className="flex items-center space-x-1 sm:space-x-1.5 min-w-0 pr-1">
                   {isActive ? (
-                    <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 flex-shrink-0 animate-pulse" />
+                    <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400 flex-shrink-0 animate-pulse" />
                   ) : (
                     <span className="text-[10px] font-mono font-bold text-gray-500 flex-shrink-0">
                       #{idx + 1}
                     </span>
                   )}
-                  <span className={`text-xs font-bold truncate ${isActive ? 'text-white font-black' : 'text-gray-300'}`}>
+                  <span className={`text-[11px] sm:text-xs font-bold truncate ${isActive ? 'text-white font-black' : 'text-gray-300'}`}>
                     {player.name}
                   </span>
                   {match.best_of > 1 && framesWon > 0 && (
-                    <span className="text-[9px] px-1 rounded bg-emerald-900/60 text-emerald-300 font-mono font-bold flex-shrink-0">
+                    <span className="text-[8px] sm:text-[9px] px-1 rounded bg-emerald-900/60 text-emerald-300 font-mono font-bold flex-shrink-0">
                       {framesWon}F
                     </span>
                   )}
@@ -698,7 +703,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
                 <div className="flex items-center space-x-1 flex-shrink-0 pl-1">
                   {highBreak > 0 && (
-                    <span className="text-[9px] text-amber-400 font-mono hidden xs:inline" title={`High Break: ${highBreak}`}>
+                    <span className="text-[9px] text-amber-400 font-mono hidden sm:inline" title={`High Break: ${highBreak}`}>
                       🔥{highBreak}
                     </span>
                   )}
@@ -715,7 +720,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* UNIFIED SCORER CONSOLE & TABLE HUD STRIP                      */}
       {/* ------------------------------------------------------------- */}
-      <div className="bg-[#0b140f] border border-emerald-900/60 rounded-xl px-2.5 sm:px-3 py-1.5 shadow-sm space-y-1 sm:space-y-1.5">
+      <div className="bg-[#0b140f] border border-emerald-900/60 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm space-y-1 sm:space-y-1.5">
         
         {/* Row 1: Active Scorer Banner & Current Break */}
         <div className="flex items-center justify-between gap-2">
@@ -724,7 +729,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
               <Zap className="w-2.5 h-2.5 fill-black text-black" />
               AT TABLE
             </span>
-            <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-gray-400 flex-shrink-0 hidden xs:inline">
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-gray-400 flex-shrink-0">
               SCORING FOR:
             </span>
             <span className="text-xs sm:text-sm font-black text-white truncate underline decoration-emerald-400 decoration-2">
@@ -754,7 +759,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           </div>
 
           <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between min-w-0">
-            <span className="text-[10px] text-gray-400 font-medium mr-1 flex-shrink-0">Target:</span>
+            <span className="text-[10px] text-gray-400 font-medium mr-1 flex-shrink-0">On:</span>
             <span className="font-mono font-bold text-emerald-300 text-[11px] sm:text-xs truncate">{getBallOnLabel()}</span>
           </div>
         </div>
@@ -762,8 +767,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* Snookers Alert Banner (Appears only when snookers needed) */}
       {state.snookersNeeded.needed && (
-        <div className="bg-amber-950/60 border border-amber-600/40 rounded-lg px-2.5 py-1 flex items-center space-x-1.5 text-amber-300 text-[11px]">
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+        <div className="bg-amber-950/60 border border-amber-600/40 rounded-lg px-2 py-0.5 flex items-center space-x-1.5 text-amber-300 text-[10px] sm:text-[11px]">
+          <ShieldAlert className="w-3 h-3 text-amber-400 flex-shrink-0" />
           <span className="font-bold truncate">
             Snookers: {state.snookersNeeded.trailers.map(t => `${resolvedPlayers[t.playerIndex]?.name || `P${t.playerIndex + 1}`} (${t.count})`).join(', ')}
           </span>
@@ -772,15 +777,15 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* Free Ball Active Banner (With 1-tap dismiss) */}
       {state.freeBallActive && (
-        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2.5 py-1 flex items-center justify-between text-yellow-300 text-[11px]">
-          <div className="flex items-center space-x-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="font-bold">FREE BALL ACTIVE: Any nominated color acts as ball on</span>
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2 py-0.5 flex items-center justify-between text-yellow-300 text-[10px] sm:text-[11px]">
+          <div className="flex items-center space-x-1.5 min-w-0">
+            <Sparkles className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+            <span className="font-bold truncate">FREE BALL: Nominated color is on</span>
           </div>
           <button
             type="button"
             onClick={onToggleFreeBall}
-            className="text-[9px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-black hover:bg-yellow-400 transition cursor-pointer"
+            className="text-[9px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-black hover:bg-yellow-400 transition cursor-pointer flex-shrink-0 ml-1"
           >
             Cancel
           </button>

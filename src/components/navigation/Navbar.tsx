@@ -32,21 +32,21 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* TOP HEADER (Brand, Cloud Status, Rules Help, Desktop Nav)        */}
       {/* ----------------------------------------------------------------- */}
       <header className="sticky top-0 z-40 bg-[#080d0a]/95 backdrop-blur-md border-b border-emerald-900/40">
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 h-11 sm:h-14 md:h-16 flex items-center justify-between">
           
           {/* Brand */}
           <div 
             onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
             className="flex items-center space-x-2 sm:space-x-2.5 cursor-pointer select-none"
           >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-900/50 border border-emerald-400/30 flex-shrink-0">
-              <span className="text-lg sm:text-xl">🎱</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-900/50 border border-emerald-400/30 flex-shrink-0">
+              <span className="text-base sm:text-lg md:text-xl">🎱</span>
             </div>
             <div>
-              <h1 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white flex items-center gap-1.5">
+              <h1 className="text-xs sm:text-sm md:text-base font-black tracking-tight text-white flex items-center gap-1.5">
                 Snooker<span className="text-emerald-400">Track</span>
                 {hasActiveMatch && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider">
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-[9px] sm:text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" /> Live
                   </span>
                 )}

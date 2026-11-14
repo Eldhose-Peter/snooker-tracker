@@ -485,6 +485,23 @@ async function testAbandon() {
   }
   console.log('✓ Compact multiplayer scoring and switching cleanly validated for 2, 3, 4, 5, and 6 players.');
 
+  // 21. Verify 5-Player Snookers & Sequence Progression
+  console.log('\n[21] Verifying 5-Player Snookers Calculation & Color Clearance...');
+  let state5P = createInitialFrameState(5, 1, ['Eldho', 'Thoma', 'Raju', 'Adi', 'BM']);
+  // Pot last red
+  state5P = handlePot(state5P, 'red');
+  assert.strictEqual(state5P.redsRemaining, 0);
+  assert.strictEqual(state5P.tablePhase, 'COLOR_AFTER_RED');
+  // Pot color after red (Black)
+  state5P = handlePot(state5P, 'black');
+  assert.strictEqual(state5P.tablePhase, 'COLORS_SEQUENCE');
+  assert.strictEqual(state5P.colorsSequenceIndex, 0); // Yellow is ball on
+  assert.strictEqual(state5P.pointsRemaining, 27);
+  // Check snookers needed in 5-player match
+  const snk5P = checkSnookersNeeded(state5P.playerScores, state5P.pointsRemaining);
+  assert.strictEqual(snk5P.needed, false); // Eldho has 8, remaining 27 > 8, so no snooker needed yet
+  console.log('✓ 5-Player snookers calculation and color clearance phase transition validated.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');
