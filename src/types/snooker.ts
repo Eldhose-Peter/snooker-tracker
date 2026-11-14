@@ -80,28 +80,38 @@ export interface ShotAction {
   id: string;
   timestamp: number;
   type: 'POT' | 'MISS' | 'FOUL' | 'FREE_BALL_POT' | 'CONCEDE';
-  player: 1 | 2;
+  playerIndex: number;
+  player?: 1 | 2; // backward compatibility
   ball?: BallType;
   points?: number;
-  awardedTo?: 1 | 2;
+  awardedTo?: number[]; // indices of players awarded points
   description: string;
+}
+
+export interface TrailerSnookerInfo {
+  playerIndex: number;
+  count: number;
+  pointsDiff: number;
 }
 
 export interface SnookersNeededInfo {
   needed: boolean;
+  leaderIndex: number;
+  trailers: TrailerSnookerInfo[];
+  // Backwards compatibility for 2-player mode:
   player: 1 | 2 | null;
   count: number;
   pointsDiff: number;
 }
 
 export interface FrameState {
-  player1Score: number;
-  player2Score: number;
-  activePlayer: 1 | 2;
+  // Multiplayer scores indexed by rotation sequence
+  playerScores: number[];
+  playerNames?: string[];
+  activePlayerIndex: number;
   currentBreak: number;
   currentBreakBalls: BallType[];
-  highestBreakP1: number;
-  highestBreakP2: number;
+  playerHighestBreaks: number[];
   redsRemaining: number;
   tablePhase: TablePhase;
   colorsSequenceIndex: number; // 0=yellow, 1=green, 2=brown, 3=blue, 4=pink, 5=black
@@ -109,9 +119,17 @@ export interface FrameState {
   pointsRemaining: number;
   snookersNeeded: SnookersNeededInfo;
   isFrameOver: boolean;
-  winner: 1 | 2 | null;
+  winnerIndex: number | null;
   winReason?: string;
   lastActionDescription?: string;
+
+  // Backwards compatibility properties (for 2-player):
+  player1Score: number;
+  player2Score: number;
+  activePlayer: 1 | 2;
+  highestBreakP1: number;
+  highestBreakP2: number;
+  winner: 1 | 2 | null;
 }
 
 export interface Player {
@@ -124,32 +142,40 @@ export interface Player {
 
 export interface Match {
   id: string;
-  player1_id: string;
-  player2_id: string;
-  player1?: Player;
-  player2?: Player;
+  player_ids?: string[]; // all participating player IDs in sequence
+  players?: Player[]; // hydrated players in sequence
+  player_frames?: number[]; // frames won by each player in sequence
   best_of: number;
   status: 'in_progress' | 'completed' | 'abandoned';
   winner_id?: string | null;
-  player1_frames: number;
-  player2_frames: number;
   reds_count: number;
   started_at: string;
   completed_at?: string | null;
   frames?: Frame[];
+
+  // Backwards compatibility fields for 2-player / DB schema:
+  player1_id: string;
+  player2_id: string;
+  player1?: Player;
+  player2?: Player;
+  player1_frames: number;
+  player2_frames: number;
 }
 
 export interface Frame {
   id: string;
   match_id: string;
   frame_number: number;
-  player1_score: number;
-  player2_score: number;
+  scores?: number[]; // scores for all players in sequence
   winner_id?: string | null;
   highest_break: number;
   highest_break_player_id?: string | null;
   started_at?: string;
   completed_at?: string | null;
+
+  // Backwards compatibility fields:
+  player1_score: number;
+  player2_score: number;
 }
 
 export interface LeaderboardEntry {

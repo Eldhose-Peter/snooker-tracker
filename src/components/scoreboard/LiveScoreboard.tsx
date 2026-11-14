@@ -15,6 +15,7 @@ import {
   handlePot, 
   handleMiss, 
   handleFoul, 
+  handleSwitchPlayer, 
   handleConcede 
 } from '@/lib/snooker-engine';
 import { FoulModal } from './FoulModal';
@@ -22,157 +23,294 @@ import { WinModal } from './WinModal';
 import { recordFrameCompleted, finishMatch } from '@/lib/storage';
 import { 
   RotateCcw, 
+  RotateCw, 
   AlertTriangle, 
   Flag, 
   Sparkles, 
-  CornerDownRight, 
   Zap, 
   Flame, 
-  ChevronRight,
-  ShieldAlert
+  ChevronRight, 
+  ShieldAlert, 
+  Users 
 } from 'lucide-react';
 
 interface LiveScoreboardProps {
   match: Match;
-  player1: Player;
-  player2: Player;
+  players?: Player[]; // sequence of players
+  // Legacy backward compatibility:
+  player1?: Player;
+  player2?: Player;
   onMatchComplete: () => void;
 }
 
 export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   match,
-  player1,
-  player2,
+  players: propPlayers,
+  player1: propP1,
+  player2: propP2,
   onMatchComplete,
 }) => {
-  const [currentFrameNum, setCurrentFrameNum] = useState<number>(
-    (match.player1_frames + match.player2_frames) + 1
-  );
-  const [p1MatchFrames, setP1MatchFrames] = useState<number>(match.player1_frames);
-  const [p2MatchFrames, setP2MatchFrames] = useState<number>(match.player2_frames);
+  // Resolve participating players in sequence order
+  const resolvedPlayers: Player[] = React.useMemo(() => {
+    if (propPlayers && propPlayers.length > 0) return propPlayers;
+    if (match.players && match.players.length > 0) return match.players;
+    const fallback: Player[] = [];
+    if (propP1) fallback.push(propP1);
+    if (propP2) fallback.push(propP2);
+    if (fallback.length >= 2) return fallback;
+    return [
+      { id: match.player1_id, name: 'Player 1' },
+      { id: match.player2_id, name: 'Player 2' },
+    ];
+  }, [propPlayers, match.players, propP1, propP2, match.player1_id, match.player2_id]);
 
-  // Snooker Frame State and History Stack for Undo
-  const [state, setState] = useState<FrameState>(() => createInitialFrameState(match.reds_count || 15));
-  const [historyStack, setHistoryStack] = useState<FrameState[]>([]);
+  const playerCount = resolvedPlayers.length;
+  const playerNames = React.useMemo(() => resolvedPlayers.map(p => p.name), [resolvedPlayers]);
+
+  const [currentFrameNum, setCurrentFrameNum] = useState<number>(() => {
+    const totalFrames = (match.player_frames?.reduce((a, b) => a + b, 0)) ?? 
+      (match.player1_frames + match.player2_frames);
+    return totalFrames + 1;
+  });
+
+  const [playerFrames, setPlayerFrames] = useState<number[]>(() => {
+    if (match.player_frames && match.player_frames.length === playerCount) {
+      return match.player_frames;
+    }
+    const arr = new Array(playerCount).fill(0);
+    arr[0] = match.player1_frames || 0;
+    arr[1] = match.player2_frames || 0;
+    return arr;
+  });
+
+  // Snooker Frame State and Undo / Redo Stacks
+  const [state, setState] = useState<FrameState>(() => {
+    const initBreakOff = (currentFrameNum - 1) % playerCount;
+    const fresh = createInitialFrameState(playerCount, match.reds_count || 15, playerNames);
+    if (initBreakOff !== 0) {
+      return {
+        ...fresh,
+        activePlayerIndex: initBreakOff,
+        lastActionDescription: `Frame ${currentFrameNum} started. Break-off shot by ${playerNames[initBreakOff] || `Player ${initBreakOff + 1}`}.`,
+      };
+    }
+    return fresh;
+  });
+
+  const [undoStack, setUndoStack] = useState<FrameState[]>([]);
+  const [redoStack, setRedoStack] = useState<FrameState[]>([]);
 
   // Modals
   const [isFoulModalOpen, setIsFoulModalOpen] = useState(false);
   const [isWinModalOpen, setIsWinModalOpen] = useState(false);
 
-  // Sync state if match changes
-  useEffect(() => {
-    setP1MatchFrames(match.player1_frames);
-    setP2MatchFrames(match.player2_frames);
-    setCurrentFrameNum((match.player1_frames + match.player2_frames) + 1);
-    setState(createInitialFrameState(match.reds_count || 15));
-    setHistoryStack([]);
-  }, [match.id, match.player1_frames, match.player2_frames, match.reds_count]);
+  // Push state to undo stack before mutating and clear redo stack
+  const applyStateMutation = useCallback((nextState: FrameState) => {
+    setUndoStack((prev) => [...prev, state]);
+    setRedoStack([]); // Clear redo stack on new action
+    setState(nextState);
 
-  // When frame finishes
-  useEffect(() => {
-    if (state.isFrameOver && state.winner && !isWinModalOpen) {
-      // Determine winner id
-      const winnerId = state.winner === 1 ? player1.id : player2.id;
-      const highestBreak = Math.max(state.highestBreakP1, state.highestBreakP2);
-      const highBreakPlayerId = state.highestBreakP1 > state.highestBreakP2
-        ? player1.id
-        : state.highestBreakP2 > state.highestBreakP1
-        ? player2.id
-        : null;
-
-      // Update in-memory match frame tally
-      const nextP1Frames = state.winner === 1 ? p1MatchFrames + 1 : p1MatchFrames;
-      const nextP2Frames = state.winner === 2 ? p2MatchFrames + 1 : p2MatchFrames;
-      setP1MatchFrames(nextP1Frames);
-      setP2MatchFrames(nextP2Frames);
-
-      // Persist frame to Supabase / LocalStorage
-      recordFrameCompleted(
-        match.id,
-        currentFrameNum,
-        state.player1Score,
-        state.player2Score,
-        winnerId,
-        highestBreak,
-        highBreakPlayerId
-      );
-
-      // Check if match is concluded
-      const targetFrames = Math.ceil(match.best_of / 2);
-      if (nextP1Frames >= targetFrames || nextP2Frames >= targetFrames) {
-        const matchWinnerId = nextP1Frames >= targetFrames ? player1.id : player2.id;
-        finishMatch(match.id, matchWinnerId, nextP1Frames, nextP2Frames);
-      }
-
+    // If frame just concluded, open celebration modal (frame commit happens on Next Frame / Finish Match)
+    if (nextState.isFrameOver && nextState.winnerIndex !== null) {
       setIsWinModalOpen(true);
     }
-  }, [state.isFrameOver, state.winner]);
-
-  // Push state to history stack before mutating
-  const pushState = useCallback((nextState: FrameState) => {
-    setHistoryStack((prev) => [...prev, state]);
-    setState(nextState);
   }, [state]);
 
   // Actions
   const onPotBall = (ball: BallType) => {
     const nextState = handlePot(state, ball);
-    pushState(nextState);
+    applyStateMutation(nextState);
   };
 
   const onMiss = () => {
     const nextState = handleMiss(state);
-    pushState(nextState);
+    applyStateMutation(nextState);
   };
 
-  const onConfirmFoul = (points: number, awardFreeBall: boolean, passBack: boolean) => {
-    const nextState = handleFoul(state, points, awardFreeBall, passBack);
-    pushState(nextState);
+  const onConfirmFoul = (
+    points: number, 
+    target: 'all_opponents' | 'next_player' | number, 
+    awardFreeBall: boolean, 
+    passBack: boolean
+  ) => {
+    const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
+    applyStateMutation(nextState);
   };
 
   const onConcede = () => {
-    const activeName = state.activePlayer === 1 ? player1.name : player2.name;
-    if (window.confirm(`Are you sure ${activeName} wants to concede this frame?`)) {
-      const nextState = handleConcede(state, state.activePlayer);
-      pushState(nextState);
+    const playerAtTable = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
+    if (window.confirm(`Are you sure ${playerAtTable.name} wants to concede this frame?`)) {
+      const nextState = handleConcede(state, state.activePlayerIndex);
+      applyStateMutation(nextState);
     }
   };
 
-  const onUndo = () => {
-    if (historyStack.length === 0) return;
-    const previous = historyStack[historyStack.length - 1];
-    setHistoryStack((prev) => prev.slice(0, -1));
+  // Undo Handler - Always closes win modal and reverts state safely
+  const onUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, state]);
+    setIsWinModalOpen(false);
     setState(previous);
-  };
+  }, [undoStack, state]);
+
+  // Redo Handler
+  const onRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, state]);
+    setState(next);
+    if (next.isFrameOver && next.winnerIndex !== null) {
+      setIsWinModalOpen(true);
+    }
+  }, [redoStack, state]);
+
+  // Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          onRedo();
+        } else {
+          onUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        onRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onUndo, onRedo]);
 
   const onToggleFreeBall = () => {
-    setState((prev) => ({
-      ...prev,
-      freeBallActive: !prev.freeBallActive,
-      lastActionDescription: !prev.freeBallActive ? 'Free ball nominated' : 'Free ball cancelled',
-    }));
+    applyStateMutation({
+      ...state,
+      freeBallActive: !state.freeBallActive,
+      lastActionDescription: !state.freeBallActive ? 'Free ball nominated' : 'Free ball cancelled',
+    });
   };
 
-  // Next Frame handler
-  const handleNextFrame = () => {
+  const onSwitchActivePlayer = (targetIndex: number) => {
+    if (targetIndex === state.activePlayerIndex || state.isFrameOver) return;
+    const nextState = handleSwitchPlayer(state, targetIndex);
+    applyStateMutation(nextState);
+  };
+
+  // Projected frames including current pending frame if concluded
+  const projectedFrames = React.useMemo(() => {
+    if (state.isFrameOver && state.winnerIndex !== null) {
+      const copy = [...playerFrames];
+      copy[state.winnerIndex] = (copy[state.winnerIndex] || 0) + 1;
+      return copy;
+    }
+    return playerFrames;
+  }, [state.isFrameOver, state.winnerIndex, playerFrames]);
+
+  const framesToWin = Math.ceil(match.best_of / 2);
+  const isMatchWon = match.best_of === 1 
+    ? state.isFrameOver 
+    : projectedFrames.some(f => f >= framesToWin);
+
+  const matchWinnerIdx = isMatchWon
+    ? (match.best_of === 1 ? state.winnerIndex : projectedFrames.findIndex(f => f >= framesToWin))
+    : -1;
+  const matchWinner = matchWinnerIdx !== null && matchWinnerIdx !== -1 ? resolvedPlayers[matchWinnerIdx] : null;
+
+  // Next Frame handler: commits previous frame and sets up new frame
+  const handleNextFrame = async () => {
+    if (state.winnerIndex !== null) {
+      const winnerIdx = state.winnerIndex;
+      const winnerPlayer = resolvedPlayers[winnerIdx] || resolvedPlayers[0];
+      const highestBreak = Math.max(...state.playerHighestBreaks);
+      const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+      const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
+
+      const updatedFrames = [...playerFrames];
+      updatedFrames[winnerIdx] = (updatedFrames[winnerIdx] || 0) + 1;
+
+      // Persist frame to Supabase / LocalStorage
+      await recordFrameCompleted(
+        match.id,
+        currentFrameNum,
+        state.playerScores,
+        winnerPlayer.id,
+        highestBreak,
+        highBreakPlayerId
+      );
+
+      setPlayerFrames(updatedFrames);
+    }
+
     setIsWinModalOpen(false);
-    setCurrentFrameNum((prev) => prev + 1);
-    setState(createInitialFrameState(match.reds_count || 15));
-    setHistoryStack([]);
+    const nextFrameNum = currentFrameNum + 1;
+    setCurrentFrameNum(nextFrameNum);
+
+    // In snooker rotation, break-off rotates to next player in sequence for subsequent frames
+    const nextBreakOffIndex = (nextFrameNum - 1) % playerCount;
+    const freshState = createInitialFrameState(playerCount, match.reds_count || 15, playerNames);
+    setState({
+      ...freshState,
+      activePlayerIndex: nextBreakOffIndex,
+      lastActionDescription: `Frame ${nextFrameNum} started. Break-off shot by ${playerNames[nextBreakOffIndex] || `Player ${nextBreakOffIndex + 1}`}.`,
+    });
+    setUndoStack([]);
+    setRedoStack([]);
   };
 
-  // Match Finish handler
-  const handleFinishMatch = () => {
+  // Match Finish handler: commits final frame and completes match
+  const handleFinishMatch = async () => {
+    if (state.isFrameOver && state.winnerIndex !== null) {
+      const winnerIdx = state.winnerIndex;
+      const winnerPlayer = resolvedPlayers[winnerIdx] || resolvedPlayers[0];
+      const highestBreak = Math.max(...state.playerHighestBreaks);
+      const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+      const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
+
+      const finalFrames = [...playerFrames];
+      finalFrames[winnerIdx] = (finalFrames[winnerIdx] || 0) + 1;
+
+      await recordFrameCompleted(
+        match.id,
+        currentFrameNum,
+        state.playerScores,
+        winnerPlayer.id,
+        highestBreak,
+        highBreakPlayerId
+      );
+
+      const overallWinner = matchWinner || winnerPlayer;
+      await finishMatch(match.id, overallWinner.id, finalFrames);
+    }
+
     setIsWinModalOpen(false);
     onMatchComplete();
   };
 
   const availableBalls = getAvailableBalls(state);
-  const framesToWin = Math.ceil(match.best_of / 2);
-  const isMatchWon = p1MatchFrames >= framesToWin || p2MatchFrames >= framesToWin;
-  const matchWinner = p1MatchFrames >= framesToWin ? player1 : p2MatchFrames >= framesToWin ? player2 : null;
-  const highestBreak = Math.max(state.highestBreakP1, state.highestBreakP2);
-  const highBreakPlayer = state.highestBreakP1 >= state.highestBreakP2 ? player1 : player2;
+
+  const frameWinner = state.winnerIndex !== null ? resolvedPlayers[state.winnerIndex] : null;
+  const highestBreak = Math.max(...state.playerHighestBreaks);
+  const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+  const highBreakPlayer = highestBreak > 0 ? resolvedPlayers[highBreakPlayerIdx] : null;
+
+  const activePlayer = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
+
+  // Leader calculation (with tie support)
+  const maxScore = Math.max(...state.playerScores);
+  const leadingIndices = state.playerScores
+    .map((s, idx) => (s === maxScore ? idx : -1))
+    .filter(idx => idx !== -1);
+  const isLeaderTied = leadingIndices.length > 1;
+  const leaderNames = leadingIndices.map(idx => resolvedPlayers[idx]?.name || `P${idx + 1}`).join(' & ');
 
   // Determine current ball on description
   const getBallOnLabel = (): string => {
@@ -192,143 +330,135 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & SERIES TRACKER */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between px-3 py-2 bg-[#0d1611] border border-emerald-900/40 rounded-xl text-xs sm:text-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 py-2.5 bg-[#0d1611] border border-emerald-900/40 rounded-2xl text-xs sm:text-sm gap-2 shadow-sm">
         <div className="flex items-center space-x-2">
           <span className="font-bold text-emerald-400">Frame {currentFrameNum}</span>
           <span className="text-gray-500">|</span>
-          <span className="text-gray-400">Best of {match.best_of} ({framesToWin} to win)</span>
+          <span className="text-gray-400">
+            {match.best_of === 1 ? 'Single Frame' : `Best of ${match.best_of} (${framesToWin} to win)`}
+          </span>
+          <span className="text-gray-500">|</span>
+          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+            <Users className="w-3.5 h-3.5 text-emerald-400" />
+            {playerCount} Players
+          </span>
         </div>
-        <div className="flex items-center space-x-2 font-mono font-bold">
-          <span className="text-white">{p1MatchFrames}</span>
-          <span className="text-emerald-500">-</span>
-          <span className="text-white">{p2MatchFrames}</span>
+
+        {/* Frames Tally */}
+        <div className="flex items-center space-x-3 overflow-x-auto font-mono text-xs font-bold scrollbar-none">
+          {resolvedPlayers.map((p, idx) => (
+            <div key={p.id} className="flex items-center space-x-1 flex-shrink-0">
+              <span className="text-gray-400 truncate max-w-[70px]">{p.name}:</span>
+              <span className="text-emerald-300 font-black">{playerFrames[idx] || 0}</span>
+              {idx < resolvedPlayers.length - 1 && <span className="text-gray-600 ml-1">·</span>}
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* PLAYER SCORE CARDS (ACTIVE PLAYER GLOW) */}
+      {/* MULTIPLAYER SCORE CARDS (ACTIVE PLAYER GLOW) */}
       {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
-        
-        {/* PLAYER 1 CARD */}
-        <div
-          onClick={() => {
-            if (state.activePlayer !== 1 && !state.isFrameOver) {
-              pushState({ ...state, activePlayer: 1, currentBreak: 0, currentBreakBalls: [] });
-            }
-          }}
-          className={`relative p-3 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
-            state.activePlayer === 1
-              ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-500/30'
-              : 'bg-[#0d1712]/80 border-gray-800 opacity-80 hover:opacity-100'
-          }`}
-        >
-          {state.activePlayer === 1 && (
-            <div className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black tracking-wider uppercase flex items-center gap-1 shadow">
-              <Zap className="w-3 h-3 fill-black" /> At Table
-            </div>
-          )}
+      <div className={`grid gap-2 sm:gap-3 ${
+        playerCount === 2 
+          ? 'grid-cols-2' 
+          : playerCount === 3 
+          ? 'grid-cols-1 sm:grid-cols-3' 
+          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+      }`}>
+        {resolvedPlayers.map((player, idx) => {
+          const isActive = state.activePlayerIndex === idx;
+          const score = state.playerScores[idx] ?? 0;
+          const highBreak = state.playerHighestBreaks[idx] ?? 0;
+          const framesWon = playerFrames[idx] ?? 0;
 
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <h2 className="text-sm sm:text-lg font-bold text-white truncate">
-                {player1.name}
-              </h2>
-              {player1.nickname && (
-                <p className="text-[11px] text-emerald-400/80 truncate">
-                  "{player1.nickname}"
-                </p>
-              )}
-            </div>
-            <div className="text-xs px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-800/40 text-emerald-300 font-mono font-bold">
-              {p1MatchFrames} {p1MatchFrames === 1 ? 'frame' : 'frames'}
-            </div>
-          </div>
+          return (
+            <div
+              key={player.id}
+              onClick={() => onSwitchActivePlayer(idx)}
+              title="Click to set active player at table"
+              className={`relative p-3 sm:p-4 rounded-2xl border transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-500/30'
+                  : 'bg-[#0d1712]/85 border-gray-800 opacity-80 hover:opacity-100 hover:border-emerald-900/60'
+              }`}
+            >
+              {/* Turn Sequence & At Table Badge */}
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                  isActive ? 'bg-emerald-500/30 text-emerald-300' : 'bg-gray-800 text-gray-400'
+                }`}>
+                  #{idx + 1}
+                </span>
 
-          <div className="mt-2 sm:mt-3 flex items-baseline justify-between">
-            <span className="text-4xl sm:text-6xl font-black text-white font-mono tracking-tight">
-              {state.player1Score}
-            </span>
-            {state.highestBreakP1 > 0 && (
-              <span className="text-[11px] text-amber-300 flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/30">
-                <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-                Hi: {state.highestBreakP1}
-              </span>
-            )}
-          </div>
-        </div>
+                {isActive && (
+                  <div className="px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black tracking-wider uppercase flex items-center gap-1 shadow">
+                    <Zap className="w-2.5 h-2.5 fill-black" /> At Table
+                  </div>
+                )}
 
-        {/* PLAYER 2 CARD */}
-        <div
-          onClick={() => {
-            if (state.activePlayer !== 2 && !state.isFrameOver) {
-              pushState({ ...state, activePlayer: 2, currentBreak: 0, currentBreakBalls: [] });
-            }
-          }}
-          className={`relative p-3 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
-            state.activePlayer === 2
-              ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-500/30'
-              : 'bg-[#0d1712]/80 border-gray-800 opacity-80 hover:opacity-100'
-          }`}
-        >
-          {state.activePlayer === 2 && (
-            <div className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black tracking-wider uppercase flex items-center gap-1 shadow">
-              <Zap className="w-3 h-3 fill-black" /> At Table
+                <div className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/40 text-emerald-300 font-mono font-bold">
+                  {framesWon} {framesWon === 1 ? 'frame' : 'frames'}
+                </div>
+              </div>
+
+              {/* Player Name */}
+              <div className="min-w-0 pr-1">
+                <h2 className="text-sm sm:text-base font-bold text-white truncate">
+                  {player.name}
+                </h2>
+                {player.nickname && (
+                  <p className="text-[10px] text-emerald-400/80 truncate">
+                    &ldquo;{player.nickname}&rdquo;
+                  </p>
+                )}
+              </div>
+
+              {/* Score Display */}
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-3xl sm:text-5xl font-black text-white font-mono tracking-tight">
+                  {score}
+                </span>
+                {highBreak > 0 && (
+                  <span className="text-[10px] text-amber-300 flex items-center gap-0.5 bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/30 font-mono">
+                    <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                    Hi: {highBreak}
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-2">
-              <h2 className="text-sm sm:text-lg font-bold text-white truncate">
-                {player2.name}
-              </h2>
-              {player2.nickname && (
-                <p className="text-[11px] text-emerald-400/80 truncate">
-                  "{player2.nickname}"
-                </p>
-              )}
-            </div>
-            <div className="text-xs px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-800/40 text-emerald-300 font-mono font-bold">
-              {p2MatchFrames} {p2MatchFrames === 1 ? 'frame' : 'frames'}
-            </div>
-          </div>
-
-          <div className="mt-2 sm:mt-3 flex items-baseline justify-between">
-            <span className="text-4xl sm:text-6xl font-black text-white font-mono tracking-tight">
-              {state.player2Score}
-            </span>
-            {state.highestBreakP2 > 0 && (
-              <span className="text-[11px] text-amber-300 flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/30">
-                <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-                Hi: {state.highestBreakP2}
-              </span>
-            )}
-          </div>
-        </div>
-
+          );
+        })}
       </div>
 
       {/* ------------------------------------------------------------- */}
       {/* CURRENT BREAK ACCUMULATOR & BALL CHIPS */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-card rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      <div className="baize-card rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-md">
         <div className="flex items-center space-x-3">
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-600/30 flex items-center space-x-2">
-            <span className="text-xs text-gray-400 uppercase font-semibold">Break</span>
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/90 border border-emerald-600/40 flex items-center space-x-2">
+            <div className="text-left">
+              <span className="text-[9px] text-gray-400 uppercase font-semibold block leading-none">
+                {activePlayer.name}&apos;s
+              </span>
+              <span className="text-xs text-emerald-400 uppercase font-bold">
+                Break
+              </span>
+            </div>
             <span className="text-2xl sm:text-3xl font-black text-yellow-400 font-mono">
               {state.currentBreak}
             </span>
           </div>
 
           {/* Balls potted in current break */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto py-1 max-w-[220px] sm:max-w-xs scrollbar-none">
+          <div className="flex items-center space-x-1.5 overflow-x-auto py-1 max-w-[200px] sm:max-w-xs scrollbar-none">
             {state.currentBreakBalls.length === 0 ? (
               <span className="text-xs text-gray-500 italic">No balls potted yet in break</span>
             ) : (
               state.currentBreakBalls.map((b, idx) => (
                 <div
                   key={idx}
-                  className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm"
+                  className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm border border-black/20"
                   style={{ backgroundColor: BALL_CONFIGS[b].colorHex }}
                   title={`${BALL_CONFIGS[b].name} (+${BALL_CONFIGS[b].points})`}
                 />
@@ -374,17 +504,26 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         {/* Snookers Alert or Difference */}
         <div className="col-span-2 sm:col-span-1 bg-[#0b140f] border border-emerald-900/40 rounded-xl p-2.5 flex items-center justify-between">
           {state.snookersNeeded.needed ? (
-            <div className="flex items-center space-x-1.5 text-amber-400">
+            <div className="flex items-center space-x-1.5 text-amber-400 w-full min-w-0">
               <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span className="text-xs font-bold truncate">
-                {state.snookersNeeded.player === 1 ? player1.name : player2.name} needs {state.snookersNeeded.count} {state.snookersNeeded.count === 1 ? 'snooker' : 'snookers'}
-              </span>
+              <div className="text-xs font-bold truncate">
+                {state.snookersNeeded.trailers.map((t, i) => {
+                  const p = resolvedPlayers[t.playerIndex];
+                  return (
+                    <span key={t.playerIndex}>
+                      {p?.name || `P${t.playerIndex + 1}`} ({t.count} snk){i < state.snookersNeeded.trailers.length - 1 ? ', ' : ''}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-gray-400 font-medium">Point Lead:</span>
-              <span className="text-sm font-bold text-gray-300 font-mono">
-                {Math.abs(state.player1Score - state.player2Score)} pts
+              <span className="text-xs text-gray-400 font-medium">
+                {isLeaderTied ? 'Tied for Lead:' : 'Leading:'}
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-gray-200 truncate font-mono">
+                {isLeaderTied ? leaderNames : (resolvedPlayers[leadingIndices[0]]?.name || 'Player 1')} ({maxScore} pts)
               </span>
             </div>
           )}
@@ -392,7 +531,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* LARGE TOUCH-FRIENDLY SNOOKER BALLS GRID */}
+      {/* TOUCH-FRIENDLY SNOOKER BALLS GRID */}
       {/* ------------------------------------------------------------- */}
       <div className="baize-felt rounded-3xl p-3 sm:p-5 shadow-inner">
         <div className="text-center mb-2">
@@ -401,7 +540,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           </span>
         </div>
 
-        {/* Reds Button (Prominent) & Colors Grid */}
+        {/* Reds Button & Colors Grid */}
         <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
           
           {/* RED BALL (1 pt) */}
@@ -527,25 +666,25 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* PRIMARY CONTROLS: MISS, FOUL, FREE BALL, UNDO, CONCEDE */}
+      {/* PRIMARY CONTROLS: MISS, FOUL, FREE BALL, UNDO, REDO, CONCEDE */}
       {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         
-        {/* MISS / END TURN (Double width on mobile) */}
+        {/* MISS / END TURN (Double width) */}
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-2 sm:col-span-2 py-3 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-sm sm:text-base border border-gray-700 transition flex items-center justify-center space-x-2 shadow"
+          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow"
         >
-          <ChevronRight className="w-5 h-5 text-emerald-400" />
-          <span>Miss / Switch Turn</span>
+          <ChevronRight className="w-4 h-4 text-emerald-400" />
+          <span>Miss / Next Turn</span>
         </button>
 
         {/* FOUL */}
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-1 py-3 px-2 sm:px-4 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-600/50 active:scale-95 text-red-200 font-bold text-xs sm:text-sm transition flex flex-col sm:flex-row items-center justify-center gap-1 shadow"
+          className="col-span-3 sm:col-span-1 py-3 px-2 sm:px-3 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-600/50 active:scale-95 text-red-200 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow"
         >
           <AlertTriangle className="w-4 h-4 text-red-400" />
           <span>Foul</span>
@@ -555,37 +694,53 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onToggleFreeBall}
-          className={`col-span-1 py-3 px-2 sm:px-4 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex flex-col sm:flex-row items-center justify-center gap-1 ${
+          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
             state.freeBallActive
               ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-950'
               : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:border-gray-700'
           }`}
         >
-          <Sparkles className={`w-4 h-4 ${state.freeBallActive ? 'text-black' : 'text-yellow-400'}`} />
+          <Sparkles className={`w-3.5 h-3.5 ${state.freeBallActive ? 'text-black' : 'text-yellow-400'}`} />
           <span>Free Ball</span>
         </button>
 
         {/* UNDO BUTTON */}
         <button
           type="button"
-          disabled={historyStack.length === 0}
+          disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-2 sm:col-span-1 py-3 px-2 sm:px-4 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 ${
-            historyStack.length > 0
+          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
+            undoStack.length > 0
               ? 'bg-blue-950/80 text-blue-200 border-blue-600/50 hover:bg-blue-900'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
-          title="Revert the last pot, foul, or miss"
+          title="Undo last action (Ctrl+Z)"
         >
-          <RotateCcw className="w-4 h-4" />
-          <span>Undo ({historyStack.length})</span>
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Undo{undoStack.length > 0 ? ` (${undoStack.length})` : ''}</span>
         </button>
 
-        {/* CONCEDE FRAME (Only on larger screens or footer) */}
+        {/* REDO BUTTON */}
+        <button
+          type="button"
+          disabled={redoStack.length === 0}
+          onClick={onRedo}
+          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
+            redoStack.length > 0
+              ? 'bg-purple-950/80 text-purple-200 border-purple-600/50 hover:bg-purple-900'
+              : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
+          }`}
+          title="Redo action (Ctrl+Y)"
+        >
+          <RotateCw className="w-3.5 h-3.5" />
+          <span>Redo{redoStack.length > 0 ? ` (${redoStack.length})` : ''}</span>
+        </button>
+
+        {/* CONCEDE FRAME */}
         <button
           type="button"
           onClick={onConcede}
-          className="col-span-2 sm:col-span-5 py-2 px-3 rounded-lg text-gray-500 hover:text-red-400 text-xs font-semibold flex items-center justify-center space-x-1 transition"
+          className="col-span-6 py-1.5 px-3 rounded-lg text-gray-500 hover:text-red-400 text-xs font-semibold flex items-center justify-center space-x-1 transition"
         >
           <Flag className="w-3.5 h-3.5" />
           <span>Concede Frame</span>
@@ -609,20 +764,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       <FoulModal
         isOpen={isFoulModalOpen}
         onClose={() => setIsFoulModalOpen(false)}
-        fouledPlayerName={state.activePlayer === 1 ? player1.name : player2.name}
-        opponentPlayerName={state.activePlayer === 1 ? player2.name : player1.name}
+        fouledPlayerIndex={state.activePlayerIndex}
+        players={resolvedPlayers}
         onConfirmFoul={onConfirmFoul}
       />
 
       <WinModal
         isOpen={isWinModalOpen}
-        frameWinner={state.winner}
-        p1={player1}
-        p2={player2}
-        p1Score={state.player1Score}
-        p2Score={state.player2Score}
-        p1Frames={p1MatchFrames}
-        p2Frames={p2MatchFrames}
+        players={resolvedPlayers}
+        playerScores={state.playerScores}
+        playerFrames={projectedFrames}
+        frameWinner={frameWinner}
         frameNumber={currentFrameNum}
         bestOf={match.best_of}
         highestBreak={highestBreak}
@@ -631,6 +783,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         matchWinner={matchWinner}
         onNextFrame={handleNextFrame}
         onFinishMatch={handleFinishMatch}
+        onUndo={undoStack.length > 0 ? onUndo : undefined}
       />
 
     </div>

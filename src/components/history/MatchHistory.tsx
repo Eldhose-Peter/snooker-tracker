@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Match } from '@/types/snooker';
+import { Match, Player } from '@/types/snooker';
 import { fetchMatches } from '@/lib/storage';
 import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame } from 'lucide-react';
 
@@ -50,7 +50,7 @@ export const MatchHistory: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-emerald-400/80 mt-0.5">
-            Log of completed matches, series results, and frame breakdowns
+            Log of completed matches, series results, and multiplayer frame breakdowns
           </p>
         </div>
       </div>
@@ -68,9 +68,11 @@ export const MatchHistory: React.FC = () => {
         <div className="space-y-3">
           {matches.map((m) => {
             const isExpanded = expandedMatchId === m.id;
-            const p1 = m.player1;
-            const p2 = m.player2;
-            const winner = m.winner_id === p1?.id ? p1 : p2;
+            const matchPlayers = m.players && m.players.length > 0
+              ? m.players
+              : [m.player1, m.player2].filter((p): p is Player => Boolean(p));
+
+            const winner = matchPlayers.find(p => p.id === m.winner_id);
             const frames = m.frames || [];
 
             // Calculate match highest break
@@ -79,7 +81,8 @@ export const MatchHistory: React.FC = () => {
             for (const f of frames) {
               if (f.highest_break > matchHighBreak) {
                 matchHighBreak = f.highest_break;
-                matchHighBreakPlayer = f.highest_break_player_id === p1?.id ? (p1?.name || '') : (p2?.name || '');
+                const hp = matchPlayers.find(p => p.id === f.highest_break_player_id);
+                matchHighBreakPlayer = hp?.name || '';
               }
             }
 
@@ -94,29 +97,41 @@ export const MatchHistory: React.FC = () => {
                   className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
                 >
                   {/* Left: Players & Winner */}
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-emerald-950/80 border border-emerald-600/40 flex items-center justify-center flex-shrink-0">
                       <Trophy className="w-5 h-5 text-amber-400" />
                     </div>
 
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-sm sm:text-base font-bold ${m.winner_id === p1?.id ? 'text-emerald-400' : 'text-gray-300'}`}>
-                          {p1?.name || 'Player 1'}
-                        </span>
-                        <span className="text-xs text-gray-500 font-bold">vs</span>
-                        <span className={`text-sm sm:text-base font-bold ${m.winner_id === p2?.id ? 'text-emerald-400' : 'text-gray-300'}`}>
-                          {p2?.name || 'Player 2'}
-                        </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {matchPlayers.map((p, idx) => {
+                          const isWinner = p.id === m.winner_id;
+                          return (
+                            <React.Fragment key={p.id}>
+                              <span className={`text-sm sm:text-base font-bold ${isWinner ? 'text-emerald-400' : 'text-gray-300'}`}>
+                                {p.name}
+                              </span>
+                              {idx < matchPlayers.length - 1 && (
+                                <span className="text-xs text-gray-500 font-bold">vs</span>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
                       
-                      <div className="flex items-center space-x-3 text-xs text-gray-400 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400 mt-0.5">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-emerald-500" />
                           {formatDate(m.completed_at || m.started_at)}
                         </span>
                         <span>•</span>
-                        <span>Best of {m.best_of}</span>
+                        <span>{m.best_of === 1 ? 'Single Frame' : `Best of ${m.best_of}`}</span>
+                        {matchPlayers.length > 2 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-emerald-400">{matchPlayers.length} Players</span>
+                          </>
+                        )}
                         {winner && (
                           <>
                             <span>•</span>
@@ -130,22 +145,30 @@ export const MatchHistory: React.FC = () => {
                   </div>
 
                   {/* Right: Final Series Score & Expand icon */}
-                  <div className="flex items-center justify-between sm:justify-end space-x-4 border-t sm:border-t-0 border-gray-800/60 pt-2 sm:pt-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 border-gray-800/60 pt-2 sm:pt-0 max-w-full sm:max-w-[50%]">
                     <div className="text-right">
-                      <div className="text-lg sm:text-xl font-black text-white font-mono">
-                        {m.player1_frames} - {m.player2_frames}
+                      <div className="text-xs sm:text-sm font-black text-white font-mono flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+                        {m.player_frames && m.player_frames.length === matchPlayers.length ? (
+                          matchPlayers.map((p, idx) => (
+                            <span key={p.id} className={p.id === m.winner_id ? 'text-emerald-400 font-black' : 'text-gray-300'}>
+                              {p.name}: {m.player_frames?.[idx] ?? 0}{idx < matchPlayers.length - 1 ? ' · ' : ''}
+                            </span>
+                          ))
+                        ) : (
+                          <span>{m.player1_frames} - {m.player2_frames}</span>
+                        )}
                       </div>
                       {matchHighBreak > 0 && (
                         <div className="text-[11px] text-amber-300 flex items-center justify-end gap-1 font-mono">
                           <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-                          Hi: {matchHighBreak} ({matchHighBreakPlayer})
+                          Hi: {matchHighBreak} {matchHighBreakPlayer ? `(${matchHighBreakPlayer})` : ''}
                         </div>
                       )}
                     </div>
 
                     <button
                       type="button"
-                      className="p-1 rounded-lg text-gray-400 hover:text-white"
+                      className="p-1 rounded-lg text-gray-400 hover:text-white flex-shrink-0"
                     >
                       {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
@@ -161,39 +184,51 @@ export const MatchHistory: React.FC = () => {
 
                     {frames.length === 0 ? (
                       <p className="text-xs text-gray-500 italic py-2">
-                        Individual frame shot details were not archived for this legacy match.
+                        Individual frame shot details were not archived for this match.
                       </p>
                     ) : (
                       <div className="space-y-1.5">
-                        {frames.map((f) => (
-                          <div
-                            key={f.id}
-                            className="flex items-center justify-between p-2.5 rounded-xl bg-gray-900/50 border border-gray-800/80 text-xs font-mono"
-                          >
-                            <span className="font-semibold text-gray-400">
-                              Frame {f.frame_number}
-                            </span>
+                        {frames.map((f) => {
+                          const scores = f.scores && f.scores.length === matchPlayers.length
+                            ? f.scores
+                            : [f.player1_score, f.player2_score];
 
-                            <div className="flex items-center space-x-3">
-                              <span className={f.winner_id === p1?.id ? 'text-emerald-400 font-bold' : 'text-gray-300'}>
-                                {p1?.name}: {f.player1_score}
+                          return (
+                            <div
+                              key={f.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl bg-gray-900/50 border border-gray-800/80 text-xs font-mono gap-1.5"
+                            >
+                              <span className="font-semibold text-gray-400">
+                                Frame {f.frame_number}
                               </span>
-                              <span className="text-gray-600">-</span>
-                              <span className={f.winner_id === p2?.id ? 'text-emerald-400 font-bold' : 'text-gray-300'}>
-                                {p2?.name}: {f.player2_score}
-                              </span>
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                {matchPlayers.map((p, idx) => {
+                                  const score = scores[idx] ?? 0;
+                                  const isWinner = f.winner_id === p.id;
+                                  return (
+                                    <span 
+                                      key={p.id} 
+                                      className={isWinner ? 'text-emerald-400 font-black' : 'text-gray-300'}
+                                    >
+                                      {p.name}: {score}
+                                      {idx < matchPlayers.length - 1 && <span className="text-gray-600 ml-2">|</span>}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+
+                              {f.highest_break > 0 ? (
+                                <span className="text-amber-300 flex items-center gap-1 text-[11px]">
+                                  <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                  Break {f.highest_break}
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">-</span>
+                              )}
                             </div>
-
-                            {f.highest_break > 0 ? (
-                              <span className="text-amber-300 flex items-center gap-1 text-[11px]">
-                                <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                Break {f.highest_break}
-                              </span>
-                            ) : (
-                              <span className="text-gray-600">-</span>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS matches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     player1_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     player2_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    player_ids UUID[] DEFAULT ARRAY[]::UUID[],
+    player_frames INT[] DEFAULT ARRAY[]::INT[],
     best_of INT NOT NULL DEFAULT 1 CHECK (best_of > 0 AND best_of % 2 = 1),
     status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'abandoned')),
     winner_id UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS frames (
     frame_number INT NOT NULL,
     player1_score INT NOT NULL DEFAULT 0,
     player2_score INT NOT NULL DEFAULT 0,
+    scores INT[] DEFAULT ARRAY[]::INT[],
     winner_id UUID REFERENCES players(id) ON DELETE SET NULL,
     highest_break INT NOT NULL DEFAULT 0,
     highest_break_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -90,7 +93,7 @@ WITH match_stats AS (
         COUNT(m.id) FILTER (WHERE m.status = 'completed' AND m.winner_id = p.id) AS matches_won,
         COUNT(m.id) FILTER (WHERE m.status = 'completed' AND m.winner_id IS NOT NULL AND m.winner_id <> p.id) AS matches_lost
     FROM players p
-    LEFT JOIN matches m ON p.id = m.player1_id OR p.id = m.player2_id
+    LEFT JOIN matches m ON p.id = m.player1_id OR p.id = m.player2_id OR p.id = ANY(m.player_ids)
     GROUP BY p.id
 ),
 frame_stats AS (
@@ -111,7 +114,7 @@ frame_stats AS (
             END
         ), 0) AS frames_lost
     FROM players p
-    LEFT JOIN matches m ON (p.id = m.player1_id OR p.id = m.player2_id) AND m.status = 'completed'
+    LEFT JOIN matches m ON (p.id = m.player1_id OR p.id = m.player2_id OR p.id = ANY(m.player_ids)) AND m.status = 'completed'
     GROUP BY p.id
 ),
 break_stats AS (

@@ -12,21 +12,18 @@ import { RulesModal } from '@/components/modals/RulesModal';
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'live' | 'leaderboard' | 'history' | 'new-match'>('leaderboard');
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
-  const [player1, setPlayer1] = useState<Player | null>(null);
-  const [player2, setPlayer2] = useState<Player | null>(null);
+  const [matchPlayers, setMatchPlayers] = useState<Player[]>([]);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
 
-  const handleStartMatch = (match: Match, p1: Player, p2: Player) => {
+  const handleStartMatch = (match: Match, players: Player[]) => {
     setCurrentMatch(match);
-    setPlayer1(p1);
-    setPlayer2(p2);
+    setMatchPlayers(players);
     setActiveTab('live');
   };
 
   const handleMatchComplete = () => {
     setCurrentMatch(null);
-    setPlayer1(null);
-    setPlayer2(null);
+    setMatchPlayers([]);
     setActiveTab('leaderboard');
   };
 
@@ -36,17 +33,17 @@ export default function Home() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        hasActiveMatch={Boolean(currentMatch && player1 && player2)}
+        hasActiveMatch={Boolean(currentMatch && matchPlayers.length >= 2)}
         onOpenRules={() => setIsRulesOpen(true)}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 py-4 sm:py-6">
-        {activeTab === 'live' && currentMatch && player1 && player2 && (
+        {activeTab === 'live' && currentMatch && matchPlayers.length >= 2 && (
           <LiveScoreboard
+            key={currentMatch.id}
             match={currentMatch}
-            player1={player1}
-            player2={player2}
+            players={matchPlayers}
             onMatchComplete={handleMatchComplete}
           />
         )}

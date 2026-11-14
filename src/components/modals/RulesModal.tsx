@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, HelpCircle, BookOpen, ShieldAlert, Sparkles, Flame } from 'lucide-react';
+import { X, BookOpen, ShieldAlert, Sparkles, Flame } from 'lucide-react';
 import { BALL_CONFIGS } from '@/types/snooker';
 
 interface RulesModalProps {
@@ -80,7 +80,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             Snookers Required Calculation
           </h4>
           <p className="text-gray-300 leading-relaxed">
-            If the trailing player's score plus the remaining points on the table cannot overtake the leader:
+            If the trailing player&apos;s score plus the remaining points on the table cannot overtake the leader:
           </p>
           <div className="bg-black/40 p-2.5 rounded-xl font-mono text-amber-300 text-[11px]">
             Points Deficit = Leader Score - (Trailer Score + Table Remaining)<br />

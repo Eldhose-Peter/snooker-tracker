@@ -1,48 +1,59 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertTriangle, Check, X } from 'lucide-react';
+import { AlertTriangle, Check, X, Users } from 'lucide-react';
+import { Player } from '@/types/snooker';
 
 interface FoulModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fouledPlayerName: string;
-  opponentPlayerName: string;
-  onConfirmFoul: (points: number, awardFreeBall: boolean, passBack: boolean) => void;
+  fouledPlayerIndex: number;
+  players: Player[];
+  onConfirmFoul: (
+    points: number, 
+    target: 'all_opponents' | 'next_player' | number, 
+    awardFreeBall: boolean, 
+    passBack: boolean
+  ) => void;
 }
 
 export const FoulModal: React.FC<FoulModalProps> = ({
   isOpen,
   onClose,
-  fouledPlayerName,
-  opponentPlayerName,
+  fouledPlayerIndex,
+  players,
   onConfirmFoul,
 }) => {
   const [selectedPoints, setSelectedPoints] = useState<number>(4);
+  const [targetRecipient, setTargetRecipient] = useState<'all_opponents' | 'next_player' | number>('all_opponents');
   const [isFreeBall, setIsFreeBall] = useState<boolean>(false);
   const [passBack, setPassBack] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
+  const fouledPlayer = players[fouledPlayerIndex] || { name: `Player ${fouledPlayerIndex + 1}` };
+  const nextPlayerIndex = (fouledPlayerIndex + 1) % players.length;
+  const isMultiplayer = players.length > 2;
+
   const foulOptions = [
-    { points: 4, label: 'Standard / Red / Yellow / Green / Brown', color: 'bg-emerald-700' },
+    { points: 4, label: 'Red / Yellow / Green / Brown / General', color: 'bg-emerald-700' },
     { points: 5, label: 'Blue Ball Involved', color: 'bg-blue-600' },
     { points: 6, label: 'Pink Ball Involved', color: 'bg-pink-600' },
     { points: 7, label: 'Black Ball Involved', color: 'bg-slate-900 border border-slate-700' },
   ];
 
   const handleApply = () => {
-    onConfirmFoul(selectedPoints, isFreeBall, passBack);
-    // Reset state
+    onConfirmFoul(selectedPoints, targetRecipient, isFreeBall, passBack);
     setSelectedPoints(4);
+    setTargetRecipient('all_opponents');
     setIsFreeBall(false);
     setPassBack(false);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#0f1712] border border-red-500/30 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+      <div className="bg-[#0f1712] border border-red-500/40 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-3">
@@ -51,9 +62,9 @@ export const FoulModal: React.FC<FoulModalProps> = ({
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Record Foul & Penalty</h3>
-              <p className="text-xs text-red-400/90 font-medium">
-                Foul committed by {fouledPlayerName}
+              <h3 className="text-lg font-bold text-white">Record Foul Penalty</h3>
+              <p className="text-xs text-red-400 font-semibold">
+                Foul committed by {fouledPlayer.name}
               </p>
             </div>
           </div>
@@ -66,25 +77,25 @@ export const FoulModal: React.FC<FoulModalProps> = ({
         </div>
 
         {/* Penalty Points Selector */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider font-semibold text-gray-400">
-            Penalty Points Awarded to {opponentPlayerName}
+            Penalty Points
           </label>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             {foulOptions.map((opt) => (
               <button
                 key={opt.points}
                 type="button"
                 onClick={() => setSelectedPoints(opt.points)}
-                className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
                   selectedPoints === opt.points
-                    ? 'border-red-500 bg-red-950/50 shadow-md shadow-red-950/50 text-white'
+                    ? 'border-red-500 bg-red-950/60 shadow-md shadow-red-950/50 text-white'
                     : 'border-gray-800 bg-gray-900/60 hover:bg-gray-800/80 text-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="flex items-center gap-1.5 mb-0.5">
                   <span className={`w-3.5 h-3.5 rounded-full ${opt.color}`} />
-                  <span className="text-2xl font-black">{opt.points}</span>
+                  <span className="text-xl font-black">{opt.points}</span>
                   <span className="text-xs text-gray-400">pts</span>
                 </div>
                 <span className="text-[10px] text-gray-400 text-center leading-tight">
@@ -95,10 +106,57 @@ export const FoulModal: React.FC<FoulModalProps> = ({
           </div>
         </div>
 
+        {/* Target Recipient (Multiplayer) */}
+        {isMultiplayer && (
+          <div className="space-y-1.5 pt-1">
+            <label className="text-xs uppercase tracking-wider font-semibold text-emerald-400 flex items-center gap-1">
+              <Users className="w-3.5 h-3.5" />
+              Award Penalty Points To
+            </label>
+            <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => setTargetRecipient('all_opponents')}
+                className={`p-2 rounded-xl border text-xs text-left transition ${
+                  targetRecipient === 'all_opponents'
+                    ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300 font-bold'
+                    : 'border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                <span className="block font-bold">All Other Players</span>
+                <span className="text-[10px] text-gray-500 block">+{selectedPoints} pts to each</span>
+              </button>
+
+              {players.map((p, idx) => {
+                if (idx === fouledPlayerIndex) return null;
+                const isSelected = targetRecipient === idx;
+                const isNext = idx === nextPlayerIndex;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setTargetRecipient(idx)}
+                    className={`p-2 rounded-xl border text-xs text-left transition ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300 font-bold'
+                        : 'border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    <span className="block font-bold truncate">
+                      {p.name} {isNext ? '(Next Turn)' : ''}
+                    </span>
+                    <span className="text-[10px] text-gray-500 block">+{selectedPoints} pts only</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Tactical Options */}
-        <div className="space-y-2.5 pt-2 border-t border-gray-800">
+        <div className="space-y-2 pt-1 border-t border-gray-800/80">
           {/* Free Ball Option */}
-          <label className="flex items-start space-x-3 p-3 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
+          <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
             <input
               type="checkbox"
               checked={isFreeBall}
@@ -106,15 +164,15 @@ export const FoulModal: React.FC<FoulModalProps> = ({
               className="mt-0.5 h-4 w-4 rounded border-gray-700 text-emerald-600 focus:ring-emerald-500 bg-gray-800"
             />
             <div className="flex-1">
-              <span className="text-sm font-semibold text-white block">Award Free Ball</span>
-              <span className="text-xs text-gray-400 leading-tight block">
-                {opponentPlayerName} is snookered on all balls on. Any color can be nominated as the ball on.
+              <span className="text-xs sm:text-sm font-semibold text-white block">Award Free Ball</span>
+              <span className="text-[11px] text-gray-400 leading-tight block">
+                Incoming player is snookered on all balls on. Any color can be nominated as ball on.
               </span>
             </div>
           </label>
 
           {/* Pass shot back option */}
-          <label className="flex items-start space-x-3 p-3 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
+          <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
             <input
               type="checkbox"
               checked={passBack}
@@ -122,16 +180,16 @@ export const FoulModal: React.FC<FoulModalProps> = ({
               className="mt-0.5 h-4 w-4 rounded border-gray-700 text-emerald-600 focus:ring-emerald-500 bg-gray-800"
             />
             <div className="flex-1">
-              <span className="text-sm font-semibold text-white block">Pass Turn Back</span>
-              <span className="text-xs text-gray-400 leading-tight block">
-                {opponentPlayerName} elects to make {fouledPlayerName} shoot again from current position.
+              <span className="text-xs sm:text-sm font-semibold text-white block">Pass Turn Back</span>
+              <span className="text-[11px] text-gray-400 leading-tight block">
+                Incoming player elects to make {fouledPlayer.name} shoot again from current position.
               </span>
             </div>
           </label>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-3 pt-2">
+        <div className="flex items-center space-x-2.5 pt-1">
           <button
             type="button"
             onClick={onClose}

@@ -7,10 +7,7 @@ import {
   Trophy, 
   Flame, 
   UserPlus, 
-  Users, 
   Search, 
-  ArrowUpDown, 
-  Percent, 
   Swords, 
   X,
   Medal
@@ -50,18 +47,35 @@ export const Leaderboard: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    let isMounted = true;
+    Promise.all([fetchLeaderboard(), fetchPlayers()]).then(([lb, pl]) => {
+      if (!isMounted) return;
+      setEntries(lb);
+      setPlayers(pl);
+      if (pl.length >= 2) {
+        setH2HPlayer1Id(pl[0].id);
+        setH2HPlayer2Id(pl[1].id);
+      }
+      setLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Handle H2H query
   useEffect(() => {
+    let isMounted = true;
     if (isH2HOpen && h2hPlayer1Id && h2hPlayer2Id && h2hPlayer1Id !== h2hPlayer2Id) {
-      setLoadingH2H(true);
       fetchHeadToHead(h2hPlayer1Id, h2hPlayer2Id).then((res) => {
+        if (!isMounted) return;
         setH2HStats(res);
         setLoadingH2H(false);
       });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [isH2HOpen, h2hPlayer1Id, h2hPlayer2Id]);
 
   // Handle Add Player
@@ -230,7 +244,7 @@ export const Leaderboard: React.FC = () => {
                     </h3>
                     {player.nickname && (
                       <p className="text-xs text-emerald-400 font-medium truncate">
-                        "{player.nickname}"
+                        &ldquo;{player.nickname}&rdquo;
                       </p>
                     )}
                   </div>

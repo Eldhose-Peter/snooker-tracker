@@ -3,43 +3,133 @@
 import React, { useState, useEffect } from 'react';
 import { Player, Match } from '@/types/snooker';
 import { fetchPlayers, saveNewMatch, createPlayer } from '@/lib/storage';
-import { Play, Users, Settings2, UserPlus, X, Sparkles } from 'lucide-react';
+import { 
+  Play, 
+  Users, 
+  Settings2, 
+  UserPlus, 
+  X, 
+  Shuffle, 
+  ArrowUp, 
+  ArrowDown, 
+  Plus,
+  Zap
+} from 'lucide-react';
 
 interface MatchSetupProps {
-  onStartMatch: (match: Match, p1: Player, p2: Player) => void;
+  onStartMatch: (match: Match, players: Player[]) => void;
 }
 
 export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [p1Id, setP1Id] = useState<string>('');
-  const [p2Id, setP2Id] = useState<string>('');
   const [bestOf, setBestOf] = useState<number>(3);
   const [redsCount, setRedsCount] = useState<number>(15);
   const [starting, setStarting] = useState(false);
+  const [justShuffled, setJustShuffled] = useState(false);
 
   // Quick Add Player modal
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickName, setQuickName] = useState('');
   const [quickNickname, setQuickNickname] = useState('');
 
-  const loadPlayers = async () => {
-    setLoading(true);
-    const data = await fetchPlayers();
-    setPlayers(data);
-    if (data.length >= 2) {
-      setP1Id(data[0].id);
-      setP2Id(data[1].id);
-    } else if (data.length === 1) {
-      setP1Id(data[0].id);
-    }
-    setLoading(false);
+  useEffect(() => {
+    let isMounted = true;
+    fetchPlayers().then(data => {
+      if (!isMounted) return;
+      setAllPlayers(data);
+      // Default to 1v1 with the first two members, allowing quick expansion
+      setSelectedPlayers(data.slice(0, Math.min(data.length, 2)));
+      setLoading(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Quick preset selector (2, 3, 4, or all roster players)
+  const handleApplyPreset = (count: number) => {
+    if (allPlayers.length < 2) return;
+    const targetCount = Math.min(count, allPlayers.length);
+    setSelectedPlayers(allPlayers.slice(0, targetCount));
   };
 
-  useEffect(() => {
-    loadPlayers();
-  }, []);
+  // Set specific player as break off (#1)
+  const handleSetBreakOff = (index: number) => {
+    if (index === 0) return;
+    setSelectedPlayers(prev => {
+      const copy = [...prev];
+      const [player] = copy.splice(index, 1);
+      return [player, ...copy];
+    });
+  };
+
+  // Move player up in sequence
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return;
+    setSelectedPlayers(prev => {
+      const copy = [...prev];
+      const temp = copy[index - 1];
+      copy[index - 1] = copy[index];
+      copy[index] = temp;
+      return copy;
+    });
+  };
+
+  // Move player down in sequence
+  const handleMoveDown = (index: number) => {
+    if (index >= selectedPlayers.length - 1) return;
+    setSelectedPlayers(prev => {
+      const copy = [...prev];
+      const temp = copy[index + 1];
+      copy[index + 1] = copy[index];
+      copy[index] = temp;
+      return copy;
+    });
+  };
+
+  // Remove player from sequence
+  const handleRemovePlayer = (id: string) => {
+    if (selectedPlayers.length <= 2) {
+      alert('Snooker match requires a minimum of 2 players.');
+      return;
+    }
+    setSelectedPlayers(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Add player to sequence
+  const handleAddPlayerToSequence = (player: Player) => {
+    if (selectedPlayers.some(p => p.id === player.id)) return;
+    setSelectedPlayers(prev => [...prev, player]);
+  };
+
+  // Randomise / Shuffle sequence
+  const handleRandomiseSequence = () => {
+    if (selectedPlayers.length < 2) return;
+    setSelectedPlayers(prev => {
+      if (prev.length === 2) {
+        return [prev[1], prev[0]];
+      }
+      let shuffled = [...prev];
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const candidate = [...shuffled];
+        for (let i = candidate.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [candidate[i], candidate[j]] = [candidate[j], candidate[i]];
+        }
+        if (candidate.some((p, idx) => p.id !== prev[idx]?.id)) {
+          shuffled = candidate;
+          break;
+        }
+      }
+      return shuffled;
+    });
+
+    setJustShuffled(true);
+    setTimeout(() => setJustShuffled(false), 1200);
+  };
 
   const handleQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,26 +138,21 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
     setQuickName('');
     setQuickNickname('');
     setIsQuickAddOpen(false);
-    await loadPlayers();
-    if (!p1Id) setP1Id(created.id);
-    else if (!p2Id) setP2Id(created.id);
+    setAllPlayers(prev => [...prev, created]);
+    setSelectedPlayers(prev => [...prev, created]);
   };
 
   const handleStartMatch = async () => {
-    if (!p1Id || !p2Id || p1Id === p2Id) {
-      alert('Please select two distinct players for the match.');
+    if (selectedPlayers.length < 2) {
+      alert('Please select at least 2 players for the match.');
       return;
     }
 
-    const p1 = players.find(p => p.id === p1Id);
-    const p2 = players.find(p => p.id === p2Id);
-
-    if (!p1 || !p2) return;
-
     setStarting(true);
-    const newMatch = await saveNewMatch(p1Id, p2Id, bestOf, redsCount);
+    const playerIds = selectedPlayers.map(p => p.id);
+    const newMatch = await saveNewMatch(playerIds, bestOf, redsCount);
     setStarting(false);
-    onStartMatch(newMatch, p1, p2);
+    onStartMatch(newMatch, selectedPlayers);
   };
 
   const formatOptions = [
@@ -83,6 +168,10 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
     { value: 6, label: '6 Reds (Quick Shootout)' },
   ];
 
+  const unselectedPlayers = allPlayers.filter(
+    p => !selectedPlayers.some(sp => sp.id === p.id)
+  );
+
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
       
@@ -92,10 +181,10 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
           <Settings2 className="w-6 h-6" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          Setup New Snooker Match
+          Setup Snooker Match
         </h2>
         <p className="text-xs sm:text-sm text-gray-400">
-          Select opponents, match length, and table rules before breaking off
+          Supports 1v1 and multiplayer snooker (2 or more players). Select player sequence and break rules.
         </p>
       </div>
 
@@ -104,66 +193,217 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
           Loading player roster...
         </div>
       ) : (
-        <div className="bg-[#0d1712] border border-emerald-900/40 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+        <div className="bg-[#0d1712] border border-emerald-900/40 rounded-3xl p-4 sm:p-7 shadow-2xl space-y-6">
           
-          {/* Players Selection */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
-                Select Combatants
-              </label>
+          {/* Player Sequence Section */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-950/80 pb-3">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />
+                  Player Sequence & Rotation ({selectedPlayers.length} Players)
+                </label>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Players will take turns in this exact sequence. Order 1 breaks off.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {/* RANDOMISE BUTTON */}
+                <button
+                  type="button"
+                  onClick={handleRandomiseSequence}
+                  title="Randomly shuffle the sequence of players"
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 ${
+                    justShuffled
+                      ? 'bg-amber-500 text-black border-amber-400 scale-105'
+                      : 'bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border-emerald-700/50 hover:border-emerald-500 shadow-sm'
+                  }`}
+                >
+                  <Shuffle className={`w-3.5 h-3.5 ${justShuffled ? 'animate-spin' : ''}`} />
+                  <span>{justShuffled ? 'Shuffled!' : 'Randomise Sequence'}</span>
+                </button>
+
+                {/* ADD NEW FRIEND */}
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl bg-gray-900 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white text-xs font-medium flex items-center gap-1 transition"
+                  title="Add a new friend to roster"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Add Friend</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Player Count Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pb-1">
+              <span className="text-[11px] font-semibold text-gray-400 mr-1">Quick Select:</span>
               <button
                 type="button"
-                onClick={() => setIsQuickAddOpen(true)}
-                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+                onClick={() => handleApplyPreset(2)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                  selectedPlayers.length === 2
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-gray-900/70 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
               >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>+ Add Friend</span>
+                1v1 (2 Players)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(3)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                  selectedPlayers.length === 3
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-gray-900/70 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                3-Player Ring
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(4)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                  selectedPlayers.length === 4
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-gray-900/70 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                4 Players
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(allPlayers.length)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                  selectedPlayers.length === allPlayers.length
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-gray-900/70 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                All Members ({allPlayers.length})
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              
-              {/* Player 1 Selection */}
-              <div className="p-3.5 rounded-2xl bg-[#112218] border border-emerald-800/40 space-y-2">
-                <span className="text-[11px] font-bold text-gray-400 uppercase block">
-                  Player 1 (Breaks Off)
-                </span>
-                <select
-                  value={p1Id}
-                  onChange={(e) => setP1Id(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="" disabled>Choose Player 1</option>
-                  {players.map((p) => (
-                    <option key={p.id} value={p.id} disabled={p.id === p2Id}>
-                      {p.name} {p.nickname ? `("${p.nickname}")` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Sequence List */}
+            <div className="space-y-2">
+              {selectedPlayers.map((player, idx) => {
+                const isBreakOff = idx === 0;
+                return (
+                  <div
+                    key={player.id}
+                    className={`p-3 rounded-2xl border flex items-center justify-between gap-2 transition-all ${
+                      isBreakOff
+                        ? 'bg-gradient-to-r from-[#122c1d] to-[#0e2116] border-emerald-500/60 shadow-md shadow-emerald-950/50 ring-1 ring-emerald-500/30'
+                        : 'bg-[#112218] border-emerald-900/40 hover:border-emerald-800/60'
+                    }`}
+                  >
+                    {/* Order Badge + Player Info */}
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center flex-shrink-0 ${
+                        isBreakOff
+                          ? 'bg-emerald-500 text-black shadow'
+                          : 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/40'
+                      }`}>
+                        #{idx + 1}
+                      </div>
 
-              {/* Player 2 Selection */}
-              <div className="p-3.5 rounded-2xl bg-[#112218] border border-emerald-800/40 space-y-2">
-                <span className="text-[11px] font-bold text-gray-400 uppercase block">
-                  Player 2
-                </span>
-                <select
-                  value={p2Id}
-                  onChange={(e) => setP2Id(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="" disabled>Choose Player 2</option>
-                  {players.map((p) => (
-                    <option key={p.id} value={p.id} disabled={p.id === p1Id}>
-                      {p.name} {p.nickname ? `("${p.nickname}")` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                      {player.avatar_url && (
+                        <img
+                          src={player.avatar_url}
+                          alt={player.name}
+                          className="w-8 h-8 rounded-full border border-emerald-600/40 object-cover flex-shrink-0 hidden xs:block"
+                        />
+                      )}
 
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-sm font-bold text-white truncate">
+                            {player.name}
+                          </span>
+                          {isBreakOff ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
+                              <Zap className="w-2.5 h-2.5 fill-emerald-400" /> Breaks Off
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetBreakOff(idx)}
+                              title="Make this player break off (#1)"
+                              className="px-1.5 py-0.2 rounded text-[10px] font-semibold text-emerald-400/70 hover:text-emerald-300 hover:bg-emerald-950/80 border border-emerald-800/30 transition hidden sm:inline-flex items-center gap-0.5"
+                            >
+                              Make #1
+                            </button>
+                          )}
+                        </div>
+                        {player.nickname && (
+                          <p className="text-[11px] text-gray-400 truncate">
+                            &ldquo;{player.nickname}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sequence Control Buttons */}
+                    <div className="flex items-center space-x-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveUp(idx)}
+                        disabled={idx === 0}
+                        title="Move Earlier in Turn Sequence"
+                        className="p-1.5 rounded-lg bg-gray-900/80 hover:bg-gray-800 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-800"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMoveDown(idx)}
+                        disabled={idx === selectedPlayers.length - 1}
+                        title="Move Later in Turn Sequence"
+                        className="p-1.5 rounded-lg bg-gray-900/80 hover:bg-gray-800 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed border border-gray-800"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePlayer(player.id)}
+                        disabled={selectedPlayers.length <= 2}
+                        title={selectedPlayers.length <= 2 ? 'Minimum 2 players required' : 'Exclude player from this match'}
+                        className="p-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/80 text-red-400 hover:text-red-200 disabled:opacity-20 disabled:cursor-not-allowed border border-red-800/30 ml-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Unselected Players from Roster */}
+            {unselectedPlayers.length > 0 && (
+              <div className="pt-2">
+                <span className="text-[11px] font-semibold text-gray-400 block mb-1.5">
+                  Available Members (Tap to add to match sequence):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {unselectedPlayers.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleAddPlayerToSequence(p)}
+                      className="px-3 py-1.5 rounded-xl bg-gray-900/80 hover:bg-emerald-950/70 border border-gray-800 hover:border-emerald-600/50 text-xs font-medium text-gray-300 hover:text-emerald-300 transition flex items-center space-x-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Match Length / Best Of */}
@@ -220,12 +460,16 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
           <div className="pt-2">
             <button
               type="button"
-              disabled={starting || !p1Id || !p2Id || p1Id === p2Id}
+              disabled={starting || selectedPlayers.length < 2}
               onClick={handleStartMatch}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-base shadow-xl shadow-emerald-950/60 flex items-center justify-center space-x-2 transition disabled:opacity-50"
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-base shadow-xl shadow-emerald-950/60 flex items-center justify-center space-x-2 transition disabled:opacity-50 cursor-pointer"
             >
               <Play className="w-5 h-5 fill-white" />
-              <span>{starting ? 'Initializing Match...' : 'Break Off & Start Match'}</span>
+              <span>
+                {starting 
+                  ? 'Initializing Match...' 
+                  : `Start Match (${selectedPlayers.length} Players • ${selectedPlayers[0]?.name || ''} Breaks)`}
+              </span>
             </button>
           </div>
 
@@ -252,15 +496,15 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
             <form onSubmit={handleQuickAdd} className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-gray-400 block mb-1">
-                  Full Name *
+                  Name *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Liam Smith"
+                  placeholder="e.g. John"
                   value={quickName}
                   onChange={(e) => setQuickName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm"
+                  className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -270,10 +514,10 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Whirlwind"
+                  placeholder="e.g. Lightning"
                   value={quickNickname}
                   onChange={(e) => setQuickNickname(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm"
+                  className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-white text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -281,16 +525,16 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
                 <button
                   type="button"
                   onClick={() => setIsQuickAddOpen(false)}
-                  className="flex-1 py-2 rounded-xl border border-gray-700 text-gray-300 text-xs font-semibold"
+                  className="flex-1 py-2 rounded-xl border border-gray-700 text-gray-300 text-xs font-semibold hover:bg-gray-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!quickName.trim()}
-                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"
+                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold disabled:opacity-50"
                 >
-                  Save & Select
+                  Save & Include
                 </button>
               </div>
             </form>
