@@ -181,7 +181,7 @@ export const WinModal: React.FC<WinModalProps> = ({
               className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm shadow-xl shadow-emerald-950 flex items-center justify-center space-x-2 transition"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Finish Match & View Leaderboard</span>
+              <span>Finish Match & Record Result</span>
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-2">

@@ -1,9 +1,21 @@
-import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats } from '@/types/snooker';
+import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState } from '@/types/snooker';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const PLAYERS_KEY = 'snooker_tracker_players_v2';
 const MATCHES_KEY = 'snooker_tracker_matches_v2';
 const FRAMES_KEY = 'snooker_tracker_frames_v2';
+export const LIVE_SESSION_KEY = 'snooker_active_live_session_v2';
+
+export interface ActiveLiveSession {
+  match: Match;
+  players: Player[];
+  currentFrameNum: number;
+  playerFrames: number[];
+  frameState: FrameState;
+  undoStack: FrameState[];
+  redoStack?: FrameState[];
+  updatedAt: number;
+}
 
 // The friend group members requested
 export const INITIAL_PLAYERS: Player[] = [
@@ -573,6 +585,68 @@ export async function finishMatch(
     return m;
   });
   setLocal(MATCHES_KEY, updatedMatches);
+  clearLiveSession();
+}
+
+/**
+ * Abandons an in-progress match without recording completed frame stats to leaderboard.
+ */
+export async function abandonMatch(matchId: string): Promise<void> {
+  const completedAt = new Date().toISOString();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('matches').update({
+        status: 'abandoned',
+        completed_at: completedAt,
+      }).eq('id', matchId);
+      await supabase.from('frames').delete().eq('match_id', matchId);
+    } catch (err) {
+      console.warn('Supabase abandonMatch error', err);
+    }
+  }
+
+  ensureLocalSeed();
+  const matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
+  const updatedMatches = matches.map(m => {
+    if (m.id === matchId) {
+      return {
+        ...m,
+        status: 'abandoned' as const,
+        completed_at: completedAt,
+      };
+    }
+    return m;
+  });
+  setLocal(MATCHES_KEY, updatedMatches);
+
+  // Clear any recorded frames for the abandoned match so stats are not corrupted
+  const frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES);
+  const filteredFrames = frames.filter(f => f.match_id !== matchId);
+  setLocal(FRAMES_KEY, filteredFrames);
+
+  clearLiveSession();
+}
+
+// ==============================================================================
+// ACTIVE LIVE TRACKING SESSION PERSISTENCE
+// ==============================================================================
+
+export function saveLiveSession(session: ActiveLiveSession): void {
+  setLocal(LIVE_SESSION_KEY, session);
+}
+
+export function getLiveSession(): ActiveLiveSession | null {
+  return getLocal<ActiveLiveSession | null>(LIVE_SESSION_KEY, null);
+}
+
+export function clearLiveSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(LIVE_SESSION_KEY);
+  } catch (err) {
+    console.error('LocalStorage removeItem error:', err);
+  }
 }
 
 /**
@@ -594,7 +668,8 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
   ensureLocalSeed();
   const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
   const matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES).filter(m => m.status === 'completed');
-  const frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES);
+  const completedMatchIds = new Set(matches.map(m => m.id));
+  const frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES).filter(f => completedMatchIds.has(f.match_id));
 
   const leaderboard: LeaderboardEntry[] = players.map(player => {
     const playerMatches = matches.filter(m => {

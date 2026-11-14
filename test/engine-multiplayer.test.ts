@@ -8,7 +8,15 @@ import {
   handleConcede, 
   checkSnookersNeeded
 } from '../src/lib/snooker-engine';
-import { INITIAL_PLAYERS } from '../src/lib/storage';
+import { 
+  INITIAL_PLAYERS,
+  saveLiveSession,
+  getLiveSession,
+  clearLiveSession,
+  abandonMatch,
+  saveNewMatch,
+  fetchMatches
+} from '../src/lib/storage';
 
 console.log('--- Starting Snooker Tracker Verification Suite ---');
 
@@ -293,6 +301,123 @@ assert.strictEqual(sFoulToRaju.playerScores[2], 4);
 assert(sFoulToRaju.lastActionDescription?.includes('Raju'), `Expected 'Raju' in '${sFoulToRaju.lastActionDescription}'`);
 console.log('✓ Member names accurately populate all game descriptions and foul targeting.');
 
-console.log('\n======================================================');
-console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
-console.log('======================================================');
+// 12. Live Session LocalStorage Persistence & Restoration (Accidental Close & Back)
+console.log('\n[12] Verifying Live Session State Persistence and Restoration...');
+const mockStorage: Record<string, string> = {};
+(globalThis as unknown as { window: unknown }).window = {
+  localStorage: {
+    getItem: (key: string) => mockStorage[key] ?? null,
+    setItem: (key: string, val: string) => { mockStorage[key] = val; },
+    removeItem: (key: string) => { delete mockStorage[key]; },
+    clear: () => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); },
+  }
+};
+
+const testMatch = {
+  id: 'm_live_test_001',
+  player_ids: ['p1', 'p2'],
+  player1_id: 'p1',
+  player2_id: 'p2',
+  player_frames: [1, 0],
+  player1_frames: 1,
+  player2_frames: 0,
+  best_of: 3,
+  reds_count: 15,
+  status: 'in_progress' as const,
+  started_at: new Date().toISOString(),
+};
+
+const testFrameState = handlePot(createInitialFrameState(2, 15, ['Eldho', 'Thoma']), 'red');
+const testSession = {
+  match: testMatch,
+  players: INITIAL_PLAYERS.slice(0, 2),
+  currentFrameNum: 2,
+  playerFrames: [1, 0],
+  frameState: testFrameState,
+  undoStack: [createInitialFrameState(2, 15, ['Eldho', 'Thoma'])],
+  redoStack: [],
+  updatedAt: Date.now(),
+};
+
+// Persist live session
+saveLiveSession(testSession);
+// Verify it can be retrieved accurately
+const restoredSession = getLiveSession();
+assert(restoredSession !== null, 'Restored session must not be null');
+assert.strictEqual(restoredSession.match.id, 'm_live_test_001');
+assert.strictEqual(restoredSession.currentFrameNum, 2);
+assert.deepStrictEqual(restoredSession.playerFrames, [1, 0]);
+assert.deepStrictEqual(restoredSession.frameState.playerScores, [1, 0]);
+assert.strictEqual(restoredSession.undoStack.length, 1);
+assert.strictEqual(restoredSession.undoStack[0].playerScores[0], 0);
+
+// Verify clearing live session
+clearLiveSession();
+assert.strictEqual(getLiveSession(), null, 'Live session must be null after clearLiveSession()');
+console.log('✓ Live session accurately persists and restores all state without loss.');
+
+// 13. Match Abandonment and In-Between Ending
+console.log('\n[13] Verifying Match Abandonment and In-Between Ending...');
+async function testAbandon() {
+  const newMatch = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 3, 15);
+  assert.strictEqual(newMatch.status, 'in_progress');
+
+  // Simulate setting active live session
+  saveLiveSession({
+    ...testSession,
+    match: newMatch,
+  });
+  assert(getLiveSession() !== null);
+
+  // Abandon match in between
+  await abandonMatch(newMatch.id);
+  const allMatches = await fetchMatches();
+  const abandoned = allMatches.find(m => m.id === newMatch.id);
+  assert(abandoned, 'Abandoned match must exist in storage');
+  assert.strictEqual(abandoned.status, 'abandoned', 'Match status must be updated to abandoned');
+  assert.strictEqual(getLiveSession(), null, 'Active live session must be cleared upon abandonment');
+  console.log('✓ Match abandonment cleanly updates status and cleans up live session.');
+
+  // 14. Verify Abandoned Match Frame Isolation from Leaderboard
+  console.log('\n[14] Verifying Abandoned Match Frame Records Isolation...');
+  const testMatchForFrames = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 3, 15);
+  const { recordFrameCompleted, fetchLeaderboard } = await import('../src/lib/storage');
+  
+  // Record a frame with a huge break (e.g. 120) before abandoning
+  await recordFrameCompleted(
+    testMatchForFrames.id,
+    1,
+    [120, 4],
+    'p1000000-0000-0000-0000-000000000001',
+    120,
+    'p1000000-0000-0000-0000-000000000001'
+  );
+
+  // Abandon the match
+  await abandonMatch(testMatchForFrames.id);
+
+  // Verify that the 120 break does NOT count on the leaderboard because match was abandoned
+  const lb = await fetchLeaderboard();
+  const p1Entry = lb.find(p => p.id === 'p1000000-0000-0000-0000-000000000001');
+  assert(p1Entry, 'P1 must exist in leaderboard');
+  assert.notStrictEqual(p1Entry.highest_break, 120, 'Abandoned match frames must not contaminate highest break on leaderboard');
+  console.log('✓ Abandoned match frames cleanly purged; leaderboard integrity preserved.');
+
+  // 15. Verify Quick 4-pt Foul
+  console.log('\n[15] Verifying Quick 4-pt Foul Execution...');
+  const baseState = createInitialFrameState(2, 15, ['Eldho', 'Thoma']);
+  const stateAfterFoul = handleFoul(baseState, 4, 1, false, false);
+  assert.deepStrictEqual(stateAfterFoul.playerScores, [0, 4], '4 points must be awarded to player 2');
+  assert.strictEqual(stateAfterFoul.activePlayerIndex, 1, 'Turn must rotate to player 2');
+  assert.strictEqual(stateAfterFoul.currentBreak, 0, 'Break must be reset to 0');
+  console.log('✓ Quick 4-pt foul executes accurately with correct penalty assignment.');
+
+  console.log('\n======================================================');
+  console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
+  console.log('======================================================');
+}
+
+testAbandon().catch((err) => {
+  console.error('Test failed:', err);
+  process.exit(1);
+});

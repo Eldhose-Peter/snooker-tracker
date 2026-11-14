@@ -20,7 +20,8 @@ import {
 } from '@/lib/snooker-engine';
 import { FoulModal } from './FoulModal';
 import { WinModal } from './WinModal';
-import { recordFrameCompleted, finishMatch } from '@/lib/storage';
+import { EndMatchModal } from './EndMatchModal';
+import { recordFrameCompleted, finishMatch, abandonMatch, getLiveSession, saveLiveSession, clearLiveSession } from '@/lib/storage';
 import { 
   RotateCcw, 
   RotateCw, 
@@ -31,7 +32,8 @@ import {
   Flame, 
   ChevronRight, 
   ShieldAlert, 
-  Users 
+  Users,
+  LogOut
 } from 'lucide-react';
 
 interface LiveScoreboardProps {
@@ -67,13 +69,23 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const playerCount = resolvedPlayers.length;
   const playerNames = React.useMemo(() => resolvedPlayers.map(p => p.name), [resolvedPlayers]);
 
+  // Check if an existing live session matches this match
+  const savedSession = React.useMemo(() => {
+    const s = getLiveSession();
+    return s && s.match.id === match.id ? s : null;
+  }, [match.id]);
+
   const [currentFrameNum, setCurrentFrameNum] = useState<number>(() => {
+    if (savedSession?.currentFrameNum) return savedSession.currentFrameNum;
     const totalFrames = (match.player_frames?.reduce((a, b) => a + b, 0)) ?? 
       (match.player1_frames + match.player2_frames);
     return totalFrames + 1;
   });
 
   const [playerFrames, setPlayerFrames] = useState<number[]>(() => {
+    if (savedSession?.playerFrames && savedSession.playerFrames.length === playerCount) {
+      return savedSession.playerFrames;
+    }
     if (match.player_frames && match.player_frames.length === playerCount) {
       return match.player_frames;
     }
@@ -85,6 +97,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   // Snooker Frame State and Undo / Redo Stacks
   const [state, setState] = useState<FrameState>(() => {
+    if (savedSession?.frameState) {
+      return savedSession.frameState;
+    }
     const initBreakOff = (currentFrameNum - 1) % playerCount;
     const fresh = createInitialFrameState(playerCount, match.reds_count || 15, playerNames);
     if (initBreakOff !== 0) {
@@ -97,12 +112,41 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     return fresh;
   });
 
-  const [undoStack, setUndoStack] = useState<FrameState[]>([]);
-  const [redoStack, setRedoStack] = useState<FrameState[]>([]);
+  const [undoStack, setUndoStack] = useState<FrameState[]>(() => {
+    return savedSession?.undoStack || [];
+  });
+  const [redoStack, setRedoStack] = useState<FrameState[]>(() => {
+    return savedSession?.redoStack || [];
+  });
 
   // Modals
   const [isFoulModalOpen, setIsFoulModalOpen] = useState(false);
   const [isWinModalOpen, setIsWinModalOpen] = useState(false);
+  const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
+
+  // Sync to local storage continuously to prevent data loss on browser close / reload / back
+  useEffect(() => {
+    saveLiveSession({
+      match,
+      players: resolvedPlayers,
+      currentFrameNum,
+      playerFrames,
+      frameState: state,
+      undoStack,
+      redoStack,
+      updatedAt: Date.now(),
+    });
+  }, [match, resolvedPlayers, currentFrameNum, playerFrames, state, undoStack, redoStack]);
+
+  const triggerHaptic = (ms: number = 10) => {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(ms);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   // Push state to undo stack before mutating and clear redo stack
   const applyStateMutation = useCallback((nextState: FrameState) => {
@@ -118,11 +162,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   // Actions
   const onPotBall = (ball: BallType) => {
+    triggerHaptic(12);
     const nextState = handlePot(state, ball);
     applyStateMutation(nextState);
   };
 
   const onMiss = () => {
+    triggerHaptic(10);
     const nextState = handleMiss(state);
     applyStateMutation(nextState);
   };
@@ -134,6 +180,14 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     passBack: boolean
   ) => {
     const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
+    applyStateMutation(nextState);
+  };
+
+  // Instant 1-tap standard 4-point foul (most common in casual snooker)
+  const onQuickFoul4 = () => {
+    triggerHaptic(15);
+    const target = playerCount > 2 ? 'all_opponents' : ((state.activePlayerIndex + 1) % playerCount);
+    const nextState = handleFoul(state, 4, target, false, false);
     applyStateMutation(nextState);
   };
 
@@ -291,7 +345,97 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       await finishMatch(match.id, overallWinner.id, finalFrames);
     }
 
+    clearLiveSession();
     setIsWinModalOpen(false);
+    onMatchComplete();
+  };
+
+  // End match in between handlers
+  const handleEndMatchWithLeader = async () => {
+    const finalFrames = [...playerFrames];
+    const hasPointsInFrame = state.playerScores.some(s => s > 0);
+
+    if (hasPointsInFrame) {
+      const maxScore = Math.max(...state.playerScores);
+      const scoreLeaders = state.playerScores
+        .map((s, idx) => (s === maxScore ? idx : -1))
+        .filter(idx => idx !== -1);
+
+      // Only award frame if there is an undisputed frame leader
+      if (scoreLeaders.length === 1) {
+        const frameLeaderIdx = scoreLeaders[0];
+        const frameLeader = resolvedPlayers[frameLeaderIdx] || resolvedPlayers[0];
+        const highestBreak = Math.max(...state.playerHighestBreaks);
+        const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+        const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
+
+        finalFrames[frameLeaderIdx] = (finalFrames[frameLeaderIdx] || 0) + 1;
+        await recordFrameCompleted(
+          match.id,
+          currentFrameNum,
+          state.playerScores,
+          frameLeader.id,
+          highestBreak,
+          highBreakPlayerId
+        );
+      }
+    }
+
+    const maxWonFrames = Math.max(...finalFrames);
+    let matchWinnerIdx = finalFrames.indexOf(maxWonFrames);
+    if (matchWinnerIdx === -1) matchWinnerIdx = 0;
+    const overallWinner = resolvedPlayers[matchWinnerIdx] || resolvedPlayers[0];
+
+    await finishMatch(match.id, overallWinner.id, finalFrames);
+    clearLiveSession();
+    setIsEndMatchModalOpen(false);
+    onMatchComplete();
+  };
+
+  const handleEndMatchConcede = async (concedingPlayerIndex: number) => {
+    const finalFrames = [...playerFrames];
+    let winningPlayerIndex = 0;
+    if (playerCount === 2) {
+      winningPlayerIndex = concedingPlayerIndex === 0 ? 1 : 0;
+    } else {
+      let maxScore = -1;
+      for (let i = 0; i < playerCount; i++) {
+        if (i !== concedingPlayerIndex) {
+          const score = finalFrames[i] || 0;
+          if (score > maxScore) {
+            maxScore = score;
+            winningPlayerIndex = i;
+          }
+        }
+      }
+    }
+    finalFrames[winningPlayerIndex] = (finalFrames[winningPlayerIndex] || 0) + 1;
+    const overallWinner = resolvedPlayers[winningPlayerIndex] || resolvedPlayers[0];
+
+    // Record conceded frame so frame history remains consistent
+    const highestBreak = Math.max(...state.playerHighestBreaks);
+    const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+    const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
+
+    await recordFrameCompleted(
+      match.id,
+      currentFrameNum,
+      state.playerScores,
+      overallWinner.id,
+      highestBreak,
+      highBreakPlayerId
+    );
+
+    await finishMatch(match.id, overallWinner.id, finalFrames);
+    clearLiveSession();
+    setIsEndMatchModalOpen(false);
+    onMatchComplete();
+  };
+
+  const handleEndMatchAbandon = async () => {
+    await abandonMatch(match.id);
+    clearLiveSession();
+    setIsEndMatchModalOpen(false);
     onMatchComplete();
   };
 
@@ -330,29 +474,41 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & SERIES TRACKER */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 py-2.5 bg-[#0d1611] border border-emerald-900/40 rounded-2xl text-xs sm:text-sm gap-2 shadow-sm">
-        <div className="flex items-center space-x-2">
-          <span className="font-bold text-emerald-400">Frame {currentFrameNum}</span>
-          <span className="text-gray-500">|</span>
-          <span className="text-gray-400">
-            {match.best_of === 1 ? 'Single Frame' : `Best of ${match.best_of} (${framesToWin} to win)`}
+      <div className="flex items-center justify-between px-3 py-2 bg-[#0d1611] border border-emerald-900/40 rounded-2xl text-xs gap-2 shadow-sm">
+        <div className="flex items-center space-x-2 min-w-0">
+          <span className="font-black text-emerald-400">Frame {currentFrameNum}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-gray-400 truncate">
+            {match.best_of === 1 ? '1 Frame' : `Best of ${match.best_of}`}
           </span>
-          <span className="text-gray-500">|</span>
-          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+          <span className="text-gray-600 hidden xs:inline">|</span>
+          <span className="text-xs text-gray-400 font-medium hidden xs:flex items-center gap-1">
             <Users className="w-3.5 h-3.5 text-emerald-400" />
-            {playerCount} Players
+            {playerCount}P
           </span>
         </div>
 
-        {/* Frames Tally */}
-        <div className="flex items-center space-x-3 overflow-x-auto font-mono text-xs font-bold scrollbar-none">
-          {resolvedPlayers.map((p, idx) => (
-            <div key={p.id} className="flex items-center space-x-1 flex-shrink-0">
-              <span className="text-gray-400 truncate max-w-[70px]">{p.name}:</span>
-              <span className="text-emerald-300 font-black">{playerFrames[idx] || 0}</span>
-              {idx < resolvedPlayers.length - 1 && <span className="text-gray-600 ml-1">·</span>}
-            </div>
-          ))}
+        {/* Frames Tally & End Match Button */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center space-x-2 font-mono text-xs font-bold">
+            {resolvedPlayers.map((p, idx) => (
+              <div key={p.id} className="flex items-center space-x-1">
+                <span className="text-gray-400 truncate max-w-[50px] sm:max-w-[70px]">{p.name}:</span>
+                <span className="text-emerald-300 font-black">{playerFrames[idx] || 0}</span>
+                {idx < resolvedPlayers.length - 1 && <span className="text-gray-600">·</span>}
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsEndMatchModalOpen(true)}
+            className="px-2.5 py-1 rounded-xl bg-red-950/70 hover:bg-red-900/90 border border-red-700/50 text-red-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+            title="End or Concede Match Early"
+          >
+            <LogOut className="w-3 h-3" />
+            <span>End Match</span>
+          </button>
         </div>
       </div>
 
@@ -533,31 +689,34 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* TOUCH-FRIENDLY SNOOKER BALLS GRID */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-3xl p-3 sm:p-5 shadow-inner">
-        <div className="text-center mb-2">
+      <div className="baize-felt rounded-3xl p-2.5 sm:p-5 shadow-inner">
+        <div className="flex items-center justify-between px-1 mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300/80">
             Tap Ball to Pot
           </span>
+          <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/70 px-2.5 py-0.5 rounded-full border border-emerald-800/40">
+            {getBallOnLabel()}
+          </span>
         </div>
 
-        {/* Reds Button & Colors Grid */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
+        {/* Ergonomic 4-col layout on mobile (2 rows), 7-col on sm+ screens */}
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
           
-          {/* RED BALL (1 pt) */}
+          {/* RED BALL (1 pt) - Large 2-column primary button on mobile */}
           <button
             type="button"
             disabled={!availableBalls.includes('red')}
             onClick={() => onPotBall('red')}
-            className={`col-span-2 sm:col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-2 sm:col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('red')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-red-400/90 shadow-lg shadow-red-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">1</span>
-            <span className="text-[10px] sm:text-xs font-semibold text-white/90 uppercase tracking-tight">Red</span>
+            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase tracking-wider">Red</span>
           </button>
 
           {/* YELLOW (2 pts) */}
@@ -565,16 +724,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('yellow')}
             onClick={() => onPotBall('yellow')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('yellow')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-lg shadow-yellow-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-black drop-shadow">2</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-black/80 uppercase">Yel</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-black/85 uppercase">Yel</span>
           </button>
 
           {/* GREEN (3 pts) */}
@@ -582,16 +741,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('green')}
             onClick={() => onPotBall('green')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('green')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-green-400/90 shadow-lg shadow-green-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">3</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/90 uppercase">Grn</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Grn</span>
           </button>
 
           {/* BROWN (4 pts) */}
@@ -599,16 +758,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('brown')}
             onClick={() => onPotBall('brown')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('brown')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-amber-500/90 shadow-lg shadow-amber-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">4</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/90 uppercase">Brn</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Brn</span>
           </button>
 
           {/* BLUE (5 pts) */}
@@ -616,16 +775,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('blue')}
             onClick={() => onPotBall('blue')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('blue')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-blue-400/90 shadow-lg shadow-blue-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">5</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/90 uppercase">Blu</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Blu</span>
           </button>
 
           {/* PINK (6 pts) */}
@@ -633,16 +792,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('pink')}
             onClick={() => onPotBall('pink')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('pink')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-pink-400/90 shadow-lg shadow-pink-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">6</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/90 uppercase">Pnk</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Pnk</span>
           </button>
 
           {/* BLACK (7 pts) */}
@@ -650,68 +809,64 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('black')}
             onClick={() => onPotBall('black')}
-            className={`col-span-1 h-20 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition border border-gray-700 ${
+            className={`col-span-1 h-16 sm:h-24 rounded-2xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
               availableBalls.includes('black')
-                ? 'opacity-100 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-gray-400/90 shadow-lg shadow-black/80 hover:scale-105 active:scale-95'
                 : 'opacity-25 grayscale cursor-not-allowed'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
           >
             <div className="snooker-ball-highlight" />
             <span className="text-xl sm:text-2xl font-black text-white drop-shadow">7</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/90 uppercase">Blk</span>
+            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Blk</span>
           </button>
 
         </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* PRIMARY CONTROLS: MISS, FOUL, FREE BALL, UNDO, REDO, CONCEDE */}
+      {/* PRIMARY CONTROLS: MISS, QUICK FOUL, UNDO, REDO, FOUL MODAL    */}
       {/* ------------------------------------------------------------- */}
       <div className="grid grid-cols-6 gap-2">
         
-        {/* MISS / END TURN (Double width) */}
+        {/* MISS / END TURN (Fast 1-tap shot miss) */}
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow"
+          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-2xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-black text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
         >
           <ChevronRight className="w-4 h-4 text-emerald-400" />
           <span>Miss / Next Turn</span>
         </button>
 
-        {/* FOUL */}
+        {/* QUICK FOUL (+4) (Fast 1-tap standard snooker penalty) */}
+        <button
+          type="button"
+          onClick={onQuickFoul4}
+          className="col-span-3 sm:col-span-2 py-3 px-3 rounded-2xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-black text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          title="Instant 4-point penalty to opponent"
+        >
+          <AlertTriangle className="w-4 h-4 text-red-400" />
+          <span>Foul (+4 Pts)</span>
+        </button>
+
+        {/* FOUL OPTIONS MODAL (For 5, 6, 7 pts, or multiplayer targeting) */}
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-3 sm:col-span-1 py-3 px-2 sm:px-3 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-600/50 active:scale-95 text-red-200 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow"
+          className="col-span-2 sm:col-span-2 py-2.5 sm:py-3 px-2 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none"
         >
-          <AlertTriangle className="w-4 h-4 text-red-400" />
-          <span>Foul</span>
+          <span>Foul Options...</span>
         </button>
 
-        {/* FREE BALL TOGGLE */}
-        <button
-          type="button"
-          onClick={onToggleFreeBall}
-          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
-            state.freeBallActive
-              ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-950'
-              : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:border-gray-700'
-          }`}
-        >
-          <Sparkles className={`w-3.5 h-3.5 ${state.freeBallActive ? 'text-black' : 'text-yellow-400'}`} />
-          <span>Free Ball</span>
-        </button>
-
-        {/* UNDO BUTTON */}
+        {/* UNDO BUTTON (High prominence for quick corrections) */}
         <button
           type="button"
           disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
+          className={`col-span-2 sm:col-span-3 py-2.5 sm:py-3 px-2 rounded-2xl border active:scale-95 font-black text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             undoStack.length > 0
-              ? 'bg-blue-950/80 text-blue-200 border-blue-600/50 hover:bg-blue-900'
+              ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 shadow-md shadow-blue-950'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Undo last action (Ctrl+Z)"
@@ -725,9 +880,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={redoStack.length === 0}
           onClick={onRedo}
-          className={`col-span-2 sm:col-span-1 py-3 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 ${
+          className={`col-span-2 sm:col-span-3 py-2.5 sm:py-3 px-2 rounded-2xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             redoStack.length > 0
-              ? 'bg-purple-950/80 text-purple-200 border-purple-600/50 hover:bg-purple-900'
+              ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 shadow-md'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Redo action (Ctrl+Y)"
@@ -736,15 +891,41 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           <span>Redo{redoStack.length > 0 ? ` (${redoStack.length})` : ''}</span>
         </button>
 
-        {/* CONCEDE FRAME */}
-        <button
-          type="button"
-          onClick={onConcede}
-          className="col-span-6 py-1.5 px-3 rounded-lg text-gray-500 hover:text-red-400 text-xs font-semibold flex items-center justify-center space-x-1 transition"
-        >
-          <Flag className="w-3.5 h-3.5" />
-          <span>Concede Frame</span>
-        </button>
+        {/* FOOTER ACTIONS: FREE BALL, CONCEDE FRAME & END MATCH */}
+        <div className="col-span-6 flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-emerald-950/80">
+          <button
+            type="button"
+            onClick={onToggleFreeBall}
+            className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer select-none ${
+              state.freeBallActive
+                ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-950'
+                : 'bg-gray-900/80 text-gray-400 border-gray-800 hover:text-gray-200 hover:border-gray-700'
+            }`}
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${state.freeBallActive ? 'text-black' : 'text-yellow-400'}`} />
+            <span>{state.freeBallActive ? 'Free Ball Active' : 'Nominate Free Ball'}</span>
+          </button>
+
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={onConcede}
+              className="py-1.5 px-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-gray-900 text-xs font-semibold flex items-center space-x-1 transition cursor-pointer"
+            >
+              <Flag className="w-3.5 h-3.5" />
+              <span>Concede Frame</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsEndMatchModalOpen(true)}
+              className="py-1.5 px-2.5 rounded-xl text-red-400/90 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-900/50 text-xs font-semibold flex items-center space-x-1 transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>End Match Early</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
@@ -784,6 +965,18 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         onNextFrame={handleNextFrame}
         onFinishMatch={handleFinishMatch}
         onUndo={undoStack.length > 0 ? onUndo : undefined}
+      />
+
+      <EndMatchModal
+        isOpen={isEndMatchModalOpen}
+        onClose={() => setIsEndMatchModalOpen(false)}
+        players={resolvedPlayers}
+        playerScores={state.playerScores}
+        playerFrames={projectedFrames}
+        currentFrameNum={currentFrameNum}
+        onFinishWithCurrentLeader={handleEndMatchWithLeader}
+        onConcedeMatch={handleEndMatchConcede}
+        onAbandonMatch={handleEndMatchAbandon}
       />
 
     </div>
