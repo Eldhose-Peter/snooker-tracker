@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #090d0b;
+    --foreground: #f3f4f6;
+    --baize-green: #0a4d2e;
+    --baize-dark: #052a19;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #080c0a;
+  color: #f3f4f6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Snooker Ball Styles & 3D Specular Lighting */
+.snooker-ball {
+  position: relative;
+  border-radius: 9999px;
+  box-shadow: 
+    inset 0 4px 6px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.6),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+}
+
+.snooker-ball:active {
+  transform: scale(0.93) translateY(2px);
+  filter: brightness(0.9);
+}
+
+.snooker-ball-highlight {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  width: 28%;
+  height: 28%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+/* Felt Texture Effect */
+.baize-felt {
+  background: radial-gradient(circle at 50% 30%, #0d5432 0%, #083720 60%, #041f12 100%);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+}
+
+.baize-card {
+  background: rgba(13, 24, 18, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d0b;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e3a29;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #22c55e;
 }

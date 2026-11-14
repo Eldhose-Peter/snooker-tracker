@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SnookerTrack 🎱
 
-## Getting Started
+A modern, mobile-friendly **Snooker Game Tracker & Leaderboard** web application built for friend groups. Features a live touch scoreboard, real snooker math & points-remaining calculations, snookers-required alerts, fouls & free ball mechanics, undo stack, and persistent group rankings.
 
-First, run the development server:
+Built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Supabase**, ready to deploy to **Vercel**.
+
+---
+
+## 🌟 Key Features
+
+* **Mobile-First Live Scoreboard**: Large, touch-friendly ball buttons (1 pt Red through 7 pt Black) with 3D baize styling and active player indicators.
+* **Snooker Math & Break Engine**:
+  * Real-time break accumulator and potted ball sequence chips.
+  * Maximum table points remaining calculation (accounting for red/color phases and strict color clearance).
+  * Automatic **Snookers Required** detection (`ceil(deficit / 4)`).
+* **Fouls & Tactical Penalties**:
+  * Award 4–7 penalty points to opponent.
+  * Free Ball nomination toggle for snookered scenarios.
+  * Option to pass shot back to fouled player.
+* **Unlimited Undo History**: Fully reversible snapshot state stack to instantly fix mis-taps.
+* **Match & Frame Management**: Pre-game setup for Single Frame or Best of 3/5/7/9 matches with custom red counts (15, 10, or 6 reds).
+* **"The Chart Board" (Leaderboard)**:
+  * Global friend rankings: Matches Won/Lost, Win Rate %, Frames Won/Lost, and All-Time Highest Break.
+  * Head-to-Head (H2H) direct comparison tool.
+* **Dual Storage (Cloud + Offline Fallback)**:
+  * Seamlessly connects to **Supabase** (PostgreSQL with RLS & views).
+  * Automatically falls back to LocalStorage with pre-populated sample friend data when offline or before Supabase keys are configured.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install & Run Locally
 
 ```bash
+git clone <repo-url>
+cd snooker-tracker
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser. The app works immediately in offline/demo mode!
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🗄️ Supabase Setup (Cloud Database)
 
-## Learn More
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Go to the **SQL Editor** in your Supabase dashboard.
+3. Open `supabase/schema.sql` from this repository, paste it into the SQL Editor, and click **Run**.
+4. (Optional) Run `supabase/seed.sql` to populate sample friend matches and players.
+5. In Supabase, navigate to **Project Settings** → **API** and copy:
+   - `Project URL`
+   - `anon public key`
+6. Create `.env.local` in your project root:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Restart your dev server (`npm run dev`). The status indicator in the top navbar will display **Supabase (Connected)**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🚢 Deploy to Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push this repository to GitHub or GitLab.
+2. Go to [vercel.com/new](https://vercel.com/new) and import the repository.
+3. Add the two environment variables in Vercel's project settings:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Click **Deploy**. Your Snooker Tracker will be live in seconds!
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📐 Database Schema Overview
+
+* `players`: Friend profiles (id, name, nickname, avatar_url, created_at).
+* `matches`: Match series tracking (player1_id, player2_id, best_of, status, winner_id, player1_frames, player2_frames).
+* `frames`: Frame-level scores and highest breaks (match_id, frame_number, scores, winner_id, highest_break).
+* `breaks`: High runs log for breaks ≥ 20 points.
+* `player_leaderboard`: Real-time PostgreSQL View computing matches played, won, win rate %, frame differential, and high breaks.
