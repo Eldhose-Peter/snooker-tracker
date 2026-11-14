@@ -477,9 +477,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   // Determine current ball on description
   const getBallOnLabel = (): string => {
-    if (state.freeBallActive) return 'FREE BALL (Any Ball)';
+    if (state.freeBallActive) return 'FREE BALL';
     if (state.tablePhase === 'RED') return 'RED (1 pt)';
-    if (state.tablePhase === 'COLOR_AFTER_RED') return 'ANY COLOR (2-7 pts)';
+    if (state.tablePhase === 'COLOR_AFTER_RED') return 'COLOR (2-7)';
     if (state.tablePhase === 'COLORS_SEQUENCE') {
       const ball = COLOR_ORDER[state.colorsSequenceIndex];
       return ball ? `${ball.toUpperCase()} (${BALL_CONFIGS[ball].points} pts)` : 'None';
@@ -488,51 +488,60 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-1.5 sm:py-3 space-y-2 sm:space-y-3">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-1 sm:py-2.5 space-y-1.5 sm:space-y-2.5">
       
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & DISCREET TOP-RIGHT OPTIONS MENU (3-DOTS)       */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-[#0d1611] border border-emerald-900/40 rounded-xl text-xs gap-2 shadow-sm">
-        <div className="flex items-center space-x-2 min-w-0">
-          <span className="font-black text-emerald-400">Frame {currentFrameNum}</span>
-          <span className="text-gray-600">|</span>
-          <span className="text-gray-400 truncate">
-            {match.best_of === 1 ? '1 Frame' : `Best of ${match.best_of}`}
+      <div className="flex items-center justify-between px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#0d1611] border border-emerald-900/40 rounded-xl text-xs gap-2 shadow-sm">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
+          <span className="font-black text-emerald-400 whitespace-nowrap">Frame {currentFrameNum}</span>
+          <span className="text-gray-600">•</span>
+          <span className="text-gray-300 truncate">
+            {match.best_of === 1 ? 'Single Frame' : `Best of ${match.best_of}`}
           </span>
-          <span className="text-gray-600 hidden xs:inline">|</span>
-          <span className="text-xs text-gray-400 font-medium hidden xs:flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-gray-600">•</span>
+          <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
+            <Users className="w-3 h-3 text-emerald-400" />
             {playerCount}P
           </span>
         </div>
 
-        {/* Frames Tally & Discreet 3-Dots Options Menu */}
+        {/* Frames Tally (when best_of > 1 and 2 players) & Discreet 3-Dots Options Menu */}
         <div className="flex items-center space-x-2 flex-shrink-0">
-          <div className="flex items-center space-x-1.5 sm:space-x-2 font-mono text-xs font-bold">
-            {resolvedPlayers.map((p, idx) => (
-              <div key={p.id} className="flex items-center space-x-1">
-                <span className="text-gray-400 truncate max-w-[50px] sm:max-w-[75px]">{p.name}:</span>
-                <span className="text-emerald-300 font-black">{playerFrames[idx] || 0}</span>
-                {idx < resolvedPlayers.length - 1 && <span className="text-gray-600">·</span>}
-              </div>
-            ))}
-          </div>
+          {match.best_of > 1 && playerCount === 2 && (
+            <div className="flex items-center space-x-1 font-mono text-xs font-bold text-gray-300">
+              <span className="text-emerald-400 font-black">{playerFrames[0] || 0}</span>
+              <span className="text-gray-500">-</span>
+              <span className="text-emerald-400 font-black">{playerFrames[1] || 0}</span>
+            </div>
+          )}
 
-          {/* 3-Dots Kebab Options Menu (Hides 'End Match' & secondary actions) */}
+          {/* 3-Dots Kebab Options Menu */}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
               onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
-              className="p-1.5 rounded-lg bg-gray-900/90 hover:bg-gray-800 border border-gray-700/80 text-gray-300 hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm"
+              className="p-1 sm:p-1.5 rounded-lg bg-gray-900/90 hover:bg-gray-800 border border-gray-700/80 text-gray-300 hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm"
               title="Match Options (End Match, Concede, Free Ball)"
               aria-label="Match Options"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
             {isOptionsMenuOpen && (
               <div className="absolute right-0 mt-1.5 w-52 py-1 bg-[#0c1811] border border-emerald-600/60 rounded-xl shadow-2xl z-50 animate-fade-in text-xs space-y-0.5">
+                {match.best_of > 1 && playerCount > 2 && (
+                  <div className="px-3 py-1.5 border-b border-emerald-900/60 font-mono text-[11px] text-gray-300">
+                    <div className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Frames Tally</div>
+                    <div className="flex flex-wrap gap-2">
+                      {resolvedPlayers.map((p, idx) => (
+                        <span key={p.id}><strong className="text-white">{p.name}:</strong> <span className="text-emerald-400">{playerFrames[idx] || 0}</span></span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -577,159 +586,201 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* ULTRA-CLEAR ACTIVE SCORER BANNER (HIGH CONTRAST)              */}
-      {/* Eliminates marking errors: Prominent, unmistakable cue        */}
+      {/* COMPACT PLAYER SCORE DISPLAY                                  */}
+      {/* 1v1: Side-by-side cards (~50-54px max height)                 */}
+      {/* Multiplayer (3-6P): Dense horizontal pill chips (~38-42px)    */}
       {/* ------------------------------------------------------------- */}
-      <div className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 text-black px-3.5 py-2 rounded-2xl flex items-center justify-between shadow-lg shadow-emerald-500/25 border-2 border-emerald-200">
-        <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
-          <span className="flex-shrink-0 text-[10px] sm:text-xs uppercase tracking-widest font-black bg-black text-emerald-300 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow">
-            <Zap className="w-3 h-3 fill-emerald-300 text-emerald-300" />
-            AT TABLE
-          </span>
-          <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-black/80 flex-shrink-0 hidden xs:inline">
-            SCORING FOR:
-          </span>
-          <span className="text-sm sm:text-base font-black tracking-wide text-black truncate underline decoration-black/40 decoration-2">
-            {activePlayer.name}
-          </span>
-        </div>
+      {playerCount === 2 ? (
+        /* 1v1 (2 Players): Compact side-by-side cards */
+        <div className="grid grid-cols-2 gap-2">
+          {resolvedPlayers.map((player, idx) => {
+            const isActive = state.activePlayerIndex === idx;
+            const score = state.playerScores[idx] ?? 0;
+            const highBreak = state.playerHighestBreaks[idx] ?? 0;
+            const framesWon = playerFrames[idx] ?? 0;
 
-        {/* Current Break Counter embedded directly in banner */}
-        <div className="flex items-center space-x-2 flex-shrink-0 pl-2">
-          <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-black/75 block leading-none">Break</span>
-            <span className="text-base sm:text-lg font-black text-black font-mono leading-tight">{state.currentBreak}</span>
-          </div>
-        </div>
-      </div>
+            return (
+              <div
+                key={player.id}
+                onClick={() => onSwitchActivePlayer(idx)}
+                title={isActive ? `Scoring for ${player.name}` : `Tap to switch turn to ${player.name}`}
+                className={`relative px-2.5 sm:px-3 py-1.5 h-[50px] sm:h-[54px] rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#103822] via-[#14472b] to-[#0a2315] border-2 border-emerald-400 shadow-md shadow-emerald-950 ring-2 ring-emerald-400/40'
+                    : 'bg-[#0d1712]/75 border-gray-800 opacity-70 hover:opacity-100 hover:border-emerald-800/60'
+                }`}
+              >
+                <div className="min-w-0 pr-1.5 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5">
+                    {isActive ? (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                    ) : (
+                      <span className="text-[10px] font-mono font-bold text-gray-500">#{idx + 1}</span>
+                    )}
+                    <h2 className={`text-sm sm:text-base font-bold truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>
+                      {player.name}
+                    </h2>
+                    {match.best_of > 1 && (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 font-mono font-bold flex-shrink-0">
+                        {framesWon}F
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isActive ? (
+                      <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-0.5">
+                        <Zap className="w-2.5 h-2.5 fill-emerald-400" /> At Table
+                      </span>
+                    ) : (
+                      <span className="text-[9px] text-gray-500 hover:text-gray-300">Tap to switch</span>
+                    )}
+                    {highBreak > 0 && (
+                      <span className="text-[9px] text-amber-400 font-mono flex items-center gap-0.5 ml-1">
+                        <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                        {highBreak}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* MULTIPLAYER SCORE CARDS (ACTIVE PLAYER GLOW, NO NICKNAMES)    */}
-      {/* ------------------------------------------------------------- */}
-      <div className={`grid gap-2 ${
-        playerCount === 2 
-          ? 'grid-cols-2' 
-          : playerCount === 3 
-          ? 'grid-cols-3' 
-          : 'grid-cols-2 sm:grid-cols-4'
-      }`}>
-        {resolvedPlayers.map((player, idx) => {
-          const isActive = state.activePlayerIndex === idx;
-          const score = state.playerScores[idx] ?? 0;
-          const highBreak = state.playerHighestBreaks[idx] ?? 0;
-          const framesWon = playerFrames[idx] ?? 0;
-
-          return (
-            <div
-              key={player.id}
-              onClick={() => onSwitchActivePlayer(idx)}
-              title={isActive ? `Scoring for ${player.name}` : `Click to switch turn to ${player.name}`}
-              className={`relative p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-gradient-to-b from-[#103822] to-[#0a2315] border-2 border-emerald-400 shadow-lg shadow-emerald-950 ring-2 ring-emerald-400/40'
-                  : 'bg-[#0d1712]/75 border-gray-800 opacity-65 hover:opacity-100 hover:border-emerald-800/60'
-              }`}
-            >
-              {/* Turn Sequence & Frames Won */}
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                  isActive ? 'bg-emerald-500/30 text-emerald-300' : 'bg-gray-800 text-gray-400'
-                }`}>
-                  #{idx + 1}
-                </span>
-
-                {isActive ? (
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow">
-                    <Zap className="w-2.5 h-2.5 fill-black" /> ACTIVE
+                <div className="text-right flex-shrink-0 pl-1">
+                  <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${isActive ? 'text-emerald-300' : 'text-white'}`}>
+                    {score}
                   </span>
-                ) : (
-                  <span className="text-[9px] text-gray-500 hover:text-gray-300">
-                    Tap to switch
-                  </span>
-                )}
-
-                <div className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/40 text-emerald-300 font-mono font-bold">
-                  {framesWon}F
                 </div>
               </div>
-
-              {/* Player Name ONLY (No Nicknames) */}
-              <div className="min-w-0 pr-1">
-                <h2 className={`text-sm sm:text-base font-bold truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>
-                  {player.name}
-                </h2>
-              </div>
-
-              {/* Score Display */}
-              <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-2xl sm:text-4xl font-black text-white font-mono tracking-tight">
-                  {score}
-                </span>
-                {highBreak > 0 && (
-                  <span className="text-[10px] text-amber-300 flex items-center gap-0.5 bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/30 font-mono">
-                    <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                    Hi: {highBreak}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* SNOOKER TABLE MATH & TARGET HUD (COMPACT SINGLE ROW)          */}
-      {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-        {/* Table Remaining Points */}
-        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
-          <span className="text-[11px] text-gray-400 font-medium">Table Left:</span>
-          <span className="text-xs sm:text-sm font-black text-white font-mono">
-            {state.pointsRemaining} pts
-          </span>
+            );
+          })}
         </div>
+      ) : (
+        /* Multiplayer (3-6 Players): Clean, dense horizontal pill/chip cards (~38-42px height) */
+        <div className={`grid gap-1.5 sm:gap-2 ${
+          playerCount === 3
+            ? 'grid-cols-3'
+            : playerCount === 4
+            ? 'grid-cols-2 sm:grid-cols-4'
+            : 'grid-cols-3 sm:grid-cols-6'
+        }`}>
+          {resolvedPlayers.map((player, idx) => {
+            const isActive = state.activePlayerIndex === idx;
+            const score = state.playerScores[idx] ?? 0;
+            const highBreak = state.playerHighestBreaks[idx] ?? 0;
+            const framesWon = playerFrames[idx] ?? 0;
 
-        {/* Reds Remaining */}
-        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
-          <span className="text-[11px] text-gray-400 font-medium">Reds Left:</span>
-          <div className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shadow-sm" />
-            <span className="text-xs sm:text-sm font-black text-white font-mono">
-              {state.redsRemaining}
+            return (
+              <div
+                key={player.id}
+                onClick={() => onSwitchActivePlayer(idx)}
+                title={isActive ? `Scoring for ${player.name}` : `Tap to switch to ${player.name}`}
+                className={`relative px-2 sm:px-2.5 h-10 sm:h-11 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-950 via-[#103822] to-emerald-950 border-2 border-emerald-400 shadow-md shadow-emerald-950 ring-1 ring-emerald-400/50'
+                    : 'bg-[#0d1712]/80 border-gray-800/80 hover:border-emerald-700/60 hover:bg-[#122218]/80'
+                }`}
+              >
+                <div className="flex items-center space-x-1 sm:space-x-1.5 min-w-0 pr-1">
+                  {isActive ? (
+                    <Zap className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 flex-shrink-0 animate-pulse" />
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold text-gray-500 flex-shrink-0">
+                      #{idx + 1}
+                    </span>
+                  )}
+                  <span className={`text-xs font-bold truncate ${isActive ? 'text-white font-black' : 'text-gray-300'}`}>
+                    {player.name}
+                  </span>
+                  {match.best_of > 1 && framesWon > 0 && (
+                    <span className="text-[9px] px-1 rounded bg-emerald-900/60 text-emerald-300 font-mono font-bold flex-shrink-0">
+                      {framesWon}F
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-1 flex-shrink-0 pl-1">
+                  {highBreak > 0 && (
+                    <span className="text-[9px] text-amber-400 font-mono hidden xs:inline" title={`High Break: ${highBreak}`}>
+                      🔥{highBreak}
+                    </span>
+                  )}
+                  <span className={`font-mono font-black text-sm sm:text-base ${isActive ? 'text-emerald-300 text-base sm:text-lg' : 'text-white'}`}>
+                    {score}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* UNIFIED SCORER CONSOLE & TABLE HUD STRIP                      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="bg-[#0b140f] border border-emerald-900/60 rounded-xl px-2.5 sm:px-3 py-1.5 shadow-sm space-y-1 sm:space-y-1.5">
+        
+        {/* Row 1: Active Scorer Banner & Current Break */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-400 text-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm flex-shrink-0">
+              <Zap className="w-2.5 h-2.5 fill-black text-black" />
+              AT TABLE
             </span>
+            <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-gray-400 flex-shrink-0 hidden xs:inline">
+              SCORING FOR:
+            </span>
+            <span className="text-xs sm:text-sm font-black text-white truncate underline decoration-emerald-400 decoration-2">
+              {activePlayer.name}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1 bg-[#102417] px-2 py-0.5 rounded-lg border border-emerald-800/50 flex-shrink-0">
+            <span className="text-[9px] uppercase font-bold text-gray-400">Break</span>
+            <span className="text-xs sm:text-sm font-black text-emerald-300 font-mono leading-none">{state.currentBreak}</span>
           </div>
         </div>
 
-        {/* Target Ball On */}
-        <div className="bg-[#0b140f] border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center justify-between min-w-0">
-          <span className="text-[11px] text-gray-400 font-medium mr-1 flex-shrink-0">Target:</span>
-          <span className="text-xs sm:text-sm font-bold text-emerald-300 truncate font-mono">
-            {getBallOnLabel()}
-          </span>
+        {/* Row 2: Table Remaining, Reds, and Target Ball On */}
+        <div className="grid grid-cols-3 gap-1 pt-1 border-t border-emerald-950/80 text-[11px] sm:text-xs">
+          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-medium">Left:</span>
+            <span className="font-mono font-bold text-white text-[11px] sm:text-xs">{state.pointsRemaining} pts</span>
+          </div>
+
+          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-medium">Reds:</span>
+            <div className="flex items-center space-x-1">
+              <span className="w-2 h-2 rounded-full bg-red-600 inline-block shadow-sm" />
+              <span className="font-mono font-bold text-white text-[11px] sm:text-xs">{state.redsRemaining}</span>
+            </div>
+          </div>
+
+          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between min-w-0">
+            <span className="text-[10px] text-gray-400 font-medium mr-1 flex-shrink-0">Target:</span>
+            <span className="font-mono font-bold text-emerald-300 text-[11px] sm:text-xs truncate">{getBallOnLabel()}</span>
+          </div>
         </div>
       </div>
 
       {/* Snookers Alert Banner (Appears only when snookers needed) */}
       {state.snookersNeeded.needed && (
-        <div className="bg-amber-950/60 border border-amber-600/40 rounded-xl px-3 py-1.5 flex items-center space-x-2 text-amber-300 text-xs">
-          <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
+        <div className="bg-amber-950/60 border border-amber-600/40 rounded-lg px-2.5 py-1 flex items-center space-x-1.5 text-amber-300 text-[11px]">
+          <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
           <span className="font-bold truncate">
-            Snookers Required: {state.snookersNeeded.trailers.map(t => `${resolvedPlayers[t.playerIndex]?.name || `P${t.playerIndex + 1}`} (${t.count})`).join(', ')}
+            Snookers: {state.snookersNeeded.trailers.map(t => `${resolvedPlayers[t.playerIndex]?.name || `P${t.playerIndex + 1}`} (${t.count})`).join(', ')}
           </span>
         </div>
       )}
 
       {/* Free Ball Active Banner (With 1-tap dismiss) */}
       {state.freeBallActive && (
-        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-xl px-3 py-1.5 flex items-center justify-between text-yellow-300 text-xs">
-          <div className="flex items-center space-x-2">
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2.5 py-1 flex items-center justify-between text-yellow-300 text-[11px]">
+          <div className="flex items-center space-x-1.5">
             <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
             <span className="font-bold">FREE BALL ACTIVE: Any nominated color acts as ball on</span>
           </div>
           <button
             type="button"
             onClick={onToggleFreeBall}
-            className="text-[10px] bg-yellow-500 text-black px-2 py-0.5 rounded font-black hover:bg-yellow-400 transition"
+            className="text-[9px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-black hover:bg-yellow-400 transition cursor-pointer"
           >
             Cancel
           </button>
@@ -738,27 +789,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* TOUCH-FRIENDLY SNOOKER BALLS GRID                             */}
-      {/* Large, well-spaced buttons; unplayable balls are disabled     */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-2xl p-2 sm:p-3.5 shadow-inner">
-        <div className="flex items-center justify-between px-1 mb-1.5">
-          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-300/80">
-            Tap Ball to Pot for <strong className="text-white underline">{activePlayer.name}</strong>
-          </span>
-          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/40">
-            {getBallOnLabel()}
-          </span>
-        </div>
-
-        {/* 4-col layout on mobile (2 compact rows), 7-col on sm+ screens */}
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="baize-felt rounded-xl p-1.5 sm:p-2.5 shadow-inner">
+        {/* 4-col layout on mobile (2 rows), 7-col on sm+ screens */}
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 sm:gap-1.5">
           
           {/* RED BALL (1 pt) - Large 2-column primary button on mobile */}
           <button
             type="button"
             disabled={!availableBalls.includes('red')}
             onClick={() => onPotBall('red')}
-            className={`col-span-2 sm:col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-2 sm:col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('red')
                 ? 'opacity-100 ring-2 ring-red-400/90 shadow-md shadow-red-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -766,8 +807,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">1</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase tracking-wider">Red</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">1</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase tracking-wider leading-none mt-0.5">Red</span>
           </button>
 
           {/* YELLOW (2 pts) */}
@@ -775,7 +816,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('yellow')}
             onClick={() => onPotBall('yellow')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('yellow')
                 ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-md shadow-yellow-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -783,8 +824,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-black drop-shadow">2</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-black/85 uppercase">Yel</span>
+            <span className="text-lg sm:text-2xl font-black text-black drop-shadow leading-none">2</span>
+            <span className="text-[9px] sm:text-xs font-bold text-black/85 uppercase leading-none mt-0.5">Yel</span>
           </button>
 
           {/* GREEN (3 pts) */}
@@ -792,7 +833,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('green')}
             onClick={() => onPotBall('green')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('green')
                 ? 'opacity-100 ring-2 ring-green-400/90 shadow-md shadow-green-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -800,8 +841,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">3</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Grn</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">3</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Grn</span>
           </button>
 
           {/* BROWN (4 pts) */}
@@ -809,7 +850,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('brown')}
             onClick={() => onPotBall('brown')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('brown')
                 ? 'opacity-100 ring-2 ring-amber-500/90 shadow-md shadow-amber-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -817,8 +858,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">4</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Brn</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">4</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Brn</span>
           </button>
 
           {/* BLUE (5 pts) */}
@@ -826,7 +867,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('blue')}
             onClick={() => onPotBall('blue')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('blue')
                 ? 'opacity-100 ring-2 ring-blue-400/90 shadow-md shadow-blue-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -834,8 +875,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">5</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Blu</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">5</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Blu</span>
           </button>
 
           {/* PINK (6 pts) */}
@@ -843,7 +884,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('pink')}
             onClick={() => onPotBall('pink')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('pink')
                 ? 'opacity-100 ring-2 ring-pink-400/90 shadow-md shadow-pink-950/60 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -851,8 +892,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">6</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Pnk</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">6</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Pnk</span>
           </button>
 
           {/* BLACK (7 pts) */}
@@ -860,7 +901,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('black')}
             onClick={() => onPotBall('black')}
-            className={`col-span-1 h-14 sm:h-20 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
+            className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
               availableBalls.includes('black')
                 ? 'opacity-100 ring-2 ring-gray-400/90 shadow-md shadow-black/80 hover:scale-105 active:scale-95'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -868,8 +909,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow">7</span>
-            <span className="text-[9px] sm:text-[11px] font-bold text-white/95 uppercase">Blk</span>
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow leading-none">7</span>
+            <span className="text-[9px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Blk</span>
           </button>
 
         </div>
@@ -877,47 +918,46 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* STREAMLINED PRIMARY CONTROLS: MISS, FOUL, UNDO, REDO          */}
-      {/* Drastically reduced clutter: 1 row desktop, 2 tidy rows mobile */}
       {/* ------------------------------------------------------------- */}
       <div className="grid grid-cols-12 gap-1.5 sm:gap-2">
         
-        {/* MISS / END TURN (Fast 1-tap shot miss) */}
+        {/* MISS / END TURN */}
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-6 sm:col-span-4 py-2.5 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
         >
-          <ChevronRight className="w-4 h-4 text-emerald-400" />
+          <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
           <span>Miss / Switch</span>
         </button>
 
-        {/* QUICK FOUL (+4) (Fast 1-tap standard snooker penalty) */}
+        {/* QUICK FOUL (+4) */}
         <button
           type="button"
           onClick={onQuickFoul4}
-          className="col-span-4 sm:col-span-3 py-2.5 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
+          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
           title="Instant 4-point penalty to opponent"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
           <span>Foul (+4)</span>
         </button>
 
-        {/* FOUL OPTIONS MODAL (For 5, 6, 7 pts or multiplayer target) */}
+        {/* FOUL OPTIONS MODAL */}
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-2 sm:col-span-1 py-2.5 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
+          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
           title="Custom foul points (5, 6, 7 pts)"
         >
           <span>···</span>
         </button>
 
-        {/* UNDO BUTTON (High prominence for quick corrections) */}
+        {/* UNDO BUTTON */}
         <button
           type="button"
           disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-8 sm:col-span-3 py-2.5 px-3 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
+          className={`col-span-8 sm:col-span-3 h-9 sm:h-10 px-2 sm:px-3 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             undoStack.length > 0
               ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 shadow-md shadow-blue-950'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
@@ -933,7 +973,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={redoStack.length === 0}
           onClick={onRedo}
-          className={`col-span-4 sm:col-span-1 py-2.5 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
+          className={`col-span-4 sm:col-span-1 h-9 sm:h-10 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
             redoStack.length > 0
               ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 shadow-md'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
@@ -949,7 +989,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* LAST ACTION FEEDBACK                                          */}
       {/* ------------------------------------------------------------- */}
       {state.lastActionDescription && (
-        <p className="text-[11px] text-gray-500 text-center font-mono truncate px-2">
+        <p className="text-[10px] sm:text-[11px] text-gray-500 text-center font-mono truncate px-2">
           {state.lastActionDescription}
         </p>
       )}

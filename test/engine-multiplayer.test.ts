@@ -466,6 +466,25 @@ async function testAbandon() {
   assert.strictEqual(framesRequired, 1);
   console.log('✓ Single Frame match correctly requires 1 frame to win and conclude.');
 
+  // 20. Verify Compact Multiplayer Roster Scoring & Switching for 2 to 6 Players
+  console.log('\n[20] Verifying Compact Multiplayer Scoring & Switching (2 to 6 Players)...');
+  for (let count = 2; count <= 6; count++) {
+    const names = INITIAL_PLAYERS.slice(0, count).map(p => p.name);
+    let multiState = createInitialFrameState(count, 15, names);
+    assert.strictEqual(multiState.playerScores.length, count);
+    assert.strictEqual(multiState.playerHighestBreaks.length, count);
+
+    // Switch turn to each player and pot a ball
+    for (let i = 0; i < count; i++) {
+      multiState = handleSwitchPlayer(multiState, i);
+      assert.strictEqual(multiState.activePlayerIndex, i);
+      multiState = handlePot(multiState, 'red');
+      assert.strictEqual(multiState.playerScores[i] > 0, true);
+      multiState = handleMiss(multiState);
+    }
+  }
+  console.log('✓ Compact multiplayer scoring and switching cleanly validated for 2, 3, 4, 5, and 6 players.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');
