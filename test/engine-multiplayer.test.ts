@@ -556,6 +556,12 @@ async function testAbandon() {
   assert(controlsIndex !== -1, 'LiveScoreboard must contain primary controls');
   assert(feedbackIndex !== -1, 'LiveScoreboard must contain bottom feedback section');
   assert(feedbackIndex > controlsIndex, 'Feedback banner must be located below controls');
+
+  // Verify Black (+7) has distinct high-contrast styling from Green (+3)
+  assert(scoreboardSource.includes('text-slate-100') || scoreboardSource.includes('text-zinc-100'), 'Black (+7) score increase indicator must be distinct from green');
+
+  // Verify safe-area mobile spacing for bottom floating toast
+  assert(scoreboardSource.includes('safe-area-inset-bottom'), 'Floating toast must account for mobile safe area insets');
   console.log('✓ Individual score card increase animations and bottom feedback position verified.');
 
   console.log('\n======================================================');

@@ -197,19 +197,19 @@ body {
 @keyframes scoreRise {
   0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.8);
+    transform: translateY(3px) scale(0.85);
   }
   20% {
     opacity: 1;
-    transform: translateY(-2px) scale(1.15);
+    transform: translateY(0px) scale(1.1);
   }
   65% {
     opacity: 1;
-    transform: translateY(-16px) scale(1);
+    transform: translateY(-7px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-28px) scale(0.85);
+    transform: translateY(-13px) scale(0.9);
   }
 }
 

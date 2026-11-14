@@ -62,7 +62,7 @@ const getScoreIncreaseColor = (points: number): string => {
     case 6:
       return 'text-pink-400 drop-shadow-[0_2px_8px_rgba(244,114,182,0.95)]';
     case 7:
-      return 'text-emerald-300 drop-shadow-[0_2px_8px_rgba(110,231,183,0.95)]';
+      return 'text-slate-100 drop-shadow-[0_2px_8px_rgba(255,255,255,0.95)]';
     default:
       return 'text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.95)]';
   }
@@ -825,13 +825,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                   {scoreAnims[idx] && (
                     <div
                       key={`rise-${scoreAnims[idx].id}`}
-                      className={`absolute -top-3.5 right-0 font-mono font-black text-sm sm:text-base pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
+                      className={`absolute -top-2.5 right-0 font-mono font-black text-sm sm:text-base pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
                     >
                       +{scoreAnims[idx].points}
                     </div>
                   )}
                   <span
-                    key={`score-val-${score}-${scoreAnims[idx]?.id || 0}`}
+                    key={`score-val-${idx}-${score}`}
                     className={`inline-block font-mono font-black text-2xl sm:text-3xl tracking-tight origin-right ${
                       scoreAnims[idx] ? 'animate-score-pulse' : ''
                     } ${isActive ? 'text-emerald-300' : 'text-white'}`}
@@ -902,13 +902,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                     {scoreAnims[idx] && (
                       <div
                         key={`rise-${scoreAnims[idx].id}`}
-                        className={`absolute -top-3 right-0 font-mono font-black text-xs sm:text-sm pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
+                        className={`absolute -top-2.5 right-0 font-mono font-black text-xs sm:text-sm pointer-events-none z-20 animate-score-rise select-none whitespace-nowrap ${getScoreIncreaseColor(scoreAnims[idx].points)}`}
                       >
                         +{scoreAnims[idx].points}
                       </div>
                     )}
                     <span
-                      key={`score-val-${score}-${scoreAnims[idx]?.id || 0}`}
+                      key={`score-val-${idx}-${score}`}
                       className={`inline-block font-mono font-black tracking-tight origin-right ${
                         scoreAnims[idx] ? 'animate-score-pulse' : ''
                       } ${isActive ? 'text-emerald-300 text-base sm:text-lg' : 'text-white text-sm sm:text-base'}`}
@@ -1231,7 +1231,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {feedback && (
         <div
           key={`float-${feedback.id}`}
-          className="fixed bottom-20 sm:bottom-22 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
         >
           <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider backdrop-blur-md ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
             {feedback.ballHex && (
