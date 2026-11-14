@@ -502,6 +502,28 @@ async function testAbandon() {
   assert.strictEqual(snk5P.needed, false); // Eldho has 8, remaining 27 > 8, so no snooker needed yet
   console.log('✓ 5-Player snookers calculation and color clearance phase transition validated.');
 
+  // 22. Verify Clean Initial Leaderboard
+  console.log('\n[22] Verifying Clean Initial Leaderboard & Zeroed Stats...');
+  const cleanLb = await fetchLeaderboard();
+  assert.strictEqual(cleanLb.length, 6, 'Leaderboard must include all 6 members');
+  for (const entry of cleanLb) {
+    assert.strictEqual(entry.matches_played, 0, `${entry.name} matches_played must be 0`);
+    assert.strictEqual(entry.matches_won, 0, `${entry.name} matches_won must be 0`);
+    assert.strictEqual(entry.matches_lost, 0, `${entry.name} matches_lost must be 0`);
+    assert.strictEqual(entry.win_rate, 0, `${entry.name} win_rate must be 0`);
+    assert.strictEqual(entry.frames_won, 0, `${entry.name} frames_won must be 0`);
+    assert.strictEqual(entry.frames_lost, 0, `${entry.name} frames_lost must be 0`);
+    assert.strictEqual(entry.highest_break, 0, `${entry.name} highest_break must be 0`);
+  }
+  console.log('✓ All 6 members start with 0 matches, 0 wins, 0 losses, 0 high break, and clean leaderboard.');
+
+  // 23. Verify Clean Initial Match History
+  console.log('\n[23] Verifying Clean Initial Match History...');
+  const history = await fetchMatches();
+  const completedMatches = history.filter(m => m.status === 'completed');
+  assert.strictEqual(completedMatches.length, 0, 'Completed match history must start completely empty');
+  console.log('✓ Match history starts completely clear (0 completed matches).');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

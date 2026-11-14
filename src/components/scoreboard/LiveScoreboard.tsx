@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   BallType, 
   BALL_CONFIGS, 
-  COLOR_ORDER, 
   Player, 
   Match, 
   FrameState 
@@ -36,6 +35,17 @@ import {
   LogOut,
   MoreVertical
 } from 'lucide-react';
+
+interface ActionFeedback {
+  id: number;
+  badge: string;
+  detail: string;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+  icon?: 'ball' | 'miss' | 'foul' | 'switch' | 'undo' | 'redo';
+  ballHex?: string;
+}
 
 interface LiveScoreboardProps {
   match: Match;
@@ -165,7 +175,33 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     });
   }, [match, resolvedPlayers, currentFrameNum, playerFrames, state, undoStack, redoStack]);
 
-  const triggerHaptic = (ms: number = 10) => {
+  // Feedback state for prominent instant shot and action flashes
+  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showFeedback = useCallback((fb: Omit<ActionFeedback, 'id'>) => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    const newFb: ActionFeedback = {
+      ...fb,
+      id: Date.now() + Math.random(),
+    };
+    setFeedback(newFb);
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setFeedback(null);
+    }, 2200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerHaptic = (ms: number | number[] = 10) => {
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(ms);
@@ -189,15 +225,49 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   // Actions
   const onPotBall = (ball: BallType) => {
-    triggerHaptic(12);
+    triggerHaptic(18);
     const nextState = handlePot(state, ball);
     applyStateMutation(nextState);
+
+    const ballConfig = BALL_CONFIGS[ball];
+    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    
+    const styleMap: Record<BallType, { bg: string; text: string; border: string }> = {
+      red: { bg: 'bg-red-600', text: 'text-white font-black', border: 'border-red-400 ring-2 ring-red-400/80 shadow-lg shadow-red-950/80' },
+      yellow: { bg: 'bg-yellow-400', text: 'text-black font-black', border: 'border-yellow-200 ring-2 ring-yellow-300 shadow-lg shadow-yellow-950/60' },
+      green: { bg: 'bg-emerald-600', text: 'text-white font-black', border: 'border-emerald-300 ring-2 ring-emerald-400/80 shadow-lg shadow-emerald-950/80' },
+      brown: { bg: 'bg-[#7e3f16]', text: 'text-white font-black', border: 'border-amber-400 ring-2 ring-amber-500/80 shadow-lg shadow-amber-950/80' },
+      blue: { bg: 'bg-blue-600', text: 'text-white font-black', border: 'border-blue-300 ring-2 ring-blue-400/80 shadow-lg shadow-blue-950/80' },
+      pink: { bg: 'bg-pink-500', text: 'text-white font-black', border: 'border-pink-200 ring-2 ring-pink-300/90 shadow-lg shadow-pink-950/80' },
+      black: { bg: 'bg-gray-950', text: 'text-emerald-300 font-black', border: 'border-gray-500 ring-2 ring-gray-400/80 shadow-lg shadow-black' },
+    };
+
+    const s = styleMap[ball];
+    showFeedback({
+      badge: `+${ballConfig.points} ${ball.toUpperCase()}`,
+      detail: `${activeName} • Break: ${nextState.currentBreak} pts`,
+      bgClass: s.bg,
+      textClass: s.text,
+      borderClass: s.border,
+      ballHex: ballConfig.colorHex,
+      icon: 'ball',
+    });
   };
 
   const onMiss = () => {
-    triggerHaptic(10);
+    triggerHaptic(14);
     const nextState = handleMiss(state);
     applyStateMutation(nextState);
+
+    const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
+    showFeedback({
+      badge: 'MISS',
+      detail: `Turn passes to ${nextPlayerName}`,
+      bgClass: 'bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900',
+      textClass: 'text-amber-300 font-black',
+      borderClass: 'border-amber-400 ring-2 ring-amber-400/60 shadow-lg shadow-black',
+      icon: 'miss',
+    });
   };
 
   const onConfirmFoul = (
@@ -206,16 +276,37 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     awardFreeBall: boolean, 
     passBack: boolean
   ) => {
+    triggerHaptic([20, 50, 20]);
     const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
     applyStateMutation(nextState);
+
+    const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
+    showFeedback({
+      badge: `FOUL (+${points} PTS)`,
+      detail: passBack ? `Turn passed back to striker` : `Turn to ${nextPlayerName}`,
+      bgClass: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700',
+      textClass: 'text-white font-black',
+      borderClass: 'border-red-300 ring-2 ring-red-400/90 shadow-xl shadow-red-950',
+      icon: 'foul',
+    });
   };
 
   // Instant 1-tap standard 4-point foul (most common in casual snooker)
   const onQuickFoul4 = () => {
-    triggerHaptic(15);
+    triggerHaptic([20, 50, 20]);
     const target = playerCount > 2 ? 'all_opponents' : ((state.activePlayerIndex + 1) % playerCount);
     const nextState = handleFoul(state, 4, target, false, false);
     applyStateMutation(nextState);
+
+    const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
+    showFeedback({
+      badge: 'FOUL (+4 PTS)',
+      detail: playerCount > 2 ? `+4 to all opponents • Turn to ${nextPlayerName}` : `+4 pts awarded • Turn to ${nextPlayerName}`,
+      bgClass: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700',
+      textClass: 'text-white font-black',
+      borderClass: 'border-red-300 ring-2 ring-red-400/90 shadow-xl shadow-red-950',
+      icon: 'foul',
+    });
   };
 
   const onConcede = () => {
@@ -229,16 +320,28 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   // Undo Handler - Always closes win modal and reverts state safely
   const onUndo = useCallback(() => {
     if (undoStack.length === 0) return;
+    triggerHaptic(12);
     const previous = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => [...prev, state]);
     setIsWinModalOpen(false);
     setState(previous);
-  }, [undoStack, state]);
+
+    const prevActiveName = resolvedPlayers[previous.activePlayerIndex]?.name || `Player ${previous.activePlayerIndex + 1}`;
+    showFeedback({
+      badge: 'UNDO',
+      detail: `Reverted shot • At table: ${prevActiveName}`,
+      bgClass: 'bg-blue-800',
+      textClass: 'text-white font-bold',
+      borderClass: 'border-blue-400 ring-2 ring-blue-400/60 shadow-lg shadow-blue-950',
+      icon: 'undo',
+    });
+  }, [undoStack, state, resolvedPlayers, showFeedback]);
 
   // Redo Handler
   const onRedo = useCallback(() => {
     if (redoStack.length === 0) return;
+    triggerHaptic(12);
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
     setUndoStack((prev) => [...prev, state]);
@@ -246,7 +349,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     if (next.isFrameOver && next.winnerIndex !== null) {
       setIsWinModalOpen(true);
     }
-  }, [redoStack, state]);
+
+    const nextActiveName = resolvedPlayers[next.activePlayerIndex]?.name || `Player ${next.activePlayerIndex + 1}`;
+    showFeedback({
+      badge: 'REDO',
+      detail: `Restored action • At table: ${nextActiveName}`,
+      bgClass: 'bg-purple-800',
+      textClass: 'text-white font-bold',
+      borderClass: 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-950',
+      icon: 'redo',
+    });
+  }, [redoStack, state, resolvedPlayers, showFeedback]);
 
   // Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
   useEffect(() => {
@@ -282,8 +395,19 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   const onSwitchActivePlayer = (targetIndex: number) => {
     if (targetIndex === state.activePlayerIndex || state.isFrameOver) return;
+    triggerHaptic(12);
     const nextState = handleSwitchPlayer(state, targetIndex);
     applyStateMutation(nextState);
+
+    const targetName = resolvedPlayers[targetIndex]?.name || `Player ${targetIndex + 1}`;
+    showFeedback({
+      badge: 'SWITCH TURN',
+      detail: `Now scoring for ${targetName}`,
+      bgClass: 'bg-[#103822]',
+      textClass: 'text-emerald-300 font-black',
+      borderClass: 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-950',
+      icon: 'switch',
+    });
   };
 
   // Projected frames including current pending frame if concluded
@@ -474,18 +598,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const highBreakPlayer = highestBreak > 0 ? resolvedPlayers[highBreakPlayerIdx] : null;
 
   const activePlayer = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
-
-  // Determine current ball on description
-  const getBallOnLabel = (): string => {
-    if (state.freeBallActive) return 'FREE BALL';
-    if (state.tablePhase === 'RED') return 'RED (1 pt)';
-    if (state.tablePhase === 'COLOR_AFTER_RED') return 'COLOR (2-7)';
-    if (state.tablePhase === 'COLORS_SEQUENCE') {
-      const ball = COLOR_ORDER[state.colorsSequenceIndex];
-      return ball ? `${ball.toUpperCase()} (${BALL_CONFIGS[ball].points})` : 'None';
-    }
-    return 'Frame Over';
-  };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-1 sm:py-2.5 space-y-1.5 sm:space-y-2.5">
@@ -718,52 +830,104 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* UNIFIED SCORER CONSOLE & TABLE HUD STRIP                      */}
+      {/* UNIFIED SCORER CONSOLE & TABLE HUD STRIP (TARGET REMOVED)     */}
       {/* ------------------------------------------------------------- */}
-      <div className="bg-[#0b140f] border border-emerald-900/60 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm space-y-1 sm:space-y-1.5">
-        
-        {/* Row 1: Active Scorer Banner & Current Break */}
-        <div className="flex items-center justify-between gap-2">
+      <div className="bg-[#0b140f] border border-emerald-900/60 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-sm">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+          {/* Active Scorer */}
           <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-400 text-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm flex-shrink-0">
               <Zap className="w-2.5 h-2.5 fill-black text-black" />
               AT TABLE
-            </span>
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-gray-400 flex-shrink-0">
-              SCORING FOR:
             </span>
             <span className="text-xs sm:text-sm font-black text-white truncate underline decoration-emerald-400 decoration-2">
               {activePlayer.name}
             </span>
           </div>
 
+          {/* Table Metrics: Remaining Points & Reds (Target section removed to maximize mobile space) */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 text-[10px] sm:text-xs font-mono">
+            <div className="bg-black/40 px-1.5 sm:px-2 py-0.5 rounded flex items-center space-x-1 border border-gray-800/60">
+              <span className="text-gray-400 text-[9px] sm:text-[10px]">Left:</span>
+              <span className="font-bold text-white">{state.pointsRemaining}</span>
+            </div>
+            <div className="bg-black/40 px-1.5 sm:px-2 py-0.5 rounded flex items-center space-x-1 border border-gray-800/60">
+              <span className="w-2 h-2 rounded-full bg-red-600 inline-block shadow-sm" />
+              <span className="font-bold text-white">{state.redsRemaining}</span>
+            </div>
+          </div>
+
+          {/* Current Break */}
           <div className="flex items-center space-x-1 bg-[#102417] px-2 py-0.5 rounded-lg border border-emerald-800/50 flex-shrink-0">
             <span className="text-[9px] uppercase font-bold text-gray-400">Break</span>
             <span className="text-xs sm:text-sm font-black text-emerald-300 font-mono leading-none">{state.currentBreak}</span>
           </div>
         </div>
+      </div>
 
-        {/* Row 2: Table Remaining, Reds, and Target Ball On */}
-        <div className="grid grid-cols-3 gap-1 pt-1 border-t border-emerald-950/80 text-[11px] sm:text-xs">
-          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between">
-            <span className="text-[10px] text-gray-400 font-medium">Left:</span>
-            <span className="font-mono font-bold text-white text-[11px] sm:text-xs">{state.pointsRemaining} pts</span>
-          </div>
-
-          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between">
-            <span className="text-[10px] text-gray-400 font-medium">Reds:</span>
-            <div className="flex items-center space-x-1">
-              <span className="w-2 h-2 rounded-full bg-red-600 inline-block shadow-sm" />
-              <span className="font-mono font-bold text-white text-[11px] sm:text-xs">{state.redsRemaining}</span>
+      {/* ------------------------------------------------------------- */}
+      {/* PROMINENT INSTANT ACTION FEEDBACK BANNER                      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="relative min-h-[32px] sm:min-h-[36px] flex items-center justify-center">
+        {feedback ? (
+          <div
+            key={feedback.id}
+            className={`w-full px-2.5 sm:px-3 py-1 rounded-xl border flex items-center justify-between gap-2 animate-pop-feedback transition-all ${feedback.bgClass} ${feedback.borderClass}`}
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              {feedback.ballHex && (
+                <span
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/60 shadow-sm flex-shrink-0 inline-block"
+                  style={{ backgroundColor: feedback.ballHex }}
+                />
+              )}
+              {feedback.icon === 'miss' && <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+              {feedback.icon === 'foul' && <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />}
+              {feedback.icon === 'switch' && <Users className="w-4 h-4 text-emerald-300 flex-shrink-0" />}
+              {feedback.icon === 'undo' && <RotateCcw className="w-4 h-4 text-white flex-shrink-0" />}
+              {feedback.icon === 'redo' && <RotateCw className="w-4 h-4 text-white flex-shrink-0" />}
+              
+              <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${feedback.textClass}`}>
+                {feedback.badge}
+              </span>
             </div>
-          </div>
 
-          <div className="bg-black/35 px-2 py-0.5 rounded flex items-center justify-between min-w-0">
-            <span className="text-[10px] text-gray-400 font-medium mr-1 flex-shrink-0">On:</span>
-            <span className="font-mono font-bold text-emerald-300 text-[11px] sm:text-xs truncate">{getBallOnLabel()}</span>
+            <span className={`text-[11px] sm:text-xs font-bold truncate opacity-95 ${feedback.textClass}`}>
+              {feedback.detail}
+            </span>
+          </div>
+        ) : (
+          <div className="w-full px-3 py-1 rounded-xl bg-[#09120c]/70 border border-emerald-950/80 flex items-center justify-between text-gray-400 text-[10px] sm:text-[11px] font-mono">
+            <span className="truncate">
+              {state.lastActionDescription || 'Table live • Tap a ball to score'}
+            </span>
+            <span className="text-[10px] text-emerald-400 font-semibold flex-shrink-0 ml-1">
+              READY
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Centered Instant Pop Toast (Ultra-High Prominence) */}
+      {feedback && (
+        <div
+          key={`float-${feedback.id}`}
+          className="fixed top-14 sm:top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast"
+        >
+          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
+            {feedback.ballHex && (
+              <span
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
+                style={{ backgroundColor: feedback.ballHex }}
+              />
+            )}
+            <span>{feedback.badge}</span>
+            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1 border-l border-white/30">
+              {feedback.detail}
+            </span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Snookers Alert Banner (Appears only when snookers needed) */}
       {state.snookersNeeded.needed && (
@@ -806,7 +970,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('red')}
             className={`col-span-2 sm:col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('red')
-                ? 'opacity-100 ring-2 ring-red-400/90 shadow-md shadow-red-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-red-400/90 shadow-md shadow-red-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
@@ -823,7 +987,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('yellow')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('yellow')
-                ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-md shadow-yellow-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-yellow-400/90 shadow-md shadow-yellow-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
@@ -840,7 +1004,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('green')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('green')
-                ? 'opacity-100 ring-2 ring-green-400/90 shadow-md shadow-green-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-green-400/90 shadow-md shadow-green-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
@@ -857,7 +1021,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('brown')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('brown')
-                ? 'opacity-100 ring-2 ring-amber-500/90 shadow-md shadow-amber-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-amber-500/90 shadow-md shadow-amber-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
@@ -874,7 +1038,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('blue')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('blue')
-                ? 'opacity-100 ring-2 ring-blue-400/90 shadow-md shadow-blue-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-blue-400/90 shadow-md shadow-blue-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
@@ -891,7 +1055,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('pink')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none ${
               availableBalls.includes('pink')
-                ? 'opacity-100 ring-2 ring-pink-400/90 shadow-md shadow-pink-950/60 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-pink-400/90 shadow-md shadow-pink-950/60 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
@@ -908,7 +1072,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             onClick={() => onPotBall('black')}
             className={`col-span-1 h-11 sm:h-16 rounded-xl flex flex-col items-center justify-center snooker-ball cursor-pointer transition select-none border border-gray-700 ${
               availableBalls.includes('black')
-                ? 'opacity-100 ring-2 ring-gray-400/90 shadow-md shadow-black/80 hover:scale-105 active:scale-95'
+                ? 'opacity-100 ring-2 ring-gray-400/90 shadow-md shadow-black/80 hover:scale-105 active:scale-90 active:brightness-135 active:ring-4 active:ring-white/90'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
@@ -930,7 +1094,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-gray-800 hover:bg-gray-700 active:scale-95 active:brightness-125 active:ring-2 active:ring-emerald-400 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
         >
           <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
           <span>Miss / Switch</span>
@@ -940,7 +1104,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onQuickFoul4}
-          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
+          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 border border-red-500/60 active:scale-95 active:brightness-125 active:ring-2 active:ring-red-400 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
           title="Instant 4-point penalty to opponent"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
@@ -951,7 +1115,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
+          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 active:scale-95 text-gray-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
           title="Custom foul points (5, 6, 7 pts)"
         >
           <span>···</span>
@@ -962,9 +1126,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-8 sm:col-span-3 h-9 sm:h-10 px-2 sm:px-3 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
+          className={`col-span-8 sm:col-span-3 h-9 sm:h-10 px-2 sm:px-3 rounded-xl border font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
             undoStack.length > 0
-              ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 shadow-md shadow-blue-950'
+              ? 'bg-blue-950/90 text-blue-200 border-blue-500/70 hover:bg-blue-900 active:scale-95 active:brightness-125 active:ring-2 active:ring-blue-400 shadow-md shadow-blue-950'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Undo last action (Ctrl+Z)"
@@ -978,9 +1142,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={redoStack.length === 0}
           onClick={onRedo}
-          className={`col-span-4 sm:col-span-1 h-9 sm:h-10 px-2 rounded-xl border active:scale-95 font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
+          className={`col-span-4 sm:col-span-1 h-9 sm:h-10 px-2 rounded-xl border font-bold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
             redoStack.length > 0
-              ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 shadow-md'
+              ? 'bg-purple-950/80 text-purple-200 border-purple-500/60 hover:bg-purple-900 active:scale-95 active:brightness-125 active:ring-2 active:ring-purple-400 shadow-md'
               : 'bg-gray-900/40 text-gray-600 border-gray-800/40 cursor-not-allowed'
           }`}
           title="Redo action (Ctrl+Y)"
@@ -990,14 +1154,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         </button>
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* LAST ACTION FEEDBACK                                          */}
-      {/* ------------------------------------------------------------- */}
-      {state.lastActionDescription && (
-        <p className="text-[10px] sm:text-[11px] text-gray-500 text-center font-mono truncate px-2">
-          {state.lastActionDescription}
-        </p>
-      )}
 
       {/* ------------------------------------------------------------- */}
       {/* MODALS                                                        */}

@@ -1,10 +1,10 @@
 import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState } from '@/types/snooker';
 import { supabase, isSupabaseConfigured } from './supabase';
 
-const PLAYERS_KEY = 'snooker_tracker_players_v2';
-const MATCHES_KEY = 'snooker_tracker_matches_v2';
-const FRAMES_KEY = 'snooker_tracker_frames_v2';
-export const LIVE_SESSION_KEY = 'snooker_active_live_session_v2';
+const PLAYERS_KEY = 'snooker_tracker_players_v3';
+const MATCHES_KEY = 'snooker_tracker_matches_v3';
+const FRAMES_KEY = 'snooker_tracker_frames_v3';
+export const LIVE_SESSION_KEY = 'snooker_active_live_session_v3';
 
 export interface ActiveLiveSession {
   match: Match;
@@ -63,128 +63,9 @@ export const INITIAL_PLAYERS: Player[] = [
   },
 ];
 
-const INITIAL_MATCHES: Match[] = [
-  {
-    id: 'm1000000-0000-0000-0000-000000000001',
-    player_ids: ['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'],
-    player1_id: 'p1000000-0000-0000-0000-000000000001',
-    player2_id: 'p2000000-0000-0000-0000-000000000002',
-    best_of: 3,
-    status: 'completed',
-    winner_id: 'p1000000-0000-0000-0000-000000000001',
-    player_frames: [2, 1],
-    player1_frames: 2,
-    player2_frames: 1,
-    reds_count: 15,
-    started_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    completed_at: new Date(Date.now() - 3 * 86400000 + 45 * 60000).toISOString(),
-  },
-  {
-    id: 'm2000000-0000-0000-0000-000000000002',
-    player_ids: ['p3000000-0000-0000-0000-000000000003', 'p4000000-0000-0000-0000-000000000004'],
-    player1_id: 'p3000000-0000-0000-0000-000000000003',
-    player2_id: 'p4000000-0000-0000-0000-000000000004',
-    best_of: 3,
-    status: 'completed',
-    winner_id: 'p3000000-0000-0000-0000-000000000003',
-    player_frames: [2, 0],
-    player1_frames: 2,
-    player2_frames: 0,
-    reds_count: 15,
-    started_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    completed_at: new Date(Date.now() - 1 * 86400000 + 35 * 60000).toISOString(),
-  },
-  {
-    id: 'm3000000-0000-0000-0000-000000000003',
-    player_ids: ['p1000000-0000-0000-0000-000000000001', 'p5000000-0000-0000-0000-000000000005', 'p6000000-0000-0000-0000-000000000006'],
-    player1_id: 'p1000000-0000-0000-0000-000000000001',
-    player2_id: 'p5000000-0000-0000-0000-000000000005',
-    best_of: 1,
-    status: 'completed',
-    winner_id: 'p5000000-0000-0000-0000-000000000005',
-    player_frames: [0, 1, 0],
-    player1_frames: 0,
-    player2_frames: 1,
-    reds_count: 10,
-    started_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-    completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
-  },
-];
+export const INITIAL_MATCHES: Match[] = [];
 
-const INITIAL_FRAMES: Frame[] = [
-  {
-    id: 'f1000000-0000-0000-0000-000000000001',
-    match_id: 'm1000000-0000-0000-0000-000000000001',
-    frame_number: 1,
-    scores: [68, 42],
-    player1_score: 68,
-    player2_score: 42,
-    winner_id: 'p1000000-0000-0000-0000-000000000001',
-    highest_break: 47,
-    highest_break_player_id: 'p1000000-0000-0000-0000-000000000001',
-    completed_at: new Date(Date.now() - 3 * 86400000 + 15 * 60000).toISOString(),
-  },
-  {
-    id: 'f2000000-0000-0000-0000-000000000002',
-    match_id: 'm1000000-0000-0000-0000-000000000001',
-    frame_number: 2,
-    scores: [35, 71],
-    player1_score: 35,
-    player2_score: 71,
-    winner_id: 'p2000000-0000-0000-0000-000000000002',
-    highest_break: 52,
-    highest_break_player_id: 'p2000000-0000-0000-0000-000000000002',
-    completed_at: new Date(Date.now() - 3 * 86400000 + 30 * 60000).toISOString(),
-  },
-  {
-    id: 'f3000000-0000-0000-0000-000000000003',
-    match_id: 'm1000000-0000-0000-0000-000000000001',
-    frame_number: 3,
-    scores: [75, 29],
-    player1_score: 75,
-    player2_score: 29,
-    winner_id: 'p1000000-0000-0000-0000-000000000001',
-    highest_break: 61,
-    highest_break_player_id: 'p1000000-0000-0000-0000-000000000001',
-    completed_at: new Date(Date.now() - 3 * 86400000 + 45 * 60000).toISOString(),
-  },
-  {
-    id: 'f4000000-0000-0000-0000-000000000004',
-    match_id: 'm2000000-0000-0000-0000-000000000002',
-    frame_number: 1,
-    scores: [54, 38],
-    player1_score: 54,
-    player2_score: 38,
-    winner_id: 'p3000000-0000-0000-0000-000000000003',
-    highest_break: 34,
-    highest_break_player_id: 'p3000000-0000-0000-0000-000000000003',
-    completed_at: new Date(Date.now() - 1 * 86400000 + 18 * 60000).toISOString(),
-  },
-  {
-    id: 'f5000000-0000-0000-0000-000000000005',
-    match_id: 'm2000000-0000-0000-0000-000000000002',
-    frame_number: 2,
-    scores: [62, 45],
-    player1_score: 62,
-    player2_score: 45,
-    winner_id: 'p3000000-0000-0000-0000-000000000003',
-    highest_break: 38,
-    highest_break_player_id: 'p3000000-0000-0000-0000-000000000003',
-    completed_at: new Date(Date.now() - 1 * 86400000 + 35 * 60000).toISOString(),
-  },
-  {
-    id: 'f6000000-0000-0000-0000-000000000006',
-    match_id: 'm3000000-0000-0000-0000-000000000003',
-    frame_number: 1,
-    scores: [42, 58, 36],
-    player1_score: 42,
-    player2_score: 58,
-    winner_id: 'p5000000-0000-0000-0000-000000000005',
-    highest_break: 41,
-    highest_break_player_id: 'p5000000-0000-0000-0000-000000000005',
-    completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
-  },
-];
+export const INITIAL_FRAMES: Frame[] = [];
 
 // Helper to get from local storage safely
 function getLocal<T>(key: string, defaultValue: T): T {
@@ -206,24 +87,21 @@ function setLocal<T>(key: string, value: T): void {
   }
 }
 
-// Clean old mock data / dummy players and ensure our actual members are loaded
+// Clean old mock data / dummy players and ensure our actual members are loaded with clean match history
 function ensureLocalSeed(): void {
   if (typeof window === 'undefined') return;
 
-  // Check if legacy storage had dummy players (e.g. Alex Mercer, Liam Chen)
-  const legacyPlayers = getLocal<Player[]>('snooker_tracker_players', []);
-  const hasLegacyDummy = legacyPlayers.some(p => 
-    p.name.includes('Alex') || p.name.includes('Liam') || p.name.includes('Marcus') || p.name.includes('Davey')
-  );
-
-  if (hasLegacyDummy) {
-    try {
-      window.localStorage.removeItem('snooker_tracker_players');
-      window.localStorage.removeItem('snooker_tracker_matches');
-      window.localStorage.removeItem('snooker_tracker_frames');
-    } catch {
-      // ignore
-    }
+  // Clear legacy and previous version storage to ensure completely clean slate
+  try {
+    window.localStorage.removeItem('snooker_tracker_players');
+    window.localStorage.removeItem('snooker_tracker_matches');
+    window.localStorage.removeItem('snooker_tracker_frames');
+    window.localStorage.removeItem('snooker_tracker_players_v2');
+    window.localStorage.removeItem('snooker_tracker_matches_v2');
+    window.localStorage.removeItem('snooker_tracker_frames_v2');
+    window.localStorage.removeItem('snooker_active_live_session_v2');
+  } catch {
+    // ignore
   }
 
   const existingPlayers = getLocal<Player[]>(PLAYERS_KEY, []);
