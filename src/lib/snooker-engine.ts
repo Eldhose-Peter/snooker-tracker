@@ -5,7 +5,8 @@ import {
   FrameState, 
   TablePhase, 
   SnookersNeededInfo,
-  TrailerSnookerInfo
+  TrailerSnookerInfo,
+  ActivityItem
 } from '@/types/snooker';
 
 /**
@@ -157,6 +158,19 @@ export function createInitialFrameState(
   const snookersNeeded = checkSnookersNeeded(playerScores, pointsRemaining);
   const p1Name = playerNames?.[0] || 'Player 1';
 
+  const initialActivity: ActivityItem = {
+    id: `act-init-${Date.now()}`,
+    timestamp: Date.now(),
+    type: 'frame_start',
+    playerIndex: 0,
+    playerName: p1Name,
+    badge: 'BREAK-OFF',
+    detail: `Frame started • Break-off shot by ${p1Name}`,
+    bgClass: 'bg-emerald-950/80',
+    textClass: 'text-emerald-300 font-bold',
+    borderClass: 'border-emerald-600/50',
+  };
+
   return syncFrameStateProps({
     playerScores,
     playerNames,
@@ -173,6 +187,7 @@ export function createInitialFrameState(
     isFrameOver: false,
     winnerIndex: null,
     lastActionDescription: `Frame started. Break-off shot by ${p1Name}.`,
+    activities: [initialActivity],
   });
 }
 

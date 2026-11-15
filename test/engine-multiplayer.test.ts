@@ -536,8 +536,8 @@ async function testAbandon() {
   const scoreboardSource = fs.readFileSync('src/components/scoreboard/LiveScoreboard.tsx', 'utf8');
   assert(!scoreboardSource.includes('getBallOnLabel'), 'Target ball on label must be completely removed from LiveScoreboard');
   assert(!scoreboardSource.includes('Target:'), 'HUD must not contain any Target section');
-  assert(scoreboardSource.includes('animate-float-toast'), 'LiveScoreboard must render animated floating toast for prominent feedback');
-  assert(scoreboardSource.includes('animate-pop-feedback'), 'LiveScoreboard must render animated pop feedback banner');
+  assert(scoreboardSource.includes('Recent Activity (Last 7)'), 'LiveScoreboard must render the Last 7 Activities feed');
+  assert(scoreboardSource.includes('animate-pop-feedback'), 'LiveScoreboard must render animated pop feedback for most recent activity');
   console.log('✓ Ball active tap brightness enhancement confirmed and Target section absence verified.');
 
   // 25. Verify Score Increase Animation & Bottom Feedback Layout
@@ -560,9 +560,18 @@ async function testAbandon() {
   // Verify Black (+7) has distinct high-contrast styling from Green (+3)
   assert(scoreboardSource.includes('text-slate-100') || scoreboardSource.includes('text-zinc-100'), 'Black (+7) score increase indicator must be distinct from green');
 
-  // Verify safe-area mobile spacing for bottom floating toast
-  assert(scoreboardSource.includes('safe-area-inset-bottom'), 'Floating toast must account for mobile safe area insets');
-  console.log('✓ Individual score card increase animations and bottom feedback position verified.');
+  // Verify activity list caps at 7 and highlights latest activity
+  assert(scoreboardSource.includes('reversedActivities'), 'LiveScoreboard must compute reverse chronological activities');
+  assert(scoreboardSource.includes('isMostRecent'), 'LiveScoreboard must distinguish and highlight the most recent activity');
+  console.log('✓ Individual score card increase animations and bottom Last 7 activities layout verified.');
+
+  // 26. Verify Last 7 Activities Tracking and Initial State
+  console.log('\n[26] Verifying Last 7 Activities Tracking and Initial State...');
+  const initFrame = createInitialFrameState(3, 15, ['Eldho', 'Thoma', 'Raju']);
+  assert(initFrame.activities && initFrame.activities.length === 1, 'Initial frame state must seed 1 initial break-off activity');
+  assert.strictEqual(initFrame.activities[0].type, 'frame_start', 'Initial activity must have type frame_start');
+  assert.strictEqual(initFrame.activities[0].badge, 'BREAK-OFF', 'Initial activity badge must be BREAK-OFF');
+  console.log('✓ Last 7 activities initial state and data contract verified.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');

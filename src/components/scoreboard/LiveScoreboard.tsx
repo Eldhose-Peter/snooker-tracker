@@ -6,7 +6,8 @@ import {
   BALL_CONFIGS, 
   Player, 
   Match, 
-  FrameState 
+  FrameState,
+  ActivityItem
 } from '@/types/snooker';
 import { 
   createInitialFrameState, 
@@ -36,16 +37,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-interface ActionFeedback {
-  id: number;
-  badge: string;
-  detail: string;
-  bgClass: string;
-  textClass: string;
-  borderClass: string;
-  icon?: 'ball' | 'miss' | 'foul' | 'switch' | 'undo' | 'redo';
-  ballHex?: string;
-}
+
 
 const getScoreIncreaseColor = (points: number): string => {
   switch (points) {
@@ -130,15 +122,51 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   // Snooker Frame State and Undo / Redo Stacks
   const [state, setState] = useState<FrameState>(() => {
     if (savedSession?.frameState) {
+      if (!savedSession.frameState.activities || savedSession.frameState.activities.length === 0) {
+        const initBreakOff = (currentFrameNum - 1) % playerCount;
+        const breakOffName = playerNames[initBreakOff] || `Player ${initBreakOff + 1}`;
+        return {
+          ...savedSession.frameState,
+          activities: [
+            {
+              id: `act-init-${Date.now()}`,
+              timestamp: Date.now(),
+              type: 'frame_start',
+              playerIndex: initBreakOff,
+              playerName: breakOffName,
+              badge: 'BREAK-OFF',
+              detail: `Frame ${currentFrameNum} started • Break-off shot by ${breakOffName}`,
+              bgClass: 'bg-emerald-950/80',
+              textClass: 'text-emerald-300 font-bold',
+              borderClass: 'border-emerald-600/50',
+            }
+          ]
+        };
+      }
       return savedSession.frameState;
     }
     const initBreakOff = (currentFrameNum - 1) % playerCount;
     const fresh = createInitialFrameState(playerCount, match.reds_count || 15, playerNames);
+    const breakOffName = playerNames[initBreakOff] || `Player ${initBreakOff + 1}`;
     if (initBreakOff !== 0) {
       return {
         ...fresh,
         activePlayerIndex: initBreakOff,
-        lastActionDescription: `Frame ${currentFrameNum} started. Break-off shot by ${playerNames[initBreakOff] || `Player ${initBreakOff + 1}`}.`,
+        lastActionDescription: `Frame ${currentFrameNum} started. Break-off shot by ${breakOffName}.`,
+        activities: [
+          {
+            id: `act-init-${Date.now()}`,
+            timestamp: Date.now(),
+            type: 'frame_start',
+            playerIndex: initBreakOff,
+            playerName: breakOffName,
+            badge: 'BREAK-OFF',
+            detail: `Frame ${currentFrameNum} started • Break-off shot by ${breakOffName}`,
+            bgClass: 'bg-emerald-950/80',
+            textClass: 'text-emerald-300 font-bold',
+            borderClass: 'border-emerald-600/50',
+          }
+        ]
       };
     }
     return fresh;
@@ -196,23 +224,15 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     });
   }, [match, resolvedPlayers, currentFrameNum, playerFrames, state, undoStack, redoStack]);
 
-  // Feedback state for prominent instant shot and action flashes
-  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const showFeedback = useCallback((fb: Omit<ActionFeedback, 'id'>) => {
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
-    }
-    const newFb: ActionFeedback = {
-      ...fb,
-      id: Date.now() + Math.random(),
+  // Helper to append an activity to state while retaining at most the last 7 activities
+  const addActivityToState = useCallback((nextState: FrameState, activity: ActivityItem): FrameState => {
+    const prevActivities = state.activities || [];
+    const updatedActivities = [...prevActivities.slice(-6), activity];
+    return {
+      ...nextState,
+      activities: updatedActivities,
     };
-    setFeedback(newFb);
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setFeedback(null);
-    }, 1800);
-  }, []);
+  }, [state.activities]);
 
   // Score increase animations per player index
   const [scoreAnims, setScoreAnims] = useState<Record<number, { id: number; points: number }>>({});
@@ -250,9 +270,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
   useEffect(() => {
     return () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-      }
       Object.values(animTimeoutRefs.current).forEach(clearTimeout);
     };
   }, []);
@@ -284,7 +301,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const onPotBall = (ball: BallType) => {
     triggerHaptic(18);
     const nextState = handlePot(state, ball);
-    applyStateMutation(nextState);
 
     const ballConfig = BALL_CONFIGS[ball];
     const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
@@ -300,7 +316,12 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     };
 
     const s = styleMap[ball];
-    showFeedback({
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'pot',
+      playerIndex: state.activePlayerIndex,
+      playerName: activeName,
       badge: `+${ballConfig.points} ${ball.toUpperCase()}`,
       detail: nextState.isFrameOver 
         ? `${activeName} won Frame ${currentFrameNum}!` 
@@ -309,24 +330,35 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       textClass: s.text,
       borderClass: s.border,
       ballHex: ballConfig.colorHex,
+      ballType: ball,
+      points: ballConfig.points,
       icon: 'ball',
-    });
+    };
+
+    applyStateMutation(addActivityToState(nextState, newActivity));
   };
 
   const onMiss = () => {
     triggerHaptic(14);
     const nextState = handleMiss(state);
-    applyStateMutation(nextState);
 
+    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
-    showFeedback({
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'miss',
+      playerIndex: state.activePlayerIndex,
+      playerName: activeName,
       badge: 'MISS',
-      detail: `Turn passes to ${nextPlayerName}`,
+      detail: `${activeName} missed • Turn to ${nextPlayerName}`,
       bgClass: 'bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900',
       textClass: 'text-amber-300 font-black',
       borderClass: 'border-amber-400 ring-2 ring-amber-400/60 shadow-lg shadow-black',
       icon: 'miss',
-    });
+    };
+
+    applyStateMutation(addActivityToState(nextState, newActivity));
   };
 
   const onConfirmFoul = (
@@ -337,17 +369,27 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   ) => {
     triggerHaptic([20, 50, 20]);
     const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
-    applyStateMutation(nextState);
 
+    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
-    showFeedback({
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'foul',
+      playerIndex: state.activePlayerIndex,
+      playerName: activeName,
       badge: `FOUL (+${points} PTS)`,
-      detail: passBack ? `Turn passed back to striker` : `Turn to ${nextPlayerName}`,
+      detail: passBack 
+        ? `${activeName} fouled (+${points}) • Turn passed back` 
+        : `${activeName} fouled (+${points}) • Turn to ${nextPlayerName}`,
       bgClass: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700',
       textClass: 'text-white font-black',
       borderClass: 'border-red-300 ring-2 ring-red-400/90 shadow-xl shadow-red-950',
+      points,
       icon: 'foul',
-    });
+    };
+
+    applyStateMutation(addActivityToState(nextState, newActivity));
   };
 
   // Instant 1-tap standard 4-point foul (most common in casual snooker)
@@ -355,24 +397,49 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     triggerHaptic([20, 50, 20]);
     const target = playerCount > 2 ? 'all_opponents' : ((state.activePlayerIndex + 1) % playerCount);
     const nextState = handleFoul(state, 4, target, false, false);
-    applyStateMutation(nextState);
 
+    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
-    showFeedback({
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'foul',
+      playerIndex: state.activePlayerIndex,
+      playerName: activeName,
       badge: 'FOUL (+4 PTS)',
-      detail: playerCount > 2 ? `+4 to all opponents • Turn to ${nextPlayerName}` : `+4 pts awarded • Turn to ${nextPlayerName}`,
+      detail: playerCount > 2 
+        ? `${activeName} fouled • +4 to all opponents • Turn to ${nextPlayerName}` 
+        : `${activeName} fouled • +4 pts awarded • Turn to ${nextPlayerName}`,
       bgClass: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700',
       textClass: 'text-white font-black',
       borderClass: 'border-red-300 ring-2 ring-red-400/90 shadow-xl shadow-red-950',
+      points: 4,
       icon: 'foul',
-    });
+    };
+
+    applyStateMutation(addActivityToState(nextState, newActivity));
   };
 
   const onConcede = () => {
     const playerAtTable = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
     if (window.confirm(`Are you sure ${playerAtTable.name} wants to concede this frame?`)) {
       const nextState = handleConcede(state, state.activePlayerIndex);
-      applyStateMutation(nextState);
+      const winnerName = nextState.winnerIndex !== null ? (resolvedPlayers[nextState.winnerIndex]?.name || `Player ${nextState.winnerIndex + 1}`) : 'Opponent';
+
+      const newActivity: ActivityItem = {
+        id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: Date.now(),
+        type: 'concede',
+        playerIndex: state.activePlayerIndex,
+        playerName: playerAtTable.name,
+        badge: 'CONCEDED',
+        detail: `${playerAtTable.name} conceded • ${winnerName} wins frame`,
+        bgClass: 'bg-gradient-to-r from-gray-900 via-red-950 to-gray-900',
+        textClass: 'text-amber-300 font-black',
+        borderClass: 'border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-black',
+      };
+
+      applyStateMutation(addActivityToState(nextState, newActivity));
     }
   };
 
@@ -388,17 +455,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     animTimeoutRefs.current = {};
     setScoreAnims({});
     setState(previous);
-
-    const prevActiveName = resolvedPlayers[previous.activePlayerIndex]?.name || `Player ${previous.activePlayerIndex + 1}`;
-    showFeedback({
-      badge: 'UNDO',
-      detail: `Reverted shot • At table: ${prevActiveName}`,
-      bgClass: 'bg-blue-800',
-      textClass: 'text-white font-bold',
-      borderClass: 'border-blue-400 ring-2 ring-blue-400/60 shadow-lg shadow-blue-950',
-      icon: 'undo',
-    });
-  }, [undoStack, state, resolvedPlayers, showFeedback]);
+  }, [undoStack, state]);
 
   // Redo Handler
   const onRedo = useCallback(() => {
@@ -412,17 +469,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     if (next.isFrameOver && next.winnerIndex !== null) {
       setIsWinModalOpen(true);
     }
-
-    const nextActiveName = resolvedPlayers[next.activePlayerIndex]?.name || `Player ${next.activePlayerIndex + 1}`;
-    showFeedback({
-      badge: 'REDO',
-      detail: `Restored action • At table: ${nextActiveName}`,
-      bgClass: 'bg-purple-800',
-      textClass: 'text-white font-bold',
-      borderClass: 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-950',
-      icon: 'redo',
-    });
-  }, [redoStack, state, resolvedPlayers, showFeedback, triggerScoreIncreases]);
+  }, [redoStack, state, triggerScoreIncreases]);
 
   // Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
   useEffect(() => {
@@ -449,28 +496,48 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   }, [onUndo, onRedo]);
 
   const onToggleFreeBall = () => {
-    applyStateMutation({
+    const isNowActive = !state.freeBallActive;
+    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'switch',
+      playerIndex: state.activePlayerIndex,
+      playerName: activeName,
+      badge: isNowActive ? 'FREE BALL' : 'FREE BALL OFF',
+      detail: isNowActive ? `${activeName} nominated Free Ball` : 'Free Ball cancelled',
+      bgClass: 'bg-purple-950/80',
+      textClass: 'text-purple-200 font-bold',
+      borderClass: 'border-purple-500/60 ring-2 ring-purple-500/50',
+    };
+    applyStateMutation(addActivityToState({
       ...state,
-      freeBallActive: !state.freeBallActive,
-      lastActionDescription: !state.freeBallActive ? 'Free ball nominated' : 'Free ball cancelled',
-    });
+      freeBallActive: isNowActive,
+      lastActionDescription: isNowActive ? 'Free ball nominated' : 'Free ball cancelled',
+    }, newActivity));
   };
 
   const onSwitchActivePlayer = (targetIndex: number) => {
     if (targetIndex === state.activePlayerIndex || state.isFrameOver) return;
     triggerHaptic(12);
     const nextState = handleSwitchPlayer(state, targetIndex);
-    applyStateMutation(nextState);
 
     const targetName = resolvedPlayers[targetIndex]?.name || `Player ${targetIndex + 1}`;
-    showFeedback({
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'switch',
+      playerIndex: targetIndex,
+      playerName: targetName,
       badge: 'SWITCH TURN',
       detail: `Now scoring for ${targetName}`,
       bgClass: 'bg-[#103822]',
       textClass: 'text-emerald-300 font-black',
       borderClass: 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-lg shadow-emerald-950',
       icon: 'switch',
-    });
+    };
+
+    applyStateMutation(addActivityToState(nextState, newActivity));
   };
 
   // Projected frames including current pending frame if concluded
@@ -528,10 +595,25 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     // In snooker rotation, break-off rotates to next player in sequence for subsequent frames
     const nextBreakOffIndex = (nextFrameNum - 1) % playerCount;
     const freshState = createInitialFrameState(playerCount, match.reds_count || 15, playerNames);
+    const breakOffName = playerNames[nextBreakOffIndex] || `Player ${nextBreakOffIndex + 1}`;
     setState({
       ...freshState,
       activePlayerIndex: nextBreakOffIndex,
-      lastActionDescription: `Frame ${nextFrameNum} started. Break-off shot by ${playerNames[nextBreakOffIndex] || `Player ${nextBreakOffIndex + 1}`}.`,
+      lastActionDescription: `Frame ${nextFrameNum} started. Break-off shot by ${breakOffName}.`,
+      activities: [
+        {
+          id: `act-init-${Date.now()}`,
+          timestamp: Date.now(),
+          type: 'frame_start',
+          playerIndex: nextBreakOffIndex,
+          playerName: breakOffName,
+          badge: 'BREAK-OFF',
+          detail: `Frame ${nextFrameNum} started • Break-off shot by ${breakOffName}`,
+          bgClass: 'bg-emerald-950/80',
+          textClass: 'text-emerald-300 font-bold',
+          borderClass: 'border-emerald-600/50',
+        }
+      ],
     });
     setUndoStack([]);
     setRedoStack([]);
@@ -664,6 +746,32 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const highBreakPlayer = highestBreak > 0 ? resolvedPlayers[highBreakPlayerIdx] : null;
 
   const activePlayer = resolvedPlayers[state.activePlayerIndex] || { name: `Player ${state.activePlayerIndex + 1}` };
+
+  const currentActivities: ActivityItem[] = React.useMemo(() => {
+    if (state.activities && state.activities.length > 0) {
+      return state.activities;
+    }
+    const pName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    return [
+      {
+        id: 'act-init-fallback',
+        timestamp: Date.now(),
+        type: 'frame_start',
+        playerIndex: state.activePlayerIndex,
+        playerName: pName,
+        badge: 'READY',
+        detail: state.lastActionDescription || 'Table live • Tap a ball to score',
+        bgClass: 'bg-[#09120c]/80',
+        textClass: 'text-emerald-400 font-bold',
+        borderClass: 'border-emerald-950/80',
+      }
+    ];
+  }, [state.activities, state.activePlayerIndex, state.lastActionDescription, resolvedPlayers]);
+
+  // Display up to last 7 activities in reverse chronological order (newest on top as item 0)
+  const reversedActivities = React.useMemo(() => {
+    return [...currentActivities].reverse();
+  }, [currentActivities]);
 
   return (
     <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 py-1 sm:py-2.5 space-y-1.5 sm:space-y-2.5">
@@ -1185,68 +1293,91 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* ACTION FEEDBACK BANNER & TOAST (AT BOTTOM)                    */}
+      {/* ACTION FEEDBACK BANNER & TOAST (AT BOTTOM) - LAST 7 ACTIVITIES */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative min-h-[32px] sm:min-h-[36px] flex items-center justify-center">
-        {feedback ? (
-          <div
-            key={feedback.id}
-            className={`w-full px-2.5 sm:px-3 py-1 rounded-xl border flex items-center justify-between gap-2 animate-pop-feedback transition-all ${feedback.bgClass} ${feedback.borderClass}`}
-          >
-            <div className="flex items-center space-x-2 min-w-0">
-              {feedback.ballHex && (
-                <span
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/60 shadow-sm flex-shrink-0 inline-block"
-                  style={{ backgroundColor: feedback.ballHex }}
-                />
-              )}
-              {feedback.icon === 'miss' && <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-              {feedback.icon === 'foul' && <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />}
-              {feedback.icon === 'switch' && <Users className="w-4 h-4 text-emerald-300 flex-shrink-0" />}
-              {feedback.icon === 'undo' && <RotateCcw className="w-4 h-4 text-white flex-shrink-0" />}
-              {feedback.icon === 'redo' && <RotateCw className="w-4 h-4 text-white flex-shrink-0" />}
-              
-              <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${feedback.textClass}`}>
-                {feedback.badge}
-              </span>
-            </div>
-
-            <span className={`text-[11px] sm:text-xs font-bold truncate opacity-95 ${feedback.textClass}`}>
-              {feedback.detail}
-            </span>
-          </div>
-        ) : (
-          <div className="w-full px-3 py-1 rounded-xl bg-[#09120c]/70 border border-emerald-950/80 flex items-center justify-between text-gray-400 text-[10px] sm:text-[11px] font-mono">
-            <span className="truncate">
-              {state.lastActionDescription || 'Table live • Tap a ball to score'}
-            </span>
-            <span className="text-[10px] text-emerald-400 font-semibold flex-shrink-0 ml-1">
-              READY
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Centered Instant Pop Toast (Positioned at bottom so it never blocks cards or balls) */}
-      {feedback && (
-        <div
-          key={`float-${feedback.id}`}
-          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-float-toast max-w-[92vw] w-max"
-        >
-          <div className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border-2 shadow-2xl flex items-center space-x-2 text-sm sm:text-base font-black uppercase tracking-wider backdrop-blur-md ${feedback.bgClass} ${feedback.borderClass} ${feedback.textClass}`}>
-            {feedback.ballHex && (
-              <span
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
-                style={{ backgroundColor: feedback.ballHex }}
-              />
-            )}
-            <span className="whitespace-nowrap">{feedback.badge}</span>
-            <span className="text-xs sm:text-sm font-bold opacity-90 pl-1.5 border-l border-white/30 truncate max-w-[50vw] sm:max-w-none">
-              {feedback.detail}
-            </span>
-          </div>
+      <div className="w-full rounded-2xl bg-[#09120c]/90 border border-emerald-900/50 p-2 sm:p-2.5 shadow-lg space-y-1.5">
+        <div className="flex items-center justify-between px-1 text-[10px] sm:text-[11px] font-mono text-gray-400 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            Recent Activity (Last 7)
+          </span>
+          <span className="text-gray-400 font-mono">
+            {reversedActivities.length} of 7 logged
+          </span>
         </div>
-      )}
+
+        <div className="max-h-48 sm:max-h-56 overflow-y-auto space-y-1.5 pr-0.5">
+          {reversedActivities.map((act, index) => {
+            const isMostRecent = index === 0;
+
+            if (isMostRecent) {
+              return (
+                <div
+                  key={act.id}
+                  className={`w-full px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border flex items-center justify-between gap-2 shadow-lg animate-pop-feedback transition-all ${act.bgClass} ${act.borderClass}`}
+                >
+                  <div className="flex items-center space-x-2 min-w-0">
+                    {act.ballHex && (
+                      <span
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
+                        style={{ backgroundColor: act.ballHex }}
+                      />
+                    )}
+                    {act.icon === 'miss' && <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+                    {act.icon === 'foul' && <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />}
+                    {act.icon === 'switch' && <Users className="w-4 h-4 text-emerald-300 flex-shrink-0" />}
+
+                    <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${act.textClass}`}>
+                      {act.badge}
+                    </span>
+
+                    <span className="text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded bg-black/50 text-white/95 border border-white/20 uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      LATEST
+                    </span>
+                  </div>
+
+                  <span className={`text-[11px] sm:text-xs font-bold truncate opacity-95 text-right ${act.textClass}`}>
+                    {act.detail}
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={act.id}
+                className="w-full px-2.5 py-1 sm:py-1.5 rounded-lg bg-[#0b1710]/80 border border-emerald-950/60 flex items-center justify-between gap-2 text-gray-300 hover:bg-[#0f2016]/90 transition-colors"
+              >
+                <div className="flex items-center space-x-2 min-w-0">
+                  {act.ballHex ? (
+                    <span
+                      className="w-3 h-3 rounded-full border border-white/50 shadow-xs flex-shrink-0 inline-block opacity-85"
+                      style={{ backgroundColor: act.ballHex }}
+                    />
+                  ) : act.icon === 'miss' ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-amber-400/80 flex-shrink-0" />
+                  ) : act.icon === 'foul' ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400/80 flex-shrink-0" />
+                  ) : act.icon === 'switch' ? (
+                    <Users className="w-3.5 h-3.5 text-emerald-400/80 flex-shrink-0" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/60 flex-shrink-0" />
+                  )}
+
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-200 uppercase tracking-wide flex-shrink-0">
+                    {act.badge}
+                  </span>
+                </div>
+
+                <span className="text-[10px] sm:text-[11px] text-gray-400 truncate font-mono text-right">
+                  {act.detail}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
 
       {/* ------------------------------------------------------------- */}

@@ -88,6 +88,23 @@ export interface ShotAction {
   description: string;
 }
 
+export interface ActivityItem {
+  id: string;
+  timestamp: number;
+  type: 'pot' | 'miss' | 'foul' | 'switch' | 'frame_start' | 'concede';
+  playerIndex: number;
+  playerName: string;
+  badge: string;
+  detail: string;
+  ballHex?: string;
+  ballType?: BallType;
+  points?: number;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+  icon?: 'ball' | 'miss' | 'foul' | 'switch';
+}
+
 export interface TrailerSnookerInfo {
   playerIndex: number;
   count: number;
@@ -122,6 +139,7 @@ export interface FrameState {
   winnerIndex: number | null;
   winReason?: string;
   lastActionDescription?: string;
+  activities?: ActivityItem[];
 
   // Backwards compatibility properties (for 2-player):
   player1Score: number;
