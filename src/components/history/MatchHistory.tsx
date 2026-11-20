@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Match, Player } from '@/types/snooker';
-import { fetchMatches, seedSampleMatches, clearAllMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
+import { fetchMatches, restoreActualMatches, clearAllMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
 import { FrameInsightsView } from './insights/FrameInsightsView';
 import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3, Sparkles, RotateCcw, Play } from 'lucide-react';
 
@@ -39,10 +39,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
     reloadMatches();
   }, [reloadMatches]);
 
-  const handleLoadSampleData = async () => {
+  const handleRestoreActualMatches = async () => {
     setActionLoading(true);
     try {
-      await seedSampleMatches(true);
+      await restoreActualMatches(true);
       await reloadMatches();
     } finally {
       setActionLoading(false);
@@ -50,7 +50,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
   };
 
   const handleClearHistory = async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Are you sure you want to clear your match history? (Player roster remains safe)')) {
+    if (typeof window !== 'undefined' && !window.confirm('Reset match records back to the group actual matches?')) {
       return;
     }
     setActionLoading(true);
@@ -101,7 +101,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleLoadSampleData}
+            onClick={handleRestoreActualMatches}
             disabled={actionLoading}
             className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
             title="Restore actual played matches featuring shot-by-shot visual insights"
@@ -185,7 +185,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               type="button"
-              onClick={handleLoadSampleData}
+              onClick={handleRestoreActualMatches}
               disabled={actionLoading}
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer disabled:opacity-50"
             >

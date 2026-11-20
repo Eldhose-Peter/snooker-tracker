@@ -88,11 +88,17 @@ function setLocal<T>(key: string, value: T): void {
   }
 }
 
-const CLEARED_FLAG_KEY = 'snooker_history_cleared_v3';
-
 // Ensure roster is initialized and actual played matches are restored and preserved
 function ensureLocalSeed(): void {
   if (typeof window === 'undefined') return;
+
+  // Clear any legacy cleared flags that may prevent actual match restoration
+  try {
+    window.localStorage.removeItem('snooker_history_cleared_v3');
+    window.localStorage.removeItem('snooker_history_cleared');
+  } catch {
+    // ignore
+  }
 
   // 1. Decoupled Player Seeding (never touches matches or frames)
   const existingPlayers = getLocal<Player[]>(PLAYERS_KEY, []);
@@ -104,46 +110,48 @@ function ensureLocalSeed(): void {
     setLocal(PLAYERS_KEY, INITIAL_PLAYERS);
   }
 
-  // 2. Ensure Actual Played Matches are Restored and Preserved
+  // 2. Ensure Actual Played Matches and Frames are Restored and Preserved
   try {
-    const isExplicitlyCleared = window.localStorage.getItem(CLEARED_FLAG_KEY) === 'true';
-    const existingMatches = getLocal<Match[]>(MATCHES_KEY, []);
-    const existingFrames = getLocal<Frame[]>(FRAMES_KEY, []);
+    let matches = getLocal<Match[]>(MATCHES_KEY, []);
+    let frames = getLocal<Frame[]>(FRAMES_KEY, []);
 
-    if (!isExplicitlyCleared) {
-      if (existingMatches.length === 0) {
-        // Check if user had matches in v2 or v1
-        const v2Matches = getLocal<Match[]>('snooker_tracker_matches_v2', []);
-        const v1Matches = getLocal<Match[]>('snooker_tracker_matches', []);
-        const legacyMatches = v2Matches.length > 0 ? v2Matches : v1Matches;
+    // Check if user had matches in legacy storage versions (v2 or v1)
+    const v2Matches = getLocal<Match[]>('snooker_tracker_matches_v2', []);
+    const v1Matches = getLocal<Match[]>('snooker_tracker_matches', []);
+    const legacyMatches = [...v2Matches, ...v1Matches];
 
-        if (legacyMatches.length > 0) {
-          setLocal(MATCHES_KEY, legacyMatches);
-          const v2Frames = getLocal<Frame[]>('snooker_tracker_frames_v2', []);
-          const v1Frames = getLocal<Frame[]>('snooker_tracker_frames', []);
-          const legacyFrames = v2Frames.length > 0 ? v2Frames : v1Frames;
-          setLocal(FRAMES_KEY, legacyFrames.length > 0 ? legacyFrames : INITIAL_FRAMES);
-        } else {
-          // Restore actual played matches
-          setLocal(MATCHES_KEY, INITIAL_MATCHES);
-          setLocal(FRAMES_KEY, INITIAL_FRAMES);
-        }
-      } else {
-        // If matches exist in localStorage, ensure the actual played matches are restored if missing
-        const matchIds = new Set(existingMatches.map(m => m.id));
-        const missingActualMatches = INITIAL_MATCHES.filter(m => !matchIds.has(m.id));
-        if (missingActualMatches.length > 0) {
-          const mergedMatches = [...existingMatches, ...missingActualMatches];
-          setLocal(MATCHES_KEY, mergedMatches);
+    if (legacyMatches.length > 0) {
+      const matchIds = new Set(matches.map(m => m.id));
+      const missingLegacy = legacyMatches.filter(m => !matchIds.has(m.id));
+      if (missingLegacy.length > 0) {
+        matches = [...matches, ...missingLegacy];
+      }
 
-          const frameIds = new Set(existingFrames.map(f => f.id));
-          const missingActualFrames = INITIAL_FRAMES.filter(f => !frameIds.has(f.id));
-          if (missingActualFrames.length > 0) {
-            setLocal(FRAMES_KEY, [...existingFrames, ...missingActualFrames]);
-          }
-        }
+      const v2Frames = getLocal<Frame[]>('snooker_tracker_frames_v2', []);
+      const v1Frames = getLocal<Frame[]>('snooker_tracker_frames', []);
+      const legacyFrames = [...v2Frames, ...v1Frames];
+      const frameIds = new Set(frames.map(f => f.id));
+      const missingLegacyFrames = legacyFrames.filter(f => !frameIds.has(f.id));
+      if (missingLegacyFrames.length > 0) {
+        frames = [...frames, ...missingLegacyFrames];
       }
     }
+
+    // Always ensure the actual played matches are present
+    const currentMatchIds = new Set(matches.map(m => m.id));
+    const missingActualMatches = ACTUAL_MATCHES.filter(m => !currentMatchIds.has(m.id));
+    if (missingActualMatches.length > 0) {
+      matches = [...matches, ...missingActualMatches];
+    }
+
+    const currentFrameIds = new Set(frames.map(f => f.id));
+    const missingActualFrames = ACTUAL_FRAMES.filter(f => !currentFrameIds.has(f.id));
+    if (missingActualFrames.length > 0) {
+      frames = [...frames, ...missingActualFrames];
+    }
+
+    setLocal(MATCHES_KEY, matches.length > 0 ? matches : ACTUAL_MATCHES);
+    setLocal(FRAMES_KEY, frames.length > 0 ? frames : ACTUAL_FRAMES);
 
     // Clean up older legacy storage keys to avoid clutter, keeping v3 intact
     window.localStorage.removeItem('snooker_tracker_players');
@@ -154,20 +162,21 @@ function ensureLocalSeed(): void {
     window.localStorage.removeItem('snooker_tracker_matches_v2');
     window.localStorage.removeItem('snooker_tracker_frames_v2');
     window.localStorage.removeItem('snooker_active_live_session_v2');
-  } catch {
-    // ignore
+  } catch (err) {
+    console.error('ensureLocalSeed error:', err);
   }
 }
 
 /**
- * Loads rich sample match histories complete with shot-by-shot event telemetry and charts.
+ * Restores actual match histories complete with shot-by-shot event telemetry and charts.
  * Does not overwrite existing user matches unless force is true.
  */
-export async function seedSampleMatches(force: boolean = false): Promise<Match[]> {
+export async function restoreActualMatches(force: boolean = false): Promise<Match[]> {
   const { matches: sampleMatches, frames: sampleFrames } = getSampleMatchesAndFrames();
 
   if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(CLEARED_FLAG_KEY);
+    window.localStorage.removeItem('snooker_history_cleared_v3');
+    window.localStorage.removeItem('snooker_history_cleared');
     const currentMatches = getLocal<Match[]>(MATCHES_KEY, []);
     const currentFrames = getLocal<Frame[]>(FRAMES_KEY, []);
 
@@ -191,14 +200,16 @@ export async function seedSampleMatches(force: boolean = false): Promise<Match[]
   return sampleMatches;
 }
 
+// Alias for backwards compatibility
+export const seedSampleMatches = restoreActualMatches;
+
 /**
- * Clears match history and frame logs (leaves player roster intact).
+ * Resets match history to the actual played matches (leaves player roster intact).
  */
 export async function clearAllMatches(): Promise<void> {
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(CLEARED_FLAG_KEY, 'true');
-    setLocal(MATCHES_KEY, []);
-    setLocal(FRAMES_KEY, []);
+    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
+    setLocal(FRAMES_KEY, ACTUAL_FRAMES);
   }
 }
 
@@ -277,8 +288,17 @@ export async function fetchMatches(): Promise<Match[]> {
 
   ensureLocalSeed();
   const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
-  const matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
-  const frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES);
+  let matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
+  let frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES);
+
+  if (!matches || matches.length === 0) {
+    matches = ACTUAL_MATCHES;
+    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
+  }
+  if (!frames || frames.length === 0) {
+    frames = ACTUAL_FRAMES;
+    setLocal(FRAMES_KEY, ACTUAL_FRAMES);
+  }
 
   return matches.map(m => {
     const playerIds = m.player_ids && m.player_ids.length > 0
@@ -621,13 +641,19 @@ export function saveLiveSession(session: ActiveLiveSession): void {
 }
 
 export function getLiveSession(): ActiveLiveSession | null {
-  return getLocal<ActiveLiveSession | null>(LIVE_SESSION_KEY, null);
+  const current = getLocal<ActiveLiveSession | null>(LIVE_SESSION_KEY, null);
+  if (current) return current;
+  const v2 = getLocal<ActiveLiveSession | null>('snooker_active_live_session_v2', null);
+  if (v2) return v2;
+  return getLocal<ActiveLiveSession | null>('snooker_active_live_session', null);
 }
 
 export function clearLiveSession(): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.removeItem(LIVE_SESSION_KEY);
+    window.localStorage.removeItem('snooker_active_live_session_v2');
+    window.localStorage.removeItem('snooker_active_live_session');
   } catch (err) {
     console.error('LocalStorage removeItem error:', err);
   }
@@ -651,9 +677,17 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
 
   ensureLocalSeed();
   const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
-  const matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES).filter(m => m.status === 'completed');
+  let rawMatches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
+  if (!rawMatches || rawMatches.length === 0) {
+    rawMatches = ACTUAL_MATCHES;
+    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
+  }
+  const matches = rawMatches.filter(m => m.status === 'completed');
   const completedMatchIds = new Set(matches.map(m => m.id));
-  const frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES).filter(f => completedMatchIds.has(f.match_id));
+  let frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES).filter(f => completedMatchIds.has(f.match_id));
+  if (frames.length === 0) {
+    frames = ACTUAL_FRAMES.filter(f => completedMatchIds.has(f.match_id));
+  }
 
   const leaderboard: LeaderboardEntry[] = players.map(player => {
     const playerMatches = matches.filter(m => {

@@ -678,25 +678,24 @@ async function testAbandon() {
   assert.strictEqual(insights.discipline[1].penaltyPointsConceded, 4, 'Thoma penalty points conceded must equal 4');
   console.log('✓ Visual insights analytics engine computes accurate telemetry, ball distribution, and discipline stats.');
 
-  // 29. Verifying Sample Match Seeding & History Restoration
-  console.log('\n[29] Verifying Sample Match Seeding & History Restoration...');
-  const { seedSampleMatches, clearAllMatches } = await import('../src/lib/storage');
-  const sampleMatches = await seedSampleMatches(true);
-  assert(sampleMatches.length >= 3, 'Sample match seeding must produce at least 3 completed matches');
+  // 29. Verifying Actual Match Restoration & History Retention
+  console.log('\n[29] Verifying Actual Match Restoration & History Retention...');
+  const { restoreActualMatches, clearAllMatches } = await import('../src/lib/storage');
+  const restoredMatches = await restoreActualMatches(true);
+  assert(restoredMatches.length >= 3, 'Actual match restoration must produce at least 3 completed matches');
   const seededHistory = await fetchMatches();
-  assert(seededHistory.length >= 3, 'Seeded match history must contain at least 3 matches');
+  assert(seededHistory.length >= 3, 'Restored match history must contain at least 3 matches');
   const matchWithFrames = seededHistory.find(m => m.id === 'm1000000-0000-0000-0000-000000000001');
   assert(matchWithFrames, 'Match m1000000-0000-0000-0000-000000000001 must exist in history');
   assert.strictEqual(matchWithFrames.frames?.length, 3, 'Match must have 3 frames');
   const f1 = matchWithFrames.frames[0];
   assert(f1.events && f1.events.length > 10, 'Frame 1 must contain granular shot events');
 
-  // Test clearAllMatches
+  // Verify that clearing preserves foundational actual matches
   await clearAllMatches();
-  const clearedHistory = await fetchMatches();
-  assert.strictEqual(clearedHistory.filter(m => m.status === 'completed').length, 0, 'Completed history must be 0 after clearAllMatches');
-  await seedSampleMatches(true);
-  console.log('✓ Match seeding, shot-by-shot telemetry restoration, and clearing verified.');
+  const resetHistory = await fetchMatches();
+  assert.strictEqual(resetHistory.filter(m => m.status === 'completed').length, 3, 'Foundational actual matches must remain safely intact');
+  console.log('✓ Match restoration, shot-by-shot telemetry hydration, and history safety verified.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
