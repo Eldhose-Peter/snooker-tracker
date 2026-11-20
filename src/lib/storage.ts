@@ -1,4 +1,4 @@
-import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState } from '@/types/snooker';
+import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState, MatchEvent } from '@/types/snooker';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const PLAYERS_KEY = 'snooker_tracker_players_v3';
@@ -318,7 +318,8 @@ export async function recordFrameCompleted(
   scores: number[],
   winnerId: string,
   highestBreak: number,
-  highestBreakPlayerId: string | null
+  highestBreakPlayerId: string | null,
+  events?: MatchEvent[]
 ): Promise<Frame>;
 export async function recordFrameCompleted(
   matchId: string,
@@ -327,7 +328,8 @@ export async function recordFrameCompleted(
   player2Score: number,
   winnerId: string,
   highestBreak: number,
-  highestBreakPlayerId: string | null
+  highestBreakPlayerId: string | null,
+  events?: MatchEvent[]
 ): Promise<Frame>;
 export async function recordFrameCompleted(
   matchId: string,
@@ -336,12 +338,14 @@ export async function recordFrameCompleted(
   winnerIdOrP2: string | number,
   highestBreakOrWinnerId?: number | string,
   highBreakPlayerIdOrHighestBreak?: string | number | null,
-  maybeHighBreakPlayerId?: string | null
+  maybeHighBreakPlayerIdOrEvents?: string | null | MatchEvent[],
+  maybeEventsParam?: MatchEvent[]
 ): Promise<Frame> {
   let scores: number[];
   let winnerId: string;
   let highestBreak: number;
   let highestBreakPlayerId: string | null;
+  let frameEvents: MatchEvent[] = [];
 
   if (Array.isArray(scoresOrP1)) {
     scores = scoresOrP1;
@@ -350,11 +354,17 @@ export async function recordFrameCompleted(
     highestBreakPlayerId = (typeof highBreakPlayerIdOrHighestBreak === 'string' || highBreakPlayerIdOrHighestBreak === null)
       ? highBreakPlayerIdOrHighestBreak
       : null;
+    if (Array.isArray(maybeHighBreakPlayerIdOrEvents)) {
+      frameEvents = maybeHighBreakPlayerIdOrEvents;
+    }
   } else {
     scores = [scoresOrP1, Number(winnerIdOrP2)];
     winnerId = String(highestBreakOrWinnerId || '');
     highestBreak = typeof highBreakPlayerIdOrHighestBreak === 'number' ? highBreakPlayerIdOrHighestBreak : 0;
-    highestBreakPlayerId = maybeHighBreakPlayerId ?? null;
+    highestBreakPlayerId = typeof maybeHighBreakPlayerIdOrEvents === 'string' ? maybeHighBreakPlayerIdOrEvents : null;
+    if (Array.isArray(maybeEventsParam)) {
+      frameEvents = maybeEventsParam;
+    }
   }
 
   const frameId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `f_${Date.now()}`;
@@ -369,6 +379,7 @@ export async function recordFrameCompleted(
     highest_break: highestBreak,
     highest_break_player_id: highestBreakPlayerId,
     completed_at: new Date().toISOString(),
+    events: frameEvents,
   };
 
   if (isSupabaseConfigured && supabase) {
@@ -384,6 +395,7 @@ export async function recordFrameCompleted(
         highest_break: highestBreak,
         highest_break_player_id: highestBreakPlayerId,
         completed_at: frame.completed_at,
+        events: frame.events,
       });
 
       if (highestBreak >= 20 && highestBreakPlayerId) {

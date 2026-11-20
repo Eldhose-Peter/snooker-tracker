@@ -188,6 +188,7 @@ export function createInitialFrameState(
     winnerIndex: null,
     lastActionDescription: `Frame started. Break-off shot by ${p1Name}.`,
     activities: [initialActivity],
+    events: [],
   });
 }
 

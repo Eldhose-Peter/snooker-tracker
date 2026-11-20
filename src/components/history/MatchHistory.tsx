@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Match, Player } from '@/types/snooker';
 import { fetchMatches } from '@/lib/storage';
-import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame } from 'lucide-react';
+import { FrameInsightsView } from './insights/FrameInsightsView';
+import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3 } from 'lucide-react';
 
 export const MatchHistory: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+  const [selectedFrameByMatch, setSelectedFrameByMatch] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchMatches().then((data) => {
@@ -175,11 +177,39 @@ export const MatchHistory: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Expanded Frame-by-Frame Breakdown */}
+                {/* Expanded Frame-by-Frame Breakdown & Visual Telemetry */}
                 {isExpanded && (
-                  <div className="bg-[#09110d] px-4 py-3 border-t border-emerald-950/80 space-y-2">
-                    <div className="text-xs uppercase font-bold text-gray-400 tracking-wider">
-                      Frame Breakdown
+                  <div className="bg-[#09110d] px-4 py-4 border-t border-emerald-950/80 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="text-xs uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1.5">
+                        <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Frame Breakdown & Visual Insights</span>
+                      </div>
+
+                      {frames.length > 1 && (
+                        <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                          {frames.map((f) => {
+                            const isSelected = (selectedFrameByMatch[m.id] || frames[0]?.id) === f.id;
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedFrameByMatch(prev => ({ ...prev, [m.id]: f.id }));
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                                  isSelected
+                                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+                                    : 'bg-gray-900/80 text-gray-400 hover:text-white border border-gray-800'
+                                }`}
+                              >
+                                Frame {f.frame_number}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {frames.length === 0 ? (
@@ -187,48 +217,81 @@ export const MatchHistory: React.FC = () => {
                         Individual frame shot details were not archived for this match.
                       </p>
                     ) : (
-                      <div className="space-y-1.5">
-                        {frames.map((f) => {
-                          const scores = f.scores && f.scores.length === matchPlayers.length
-                            ? f.scores
-                            : [f.player1_score, f.player2_score];
+                      <div className="space-y-4">
+                        {/* Summary Pill Rows for All Frames */}
+                        <div className="space-y-1.5">
+                          {frames.map((f) => {
+                            const scores = f.scores && f.scores.length === matchPlayers.length
+                              ? f.scores
+                              : [f.player1_score, f.player2_score];
+                            const isSelected = (selectedFrameByMatch[m.id] || frames[0]?.id) === f.id;
 
-                          return (
-                            <div
-                              key={f.id}
-                              className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl bg-gray-900/50 border border-gray-800/80 text-xs font-mono gap-1.5"
-                            >
-                              <span className="font-semibold text-gray-400">
-                                Frame {f.frame_number}
-                              </span>
-
-                              <div className="flex flex-wrap items-center gap-2">
-                                {matchPlayers.map((p, idx) => {
-                                  const score = scores[idx] ?? 0;
-                                  const isWinner = f.winner_id === p.id;
-                                  return (
-                                    <span 
-                                      key={p.id} 
-                                      className={isWinner ? 'text-emerald-400 font-black' : 'text-gray-300'}
-                                    >
-                                      {p.name}: {score}
-                                      {idx < matchPlayers.length - 1 && <span className="text-gray-600 ml-2">|</span>}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-
-                              {f.highest_break > 0 ? (
-                                <span className="text-amber-300 flex items-center gap-1 text-[11px]">
-                                  <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                  Break {f.highest_break}
+                            return (
+                              <div
+                                key={f.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedFrameByMatch(prev => ({ ...prev, [m.id]: f.id }));
+                                }}
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl border text-xs font-mono gap-2 cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'bg-emerald-950/40 border-emerald-600/60 ring-1 ring-emerald-500/40'
+                                    : 'bg-gray-900/50 border-gray-800/80 hover:border-gray-700'
+                                }`}
+                              >
+                                <span className={`font-semibold ${isSelected ? 'text-emerald-300 font-bold' : 'text-gray-400'}`}>
+                                  Frame {f.frame_number} {f.events && f.events.length > 0 ? `(${f.events.length} events)` : ''}
                                 </span>
-                              ) : (
-                                <span className="text-gray-600">-</span>
-                              )}
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {matchPlayers.map((p, idx) => {
+                                    const score = scores[idx] ?? 0;
+                                    const isWinner = f.winner_id === p.id;
+                                    return (
+                                      <span 
+                                        key={p.id} 
+                                        className={isWinner ? 'text-emerald-400 font-black' : 'text-gray-300'}
+                                      >
+                                        {p.name}: {score}
+                                        {idx < matchPlayers.length - 1 && <span className="text-gray-600 ml-2">|</span>}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  {f.highest_break > 0 ? (
+                                    <span className="text-amber-300 flex items-center gap-1 text-[11px]">
+                                      <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                      Break {f.highest_break}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-600">-</span>
+                                  )}
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
+                                    isSelected ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400'
+                                  }`}>
+                                    {isSelected ? 'Viewing' : 'Inspect'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Visual Insights Container for Selected Frame */}
+                        {(() => {
+                          const activeFrame = frames.find(f => f.id === (selectedFrameByMatch[m.id] || frames[0]?.id)) || frames[0];
+                          if (!activeFrame) return null;
+                          return (
+                            <div className="pt-2">
+                              <FrameInsightsView
+                                frame={activeFrame}
+                                players={matchPlayers}
+                              />
                             </div>
                           );
-                        })}
+                        })()}
                       </div>
                     )}
                   </div>

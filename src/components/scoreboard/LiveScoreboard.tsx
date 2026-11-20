@@ -7,7 +7,8 @@ import {
   Player, 
   Match, 
   FrameState,
-  ActivityItem
+  ActivityItem,
+  MatchEvent
 } from '@/types/snooker';
 import { 
   createInitialFrameState, 
@@ -224,15 +225,22 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     });
   }, [match, resolvedPlayers, currentFrameNum, playerFrames, state, undoStack, redoStack]);
 
-  // Helper to append an activity to state while retaining at most the last 7 activities
-  const addActivityToState = useCallback((nextState: FrameState, activity: ActivityItem): FrameState => {
+  // Helper to append an activity (last 7 ticker) and full event history to state
+  const appendActionAndEvent = useCallback((
+    nextState: FrameState, 
+    activity: ActivityItem, 
+    event?: MatchEvent
+  ): FrameState => {
     const prevActivities = state.activities || [];
     const updatedActivities = [...prevActivities.slice(-6), activity];
+    const prevEvents = state.events || [];
+    const updatedEvents = event ? [...prevEvents, event] : prevEvents;
     return {
       ...nextState,
       activities: updatedActivities,
+      events: updatedEvents,
     };
-  }, [state.activities]);
+  }, [state.activities, state.events]);
 
   // Score increase animations per player index
   const [scoreAnims, setScoreAnims] = useState<Record<number, { id: number; points: number }>>({});
@@ -303,7 +311,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     const nextState = handlePot(state, ball);
 
     const ballConfig = BALL_CONFIGS[ball];
-    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    const activeIdx = state.activePlayerIndex;
+    const activePlayer = resolvedPlayers[activeIdx];
+    const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
+    const ptsScored = (nextState.playerScores[activeIdx] ?? 0) - (state.playerScores[activeIdx] ?? 0);
     
     const styleMap: Record<BallType, { bg: string; text: string; border: string }> = {
       red: { bg: 'bg-red-600', text: 'text-white font-black', border: 'border-red-400 ring-2 ring-red-400/80 shadow-lg shadow-red-950/80' },
@@ -320,7 +331,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
       type: 'pot',
-      playerIndex: state.activePlayerIndex,
+      playerIndex: activeIdx,
       playerName: activeName,
       badge: `+${ballConfig.points} ${ball.toUpperCase()}`,
       detail: nextState.isFrameOver 
@@ -335,20 +346,40 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       icon: 'ball',
     };
 
-    applyStateMutation(addActivityToState(nextState, newActivity));
+    const newEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'pot',
+      playerIndex: activeIdx,
+      playerId: activePlayer?.id,
+      playerName: activeName,
+      ball,
+      points: ptsScored,
+      breakScore: nextState.currentBreak,
+      breakBalls: nextState.currentBreakBalls,
+      scoresAfter: [...nextState.playerScores],
+      detail: nextState.isFrameOver 
+        ? `${activeName} potted ${ballConfig.name} (+${ptsScored} pts) to win Frame ${currentFrameNum}!` 
+        : `${activeName} potted ${ballConfig.name} (+${ptsScored} pts) • Break: ${nextState.currentBreak}`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
   };
 
   const onMiss = () => {
     triggerHaptic(14);
     const nextState = handleMiss(state);
 
-    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    const activeIdx = state.activePlayerIndex;
+    const activePlayer = resolvedPlayers[activeIdx];
+    const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
     const newActivity: ActivityItem = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
       type: 'miss',
-      playerIndex: state.activePlayerIndex,
+      playerIndex: activeIdx,
       playerName: activeName,
       badge: 'MISS',
       detail: `${activeName} missed • Turn to ${nextPlayerName}`,
@@ -358,7 +389,24 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       icon: 'miss',
     };
 
-    applyStateMutation(addActivityToState(nextState, newActivity));
+    const newEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'miss',
+      playerIndex: activeIdx,
+      playerId: activePlayer?.id,
+      playerName: activeName,
+      breakScore: state.currentBreak,
+      isBreakEnd: state.currentBreak > 0,
+      breakBalls: state.currentBreakBalls,
+      scoresAfter: [...nextState.playerScores],
+      detail: state.currentBreak > 0
+        ? `${activeName} ended break of ${state.currentBreak} pts. Turn to ${nextPlayerName}`
+        : `${activeName} missed shot. Turn to ${nextPlayerName}`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
   };
 
   const onConfirmFoul = (
@@ -370,13 +418,15 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     triggerHaptic([20, 50, 20]);
     const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
 
-    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    const activeIdx = state.activePlayerIndex;
+    const activePlayer = resolvedPlayers[activeIdx];
+    const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
     const newActivity: ActivityItem = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
       type: 'foul',
-      playerIndex: state.activePlayerIndex,
+      playerIndex: activeIdx,
       playerName: activeName,
       badge: `FOUL (+${points} PTS)`,
       detail: passBack 
@@ -389,7 +439,36 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       icon: 'foul',
     };
 
-    applyStateMutation(addActivityToState(nextState, newActivity));
+    let awardedIndices: number[] = [];
+    if (target === 'all_opponents') {
+      awardedIndices = resolvedPlayers.map((_, i) => i).filter(i => i !== activeIdx);
+    } else if (target === 'next_player') {
+      awardedIndices = [(activeIdx + 1) % playerCount];
+    } else if (typeof target === 'number') {
+      awardedIndices = [target];
+    }
+
+    const newEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'foul',
+      playerIndex: activeIdx,
+      playerId: activePlayer?.id,
+      playerName: activeName,
+      foulPoints: points,
+      awardedTo: awardedIndices,
+      freeBallAwarded: awardFreeBall,
+      passBack,
+      breakScore: state.currentBreak,
+      isBreakEnd: state.currentBreak > 0,
+      scoresAfter: [...nextState.playerScores],
+      detail: passBack 
+        ? `${activeName} fouled (+${points} pts). Turn passed back.` 
+        : `${activeName} fouled (+${points} pts). Turn to ${nextPlayerName}.`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
   };
 
   // Instant 1-tap standard 4-point foul (most common in casual snooker)
@@ -398,13 +477,15 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     const target = playerCount > 2 ? 'all_opponents' : ((state.activePlayerIndex + 1) % playerCount);
     const nextState = handleFoul(state, 4, target, false, false);
 
-    const activeName = resolvedPlayers[state.activePlayerIndex]?.name || `Player ${state.activePlayerIndex + 1}`;
+    const activeIdx = state.activePlayerIndex;
+    const activePlayer = resolvedPlayers[activeIdx];
+    const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
     const newActivity: ActivityItem = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
       type: 'foul',
-      playerIndex: state.activePlayerIndex,
+      playerIndex: activeIdx,
       playerName: activeName,
       badge: 'FOUL (+4 PTS)',
       detail: playerCount > 2 
@@ -417,7 +498,32 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       icon: 'foul',
     };
 
-    applyStateMutation(addActivityToState(nextState, newActivity));
+    let awardedIndices: number[] = [];
+    if (target === 'all_opponents') {
+      awardedIndices = resolvedPlayers.map((_, i) => i).filter(i => i !== activeIdx);
+    } else {
+      awardedIndices = [Number(target)];
+    }
+
+    const newEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'foul',
+      playerIndex: activeIdx,
+      playerId: activePlayer?.id,
+      playerName: activeName,
+      foulPoints: 4,
+      awardedTo: awardedIndices,
+      freeBallAwarded: false,
+      passBack: false,
+      breakScore: state.currentBreak,
+      isBreakEnd: state.currentBreak > 0,
+      scoresAfter: [...nextState.playerScores],
+      detail: `${activeName} committed standard foul (+4 pts). Turn to ${nextPlayerName}.`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
   };
 
   const onConcede = () => {
@@ -439,7 +545,19 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         borderClass: 'border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-black',
       };
 
-      applyStateMutation(addActivityToState(nextState, newActivity));
+      const concedeEvent: MatchEvent = {
+        id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: Date.now(),
+        frameNumber: currentFrameNum,
+        type: 'concede',
+        playerIndex: state.activePlayerIndex,
+        playerId: playerAtTable?.id,
+        playerName: playerAtTable.name,
+        scoresAfter: [...nextState.playerScores],
+        detail: `${playerAtTable.name} conceded Frame ${currentFrameNum}. ${winnerName} wins.`,
+      };
+
+      applyStateMutation(appendActionAndEvent(nextState, newActivity, concedeEvent));
     }
   };
 
@@ -510,22 +628,37 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       textClass: 'text-purple-200 font-bold',
       borderClass: 'border-purple-500/60 ring-2 ring-purple-500/50',
     };
-    applyStateMutation(addActivityToState({
+
+    const freeBallEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'free_ball',
+      playerIndex: state.activePlayerIndex,
+      playerId: resolvedPlayers[state.activePlayerIndex]?.id,
+      playerName: activeName,
+      freeBallAwarded: isNowActive,
+      scoresAfter: [...state.playerScores],
+      detail: isNowActive ? `${activeName} nominated Free Ball` : 'Free Ball cancelled',
+    };
+
+    applyStateMutation(appendActionAndEvent({
       ...state,
       freeBallActive: isNowActive,
       lastActionDescription: isNowActive ? 'Free ball nominated' : 'Free ball cancelled',
-    }, newActivity));
+    }, newActivity, freeBallEvent));
   };
 
-  const onSwitchActivePlayer = (targetIndex: number) => {
+  const onSwitchActivePlayer = useCallback((targetIndex: number) => {
     if (targetIndex === state.activePlayerIndex || state.isFrameOver) return;
     triggerHaptic(12);
     const nextState = handleSwitchPlayer(state, targetIndex);
 
     const targetName = resolvedPlayers[targetIndex]?.name || `Player ${targetIndex + 1}`;
+    const now = Date.now();
     const newActivity: ActivityItem = {
-      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      timestamp: Date.now(),
+      id: `act-${now}-${targetIndex}`,
+      timestamp: now,
       type: 'switch',
       playerIndex: targetIndex,
       playerName: targetName,
@@ -537,8 +670,20 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       icon: 'switch',
     };
 
-    applyStateMutation(addActivityToState(nextState, newActivity));
-  };
+    const switchEvent: MatchEvent = {
+      id: `evt-${now}-${targetIndex}`,
+      timestamp: now,
+      frameNumber: currentFrameNum,
+      type: 'switch',
+      playerIndex: targetIndex,
+      playerId: resolvedPlayers[targetIndex]?.id,
+      playerName: targetName,
+      scoresAfter: [...nextState.playerScores],
+      detail: `Active player switched to ${targetName}.`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, switchEvent));
+  }, [state, resolvedPlayers, currentFrameNum, applyStateMutation, appendActionAndEvent]);
 
   // Projected frames including current pending frame if concluded
   const projectedFrames = React.useMemo(() => {
@@ -579,7 +724,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         state.playerScores,
         winnerPlayer.id,
         highestBreak,
-        highBreakPlayerId
+        highBreakPlayerId,
+        state.events || []
       );
 
       setPlayerFrames(updatedFrames);
@@ -637,7 +783,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         state.playerScores,
         winnerPlayer.id,
         highestBreak,
-        highBreakPlayerId
+        highBreakPlayerId,
+        state.events || []
       );
 
       const overallWinner = matchWinner || winnerPlayer;
@@ -755,7 +902,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     return [
       {
         id: 'act-init-fallback',
-        timestamp: Date.now(),
+        timestamp: 0,
         type: 'frame_start',
         playerIndex: state.activePlayerIndex,
         playerName: pName,

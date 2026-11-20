@@ -58,10 +58,14 @@ CREATE TABLE IF NOT EXISTS frames (
     winner_id UUID REFERENCES players(id) ON DELETE SET NULL,
     highest_break INT NOT NULL DEFAULT 0,
     highest_break_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    events JSONB DEFAULT '[]'::jsonb,
     started_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     completed_at TIMESTAMPTZ,
     CONSTRAINT unique_frame_per_match UNIQUE (match_id, frame_number)
 );
+
+-- Ensure events column exists if table was already created
+ALTER TABLE frames ADD COLUMN IF NOT EXISTS events JSONB DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_frames_match_id ON frames(match_id);
 CREATE INDEX IF NOT EXISTS idx_frames_winner ON frames(winner_id);

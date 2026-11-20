@@ -15,8 +15,12 @@ import {
   clearLiveSession,
   abandonMatch,
   saveNewMatch,
-  fetchMatches
+  fetchMatches,
+  recordFrameCompleted,
+  finishMatch
 } from '../src/lib/storage';
+import { MatchEvent } from '../src/types/snooker';
+import { computeFrameInsights } from '../src/components/history/insights/analytics';
 
 console.log('--- Starting Snooker Tracker Verification Suite ---');
 
@@ -381,7 +385,7 @@ async function testAbandon() {
   // 14. Verify Abandoned Match Frame Isolation from Leaderboard
   console.log('\n[14] Verifying Abandoned Match Frame Records Isolation...');
   const testMatchForFrames = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 3, 15);
-  const { recordFrameCompleted, fetchLeaderboard } = await import('../src/lib/storage');
+  const { fetchLeaderboard } = await import('../src/lib/storage');
   
   // Record a frame with a huge break (e.g. 120) before abandoning
   await recordFrameCompleted(
@@ -572,6 +576,103 @@ async function testAbandon() {
   assert.strictEqual(initFrame.activities[0].type, 'frame_start', 'Initial activity must have type frame_start');
   assert.strictEqual(initFrame.activities[0].badge, 'BREAK-OFF', 'Initial activity badge must be BREAK-OFF');
   console.log('✓ Last 7 activities initial state and data contract verified.');
+
+  // 27. Verify Match Event Telemetry Archival in Storage
+  console.log('\n[27] Verifying Match Event Telemetry Archival in Storage...');
+  const telemetryMatch = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 1, 15);
+  const now = Date.now();
+  const mockEvents: MatchEvent[] = [
+    {
+      id: 'evt-1',
+      timestamp: now,
+      frameNumber: 1,
+      type: 'pot',
+      playerIndex: 0,
+      playerName: 'Eldho',
+      ball: 'red',
+      points: 1,
+      breakScore: 1,
+      breakBalls: ['red'],
+      scoresAfter: [1, 0],
+      detail: 'Eldho potted Red (+1 pt)',
+    },
+    {
+      id: 'evt-2',
+      timestamp: now + 5000,
+      frameNumber: 1,
+      type: 'pot',
+      playerIndex: 0,
+      playerName: 'Eldho',
+      ball: 'black',
+      points: 7,
+      breakScore: 8,
+      breakBalls: ['red', 'black'],
+      scoresAfter: [8, 0],
+      detail: 'Eldho potted Black (+7 pts)',
+    },
+    {
+      id: 'evt-3',
+      timestamp: now + 12000,
+      frameNumber: 1,
+      type: 'miss',
+      playerIndex: 0,
+      playerName: 'Eldho',
+      breakScore: 8,
+      isBreakEnd: true,
+      scoresAfter: [8, 0],
+      detail: 'Eldho ended break of 8 pts',
+    },
+    {
+      id: 'evt-4',
+      timestamp: now + 20000,
+      frameNumber: 1,
+      type: 'foul',
+      playerIndex: 1,
+      playerName: 'Thoma',
+      foulPoints: 4,
+      awardedTo: [0],
+      scoresAfter: [12, 0],
+      detail: 'Thoma fouled (+4 pts) awarded to Eldho',
+    },
+  ];
+
+  await recordFrameCompleted(
+    telemetryMatch.id,
+    1,
+    [12, 0],
+    'p1000000-0000-0000-0000-000000000001',
+    8,
+    'p1000000-0000-0000-0000-000000000001',
+    mockEvents
+  );
+  await finishMatch(telemetryMatch.id, 'p1000000-0000-0000-0000-000000000001', [1, 0]);
+
+  const matchesAfterTelemetry = await fetchMatches();
+  const archivedTelemetryMatch = matchesAfterTelemetry.find(m => m.id === telemetryMatch.id);
+  assert(archivedTelemetryMatch, 'Archived telemetry match must exist in storage');
+  assert(archivedTelemetryMatch.frames && archivedTelemetryMatch.frames.length > 0, 'Archived match must have frames');
+  const archivedFrame = archivedTelemetryMatch.frames[0];
+  assert(archivedFrame.events && archivedFrame.events.length === 4, 'Archived frame must store all 4 telemetry events');
+  assert.strictEqual(archivedFrame.events[0].ball, 'red');
+  assert.strictEqual(archivedFrame.events[1].points, 7);
+  assert.strictEqual(archivedFrame.events[3].foulPoints, 4);
+  console.log('✓ Match event telemetry correctly archived and hydrated in Frame records.');
+
+  // 28. Verify Visual Insights Computation Engine
+  console.log('\n[28] Verifying Visual Insights Computation Engine...');
+  const testPlayers = [
+    { id: 'p1000000-0000-0000-0000-000000000001', name: 'Eldho' },
+    { id: 'p2000000-0000-0000-0000-000000000002', name: 'Thoma' },
+  ];
+  const insights = computeFrameInsights(mockEvents, testPlayers, [12, 0]);
+  assert(insights.timeline.length >= 4, 'Timeline must contain all progression points');
+  assert.strictEqual(insights.scoringSources[0].pointsFromPots, 8, 'Eldho points from pots must equal 8');
+  assert.strictEqual(insights.scoringSources[0].pointsFromFouls, 4, 'Eldho points from opponent fouls must equal 4');
+  assert.strictEqual(insights.scoringSources[0].ballCounts.red, 1, 'Eldho red count must equal 1');
+  assert.strictEqual(insights.scoringSources[0].ballCounts.black, 1, 'Eldho black count must equal 1');
+  assert.strictEqual(insights.discipline[1].foulsCommitted, 1, 'Thoma fouls committed must equal 1');
+  assert.strictEqual(insights.discipline[1].penaltyPointsConceded, 4, 'Thoma penalty points conceded must equal 4');
+  console.log('✓ Visual insights analytics engine computes accurate telemetry, ball distribution, and discipline stats.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');

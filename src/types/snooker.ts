@@ -88,6 +88,37 @@ export interface ShotAction {
   description: string;
 }
 
+export type MatchEventType = 
+  | 'pot' 
+  | 'miss' 
+  | 'foul' 
+  | 'free_ball' 
+  | 'concede' 
+  | 'switch'
+  | 'frame_start'
+  | 'frame_end';
+
+export interface MatchEvent {
+  id: string;
+  timestamp: number;
+  frameNumber: number;
+  type: MatchEventType;
+  playerIndex: number;
+  playerId?: string;
+  playerName: string;
+  ball?: BallType;
+  points?: number;
+  breakScore?: number;
+  breakBalls?: BallType[];
+  scoresAfter: number[];
+  foulPoints?: number;
+  awardedTo?: number[];
+  freeBallAwarded?: boolean;
+  passBack?: boolean;
+  detail: string;
+  isBreakEnd?: boolean;
+}
+
 export interface ActivityItem {
   id: string;
   timestamp: number;
@@ -140,6 +171,7 @@ export interface FrameState {
   winReason?: string;
   lastActionDescription?: string;
   activities?: ActivityItem[];
+  events?: MatchEvent[];
 
   // Backwards compatibility properties (for 2-player):
   player1Score: number;
@@ -190,6 +222,7 @@ export interface Frame {
   highest_break_player_id?: string | null;
   started_at?: string;
   completed_at?: string | null;
+  events?: MatchEvent[];
 
   // Backwards compatibility fields:
   player1_score: number;
