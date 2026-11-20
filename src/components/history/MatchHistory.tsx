@@ -104,10 +104,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
             onClick={handleLoadSampleData}
             disabled={actionLoading}
             className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-            title="Populate match history with sample matches featuring shot-by-shot visual insights"
+            title="Restore actual played matches featuring shot-by-shot visual insights"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>{matches.length === 0 ? 'Load Sample Data' : 'Reset / Demo Data'}</span>
+            <span>Restore Actual Matches</span>
           </button>
 
           {matches.length > 0 && (
@@ -179,7 +179,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
           <div className="space-y-1.5">
             <p className="text-sm sm:text-base font-bold text-gray-200">No completed matches recorded yet</p>
             <p className="text-xs text-gray-400 max-w-md mx-auto">
-              Match history starts with a clean slate. You can start a live game, or load sample matches with shot-by-shot telemetry to explore the new visual insights and charts immediately!
+              Your match records are currently empty. Click below to restore your actual matches with complete shot-by-shot insights, or start a new match!
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -190,7 +190,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Load Sample Matches with Visual Insights</span>
+              <span>Restore Actual Matches with Visual Insights</span>
             </button>
             <button
               type="button"

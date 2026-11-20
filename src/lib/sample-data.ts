@@ -1,11 +1,22 @@
 import { Match, Frame, MatchEvent, BallType } from '@/types/snooker';
 
-const P_ELDHO = 'p1000000-0000-0000-0000-000000000001'; // Eldho
-const P_THOMA = 'p2000000-0000-0000-0000-000000000002'; // Thoma
-const P_RAJU = 'p3000000-0000-0000-0000-000000000003';  // Raju
-const P_ADI = 'p4000000-0000-0000-0000-000000000004';   // Adi
-const P_BM = 'p5000000-0000-0000-0000-000000000005';    // BM
-const P_SAM = 'p6000000-0000-0000-0000-000000000006';   // Sam
+export const P_ELDHO = 'p1000000-0000-0000-0000-000000000001'; // Eldho
+export const P_THOMA = 'p2000000-0000-0000-0000-000000000002'; // Thoma
+export const P_RAJU = 'p3000000-0000-0000-0000-000000000003';  // Raju
+export const P_ADI = 'p4000000-0000-0000-0000-000000000004';   // Adi
+export const P_BM = 'p5000000-0000-0000-0000-000000000005';    // BM
+export const P_SAM = 'p6000000-0000-0000-0000-000000000006';   // Sam
+
+export const M1_ID = 'm1000000-0000-0000-0000-000000000001';
+export const M2_ID = 'm2000000-0000-0000-0000-000000000002';
+export const M3_ID = 'm3000000-0000-0000-0000-000000000003';
+
+export const F1_ID = 'f1000000-0000-0000-0000-000000000001';
+export const F2_ID = 'f2000000-0000-0000-0000-000000000002';
+export const F3_ID = 'f3000000-0000-0000-0000-000000000003';
+export const F4_ID = 'f4000000-0000-0000-0000-000000000004';
+export const F5_ID = 'f5000000-0000-0000-0000-000000000005';
+export const F6_ID = 'f6000000-0000-0000-0000-000000000006';
 
 // Helper to build a clean event object
 function makeEvent(
@@ -27,9 +38,9 @@ function makeEvent(
     timestampOffsetMs?: number;
   } = {}
 ): MatchEvent {
-  const baseTime = Date.now() - 48 * 3600000;
+  const baseTime = Date.now() - 72 * 3600000;
   return {
-    id: `evt-sample-${frameNumber}-${Math.random().toString(36).substring(2, 9)}`,
+    id: `evt-actual-${frameNumber}-${Math.random().toString(36).substring(2, 9)}`,
     timestamp: baseTime + (opts.timestampOffsetMs || 0),
     frameNumber,
     type,
@@ -57,7 +68,6 @@ function createFrame1Events(): MatchEvent[] {
   let t = 0;
   const advance = (sec: number = 25) => (t += sec * 1000);
 
-  // Frame start
   events.push(makeEvent(1, 'frame_start', 0, P_ELDHO, 'Eldho', 'Frame 1 started', [0, 0], { timestampOffsetMs: t }));
 
   // Eldho visit 1: Pot Red (1), Black (7), Red (1), Pink (6), Red (1), Miss color -> Break 16
@@ -165,7 +175,6 @@ function createFrame2Events(): MatchEvent[] {
 
   events.push(makeEvent(2, 'frame_start', 1, P_THOMA, 'Thoma', 'Frame 2 started', [0, 0], { timestampOffsetMs: t }));
 
-  // Eldho early points: Red (1), Blue (5), Red (1), Pink (6), Miss -> 13
   advance();
   events.push(makeEvent(2, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Red (+1 pt)', [1, 0], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -211,7 +220,6 @@ function createFrame2Events(): MatchEvent[] {
   advance();
   events.push(makeEvent(2, 'miss', 1, P_THOMA, 'Thoma', 'Thoma missed Blue • Break ends at 52', [13, 54], { timestampOffsetMs: t }));
 
-  // Eldho fouls and additional points to reach 71-35
   advance();
   events.push(makeEvent(2, 'foul', 0, P_ELDHO, 'Eldho', 'Eldho foul (+4 pts to Thoma)', [13, 58], { foulPoints: 4, awardedTo: [1], timestampOffsetMs: t }));
   advance();
@@ -249,7 +257,6 @@ function createFrame3Events(): MatchEvent[] {
 
   events.push(makeEvent(3, 'frame_start', 0, P_ELDHO, 'Eldho', 'Frame 3 (Decider) started', [0, 0], { timestampOffsetMs: t }));
 
-  // Thoma early 18 points
   advance();
   events.push(makeEvent(3, 'pot', 1, P_THOMA, 'Thoma', 'Thoma potted Red (+1 pt)', [0, 1], { ball: 'red', points: 1, timestampOffsetMs: t }));
   advance();
@@ -299,7 +306,6 @@ function createFrame3Events(): MatchEvent[] {
   advance();
   events.push(makeEvent(3, 'miss', 0, P_ELDHO, 'Eldho', 'Eldho missed', [66, 17], { timestampOffsetMs: t }));
 
-  // Thoma foul + 9 points
   advance();
   events.push(makeEvent(3, 'foul', 1, P_THOMA, 'Thoma', 'Thoma foul (+4 pts to Eldho)', [70, 17], { foulPoints: 4, awardedTo: [0], timestampOffsetMs: t }));
   advance();
@@ -315,7 +321,160 @@ function createFrame3Events(): MatchEvent[] {
 }
 
 /**
+ * Creates events for Raju (54) vs Adi (38) - Frame 1
+ * High break 34 by Raju
+ */
+function createRajuAdiFrame1Events(): MatchEvent[] {
+  const events: MatchEvent[] = [];
+  let t = 0;
+  const advance = (sec: number = 20) => (t += sec * 1000);
+
+  events.push(makeEvent(1, 'frame_start', 0, P_RAJU, 'Raju', 'Frame 1 started', [0, 0], { timestampOffsetMs: t }));
+
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Red (+1 pt)', [0, 1], { ball: 'red', points: 1, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Black (+7 pts)', [0, 8], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Red (+1 pt)', [0, 9], { ball: 'red', points: 1, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Blue (+5 pts)', [0, 14], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'miss', 1, P_ADI, 'Adi', 'Adi missed', [0, 14], { timestampOffsetMs: t }));
+
+  // Raju 34 break run!
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [1, 14], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [8, 14], { ball: 'black', points: 7, breakScore: 8, breakBalls: ['red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [9, 14], { ball: 'red', points: 1, breakScore: 9, breakBalls: ['red', 'black', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Pink (+6 pts)', [15, 14], { ball: 'pink', points: 6, breakScore: 15, breakBalls: ['red', 'black', 'red', 'pink'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [16, 14], { ball: 'red', points: 1, breakScore: 16, breakBalls: ['red', 'black', 'red', 'pink', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [21, 14], { ball: 'blue', points: 5, breakScore: 21, breakBalls: ['red', 'black', 'red', 'pink', 'red', 'blue'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [22, 14], { ball: 'red', points: 1, breakScore: 22, breakBalls: ['red', 'black', 'red', 'pink', 'red', 'blue', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [29, 14], { ball: 'black', points: 7, breakScore: 29, breakBalls: ['red', 'black', 'red', 'pink', 'red', 'blue', 'red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Yellow (+2 pts)', [31, 14], { ball: 'yellow', points: 2, breakScore: 31, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Green (+3 pts)', [34, 14], { ball: 'green', points: 3, breakScore: 34, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'miss', 0, P_RAJU, 'Raju', 'Raju missed Brown • Break 34', [34, 14], { timestampOffsetMs: t }));
+
+  // Adi fight back: 24 points to reach 38
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Brown (+4 pts)', [34, 18], { ball: 'brown', points: 4, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Blue (+5 pts)', [34, 23], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Pink (+6 pts)', [34, 29], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Black (+7 pts)', [34, 36], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_ADI, 'Adi', 'Adi potted Yellow (+2 pts)', [34, 38], { ball: 'yellow', points: 2, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'foul', 1, P_ADI, 'Adi', 'Adi foul (+4 pts to Raju)', [38, 38], { foulPoints: 4, awardedTo: [0], timestampOffsetMs: t }));
+
+  // Raju finishes 54 - 38
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [43, 38], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Pink (+6 pts)', [49, 38], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [54, 38], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'frame_end', 0, P_RAJU, 'Raju', 'Raju won Frame 1 (54 - 38)', [54, 38], { timestampOffsetMs: t }));
+
+  return events;
+}
+
+/**
+ * Creates events for Raju (62) vs Adi (45) - Frame 2
+ * High break 38 by Raju
+ */
+function createRajuAdiFrame2Events(): MatchEvent[] {
+  const events: MatchEvent[] = [];
+  let t = 0;
+  const advance = (sec: number = 20) => (t += sec * 1000);
+
+  events.push(makeEvent(2, 'frame_start', 1, P_ADI, 'Adi', 'Frame 2 started', [0, 0], { timestampOffsetMs: t }));
+
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Red (+1 pt)', [0, 1], { ball: 'red', points: 1, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Black (+7 pts)', [0, 8], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Red (+1 pt)', [0, 9], { ball: 'red', points: 1, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Pink (+6 pts)', [0, 15], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'miss', 1, P_ADI, 'Adi', 'Adi missed', [0, 15], { timestampOffsetMs: t }));
+
+  // Raju 38 break
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [1, 15], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [8, 15], { ball: 'black', points: 7, breakScore: 8, breakBalls: ['red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [9, 15], { ball: 'red', points: 1, breakScore: 9, breakBalls: ['red', 'black', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [16, 15], { ball: 'black', points: 7, breakScore: 16, breakBalls: ['red', 'black', 'red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [17, 15], { ball: 'red', points: 1, breakScore: 17, breakBalls: ['red', 'black', 'red', 'black', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [22, 15], { ball: 'blue', points: 5, breakScore: 22, breakBalls: ['red', 'black', 'red', 'black', 'red', 'blue'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [23, 15], { ball: 'red', points: 1, breakScore: 23, breakBalls: ['red', 'black', 'red', 'black', 'red', 'blue', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [30, 15], { ball: 'black', points: 7, breakScore: 30, breakBalls: ['red', 'black', 'red', 'black', 'red', 'blue', 'red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Red (+1 pt)', [31, 15], { ball: 'red', points: 1, breakScore: 31, breakBalls: ['red', 'black', 'red', 'black', 'red', 'blue', 'red', 'black', 'red'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [38, 15], { ball: 'black', points: 7, breakScore: 38, breakBalls: ['red', 'black', 'red', 'black', 'red', 'blue', 'red', 'black', 'red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'miss', 0, P_RAJU, 'Raju', 'Raju missed Yellow • Break 38', [38, 15], { timestampOffsetMs: t }));
+
+  // Adi scores 30 points to reach 45
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Yellow (+2 pts)', [38, 17], { ball: 'yellow', points: 2, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Green (+3 pts)', [38, 20], { ball: 'green', points: 3, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Brown (+4 pts)', [38, 24], { ball: 'brown', points: 4, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Blue (+5 pts)', [38, 29], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Pink (+6 pts)', [38, 35], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Black (+7 pts)', [38, 42], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 1, P_ADI, 'Adi', 'Adi potted Green (+3 pts)', [38, 45], { ball: 'green', points: 3, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'miss', 1, P_ADI, 'Adi', 'Adi missed', [38, 45], { timestampOffsetMs: t }));
+
+  // Raju finishes to 62
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [43, 45], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [50, 45], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Blue (+5 pts)', [55, 45], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'pot', 0, P_RAJU, 'Raju', 'Raju potted Black (+7 pts)', [62, 45], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(2, 'frame_end', 0, P_RAJU, 'Raju', 'Raju won Frame 2 (62 - 45) and series 2-0!', [62, 45], { timestampOffsetMs: t }));
+
+  return events;
+}
+
+/**
  * Creates events for 3-Player Match: Eldho (42) vs BM (58) vs Sam (36)
+ * High break 41 by BM!
  */
 function createMultiplayerFrameEvents(): MatchEvent[] {
   const events: MatchEvent[] = [];
@@ -324,7 +483,7 @@ function createMultiplayerFrameEvents(): MatchEvent[] {
 
   events.push(makeEvent(1, 'frame_start', 0, P_ELDHO, 'Eldho', '3-Player Frame started', [0, 0, 0], { timestampOffsetMs: t }));
 
-  // Eldho turn
+  // Eldho turn: 8 pts
   advance();
   events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Red (+1 pt)', [1, 0, 0], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -332,7 +491,7 @@ function createMultiplayerFrameEvents(): MatchEvent[] {
   advance();
   events.push(makeEvent(1, 'miss', 0, P_ELDHO, 'Eldho', 'Eldho missed • Turn to BM', [8, 0, 0], { timestampOffsetMs: t }));
 
-  // BM turn: 32 break
+  // BM turn: 41 break! (Red, Black, Red, Black, Red, Black, Red, Pink, Red, Black, Yellow) = 1+7+1+7+1+7+1+6+1+7+2 = 41
   advance();
   events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 1, 0], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -344,213 +503,209 @@ function createMultiplayerFrameEvents(): MatchEvent[] {
   advance();
   events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 17, 0], { ball: 'red', points: 1, breakScore: 17, breakBalls: ['red', 'black', 'red', 'black', 'red'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Pink (+6 pts)', [8, 23, 0], { ball: 'pink', points: 6, breakScore: 23, breakBalls: ['red', 'black', 'red', 'black', 'red', 'pink'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Black (+7 pts)', [8, 24, 0], { ball: 'black', points: 7, breakScore: 24, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 24, 0], { ball: 'red', points: 1, breakScore: 24, breakBalls: ['red', 'black', 'red', 'black', 'red', 'pink', 'red'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 25, 0], { ball: 'red', points: 1, breakScore: 25, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black', 'red'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Black (+7 pts)', [8, 31, 0], { ball: 'black', points: 7, breakScore: 31, breakBalls: ['red', 'black', 'red', 'black', 'red', 'pink', 'red', 'black'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Pink (+6 pts)', [8, 31, 0], { ball: 'pink', points: 6, breakScore: 31, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black', 'red', 'pink'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 32, 0], { ball: 'red', points: 1, breakScore: 32, breakBalls: ['red', 'black', 'red', 'black', 'red', 'pink', 'red', 'black', 'red'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Red (+1 pt)', [8, 32, 0], { ball: 'red', points: 1, breakScore: 32, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black', 'red', 'pink', 'red'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'miss', 1, P_BM, 'BM', 'BM missed • Turn to Sam', [8, 32, 0], { timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Black (+7 pts)', [8, 39, 0], { ball: 'black', points: 7, breakScore: 39, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black', 'red', 'pink', 'red', 'black'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Yellow (+2 pts)', [8, 41, 0], { ball: 'yellow', points: 2, breakScore: 41, breakBalls: ['red', 'black', 'red', 'black', 'red', 'black', 'red', 'pink', 'red', 'black', 'yellow'], timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(1, 'miss', 1, P_BM, 'BM', 'BM missed • Turn to Sam • Break: 41', [8, 41, 0], { timestampOffsetMs: t }));
 
-  // Sam turn: 24 points
+  // Sam turn: 23 points
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Red (+1 pt)', [8, 32, 1], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Red (+1 pt)', [8, 41, 1], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Blue (+5 pts)', [8, 32, 6], { ball: 'blue', points: 5, breakScore: 6, breakBalls: ['red', 'blue'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Blue (+5 pts)', [8, 41, 6], { ball: 'blue', points: 5, breakScore: 6, breakBalls: ['red', 'blue'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Red (+1 pt)', [8, 32, 7], { ball: 'red', points: 1, breakScore: 7, breakBalls: ['red', 'blue', 'red'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Red (+1 pt)', [8, 41, 7], { ball: 'red', points: 1, breakScore: 7, breakBalls: ['red', 'blue', 'red'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Black (+7 pts)', [8, 32, 14], { ball: 'black', points: 7, breakScore: 14, breakBalls: ['red', 'blue', 'red', 'black'], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Black (+7 pts)', [8, 41, 14], { ball: 'black', points: 7, breakScore: 14, breakBalls: ['red', 'blue', 'red', 'black'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Yellow (+2 pts)', [8, 32, 16], { ball: 'yellow', points: 2, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Yellow (+2 pts)', [8, 41, 16], { ball: 'yellow', points: 2, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Green (+3 pts)', [8, 32, 19], { ball: 'green', points: 3, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Green (+3 pts)', [8, 41, 19], { ball: 'green', points: 3, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Brown (+4 pts)', [8, 32, 23], { ball: 'brown', points: 4, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Brown (+4 pts)', [8, 41, 23], { ball: 'brown', points: 4, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'miss', 2, P_SAM, 'Sam', 'Sam missed Blue', [8, 32, 23], { timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'miss', 2, P_SAM, 'Sam', 'Sam missed Blue', [8, 41, 23], { timestampOffsetMs: t }));
 
   // Sam foul: in-off (+4 to Eldho and BM)
   advance();
-  events.push(makeEvent(1, 'foul', 2, P_SAM, 'Sam', 'Sam fouled (+4 pts to all opponents)', [12, 36, 23], { foulPoints: 4, awardedTo: [0, 1], timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'foul', 2, P_SAM, 'Sam', 'Sam fouled (+4 pts to all opponents)', [12, 45, 23], { foulPoints: 4, awardedTo: [0, 1], timestampOffsetMs: t }));
 
   // Eldho scores 30 more to reach 42
   advance();
-  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Blue (+5 pts)', [17, 36, 23], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Blue (+5 pts)', [17, 45, 23], { ball: 'blue', points: 5, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [23, 36, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [23, 45, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Black (+7 pts)', [30, 36, 23], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Black (+7 pts)', [30, 45, 23], { ball: 'black', points: 7, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [36, 36, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [36, 45, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [42, 36, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Pink (+6 pts)', [42, 45, 23], { ball: 'pink', points: 6, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'miss', 0, P_ELDHO, 'Eldho', 'Eldho missed', [42, 36, 23], { timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'miss', 0, P_ELDHO, 'Eldho', 'Eldho missed', [42, 45, 23], { timestampOffsetMs: t }));
 
   // Sam scores to reach 36
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Black (+7 pts)', [42, 36, 30], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Black (+7 pts)', [42, 45, 30], { ball: 'black', points: 7, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Pink (+6 pts)', [42, 36, 36], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 2, P_SAM, 'Sam', 'Sam potted Pink (+6 pts)', [42, 45, 36], { ball: 'pink', points: 6, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'miss', 2, P_SAM, 'Sam', 'Sam missed', [42, 36, 36], { timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'miss', 2, P_SAM, 'Sam', 'Sam missed', [42, 45, 36], { timestampOffsetMs: t }));
 
   // BM clears remaining to win 58 - 42 - 36
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Blue (+5 pts)', [42, 41, 36], { ball: 'blue', points: 5, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Blue (+5 pts)', [42, 50, 36], { ball: 'blue', points: 5, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Pink (+6 pts)', [42, 47, 36], { ball: 'pink', points: 6, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Pink (+6 pts)', [42, 56, 36], { ball: 'pink', points: 6, timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(1, 'foul', 0, P_ELDHO, 'Eldho', 'Eldho foul (+4 to opponents)', [42, 51, 36], { foulPoints: 4, awardedTo: [1], timestampOffsetMs: t }));
-  advance();
-  events.push(makeEvent(1, 'pot', 1, P_BM, 'BM', 'BM potted Black (+7 pts)', [42, 58, 36], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  events.push(makeEvent(1, 'foul', 0, P_ELDHO, 'Eldho', 'Eldho foul (+2 to opponents)', [42, 58, 36], { foulPoints: 2, awardedTo: [1], timestampOffsetMs: t }));
   advance();
   events.push(makeEvent(1, 'frame_end', 1, P_BM, 'BM', 'BM won 3-Player Frame (58 - 42 - 36)', [42, 58, 36], { timestampOffsetMs: t }));
 
   return events;
 }
 
+export const ACTUAL_MATCHES: Match[] = [
+  {
+    id: M1_ID,
+    player_ids: [P_ELDHO, P_THOMA],
+    player1_id: P_ELDHO,
+    player2_id: P_THOMA,
+    best_of: 3,
+    status: 'completed',
+    winner_id: P_ELDHO,
+    player_frames: [2, 1],
+    player1_frames: 2,
+    player2_frames: 1,
+    reds_count: 15,
+    started_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    completed_at: new Date(Date.now() - 3 * 86400000 + 45 * 60000).toISOString(),
+  },
+  {
+    id: M2_ID,
+    player_ids: [P_RAJU, P_ADI],
+    player1_id: P_RAJU,
+    player2_id: P_ADI,
+    best_of: 3,
+    status: 'completed',
+    winner_id: P_RAJU,
+    player_frames: [2, 0],
+    player1_frames: 2,
+    player2_frames: 0,
+    reds_count: 15,
+    started_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    completed_at: new Date(Date.now() - 1 * 86400000 + 35 * 60000).toISOString(),
+  },
+  {
+    id: M3_ID,
+    player_ids: [P_ELDHO, P_BM, P_SAM],
+    player1_id: P_ELDHO,
+    player2_id: P_BM,
+    best_of: 1,
+    status: 'completed',
+    winner_id: P_BM,
+    player_frames: [0, 1, 0],
+    player1_frames: 0,
+    player2_frames: 1,
+    reds_count: 10,
+    started_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+    completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
+  },
+];
+
+export const ACTUAL_FRAMES: Frame[] = [
+  {
+    id: F1_ID,
+    match_id: M1_ID,
+    frame_number: 1,
+    scores: [68, 42],
+    player1_score: 68,
+    player2_score: 42,
+    winner_id: P_ELDHO,
+    highest_break: 47,
+    highest_break_player_id: P_ELDHO,
+    completed_at: new Date(Date.now() - 3 * 86400000 + 15 * 60000).toISOString(),
+    events: createFrame1Events(),
+  },
+  {
+    id: F2_ID,
+    match_id: M1_ID,
+    frame_number: 2,
+    scores: [35, 71],
+    player1_score: 35,
+    player2_score: 71,
+    winner_id: P_THOMA,
+    highest_break: 52,
+    highest_break_player_id: P_THOMA,
+    completed_at: new Date(Date.now() - 3 * 86400000 + 30 * 60000).toISOString(),
+    events: createFrame2Events(),
+  },
+  {
+    id: F3_ID,
+    match_id: M1_ID,
+    frame_number: 3,
+    scores: [75, 29],
+    player1_score: 75,
+    player2_score: 29,
+    winner_id: P_ELDHO,
+    highest_break: 61,
+    highest_break_player_id: P_ELDHO,
+    completed_at: new Date(Date.now() - 3 * 86400000 + 45 * 60000).toISOString(),
+    events: createFrame3Events(),
+  },
+  {
+    id: F4_ID,
+    match_id: M2_ID,
+    frame_number: 1,
+    scores: [54, 38],
+    player1_score: 54,
+    player2_score: 38,
+    winner_id: P_RAJU,
+    highest_break: 34,
+    highest_break_player_id: P_RAJU,
+    completed_at: new Date(Date.now() - 1 * 86400000 + 18 * 60000).toISOString(),
+    events: createRajuAdiFrame1Events(),
+  },
+  {
+    id: F5_ID,
+    match_id: M2_ID,
+    frame_number: 2,
+    scores: [62, 45],
+    player1_score: 62,
+    player2_score: 45,
+    winner_id: P_RAJU,
+    highest_break: 38,
+    highest_break_player_id: P_RAJU,
+    completed_at: new Date(Date.now() - 1 * 86400000 + 35 * 60000).toISOString(),
+    events: createRajuAdiFrame2Events(),
+  },
+  {
+    id: F6_ID,
+    match_id: M3_ID,
+    frame_number: 1,
+    scores: [42, 58, 36],
+    player1_score: 42,
+    player2_score: 58,
+    winner_id: P_BM,
+    highest_break: 41,
+    highest_break_player_id: P_BM,
+    completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
+    events: createMultiplayerFrameEvents(),
+  },
+];
+
 export function getSampleMatchesAndFrames(): { matches: Match[]; frames: Frame[] } {
-  const f1Events = createFrame1Events();
-  const f2Events = createFrame2Events();
-  const f3Events = createFrame3Events();
-  const fMultiEvents = createMultiplayerFrameEvents();
-
-  const m1Id = 'm_sample_001_eldho_thoma';
-  const m2Id = 'm_sample_002_raju_adi';
-  const m3Id = 'm_sample_003_multiplayer';
-
-  const matches: Match[] = [
-    {
-      id: m1Id,
-      player_ids: [P_ELDHO, P_THOMA],
-      player1_id: P_ELDHO,
-      player2_id: P_THOMA,
-      best_of: 3,
-      status: 'completed',
-      winner_id: P_ELDHO,
-      player_frames: [2, 1],
-      player1_frames: 2,
-      player2_frames: 1,
-      reds_count: 15,
-      started_at: new Date(Date.now() - 48 * 3600000).toISOString(),
-      completed_at: new Date(Date.now() - 46 * 3600000).toISOString(),
-    },
-    {
-      id: m2Id,
-      player_ids: [P_RAJU, P_ADI],
-      player1_id: P_RAJU,
-      player2_id: P_ADI,
-      best_of: 3,
-      status: 'completed',
-      winner_id: P_RAJU,
-      player_frames: [2, 0],
-      player1_frames: 2,
-      player2_frames: 0,
-      reds_count: 15,
-      started_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-      completed_at: new Date(Date.now() - 23 * 3600000).toISOString(),
-    },
-    {
-      id: m3Id,
-      player_ids: [P_ELDHO, P_BM, P_SAM],
-      player1_id: P_ELDHO,
-      player2_id: P_BM,
-      best_of: 1,
-      status: 'completed',
-      winner_id: P_BM,
-      player_frames: [0, 1, 0],
-      player1_frames: 0,
-      player2_frames: 1,
-      reds_count: 10,
-      started_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-      completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
-    },
-  ];
-
-  const frames: Frame[] = [
-    {
-      id: 'f_sample_001_1',
-      match_id: m1Id,
-      frame_number: 1,
-      scores: [68, 42],
-      player1_score: 68,
-      player2_score: 42,
-      winner_id: P_ELDHO,
-      highest_break: 47,
-      highest_break_player_id: P_ELDHO,
-      completed_at: new Date(Date.now() - 47 * 3600000).toISOString(),
-      events: f1Events,
-    },
-    {
-      id: 'f_sample_001_2',
-      match_id: m1Id,
-      frame_number: 2,
-      scores: [35, 71],
-      player1_score: 35,
-      player2_score: 71,
-      winner_id: P_THOMA,
-      highest_break: 52,
-      highest_break_player_id: P_THOMA,
-      completed_at: new Date(Date.now() - 46.5 * 3600000).toISOString(),
-      events: f2Events,
-    },
-    {
-      id: 'f_sample_001_3',
-      match_id: m1Id,
-      frame_number: 3,
-      scores: [75, 29],
-      player1_score: 75,
-      player2_score: 29,
-      winner_id: P_ELDHO,
-      highest_break: 61,
-      highest_break_player_id: P_ELDHO,
-      completed_at: new Date(Date.now() - 46 * 3600000).toISOString(),
-      events: f3Events,
-    },
-    {
-      id: 'f_sample_002_1',
-      match_id: m2Id,
-      frame_number: 1,
-      scores: [54, 38],
-      player1_score: 54,
-      player2_score: 38,
-      winner_id: P_RAJU,
-      highest_break: 34,
-      highest_break_player_id: P_RAJU,
-      completed_at: new Date(Date.now() - 23.5 * 3600000).toISOString(),
-      events: [],
-    },
-    {
-      id: 'f_sample_002_2',
-      match_id: m2Id,
-      frame_number: 2,
-      scores: [62, 45],
-      player1_score: 62,
-      player2_score: 45,
-      winner_id: P_RAJU,
-      highest_break: 38,
-      highest_break_player_id: P_RAJU,
-      completed_at: new Date(Date.now() - 23 * 3600000).toISOString(),
-      events: [],
-    },
-    {
-      id: 'f_sample_003_1',
-      match_id: m3Id,
-      frame_number: 1,
-      scores: [42, 58, 36],
-      player1_score: 42,
-      player2_score: 58,
-      winner_id: P_BM,
-      highest_break: 32,
-      highest_break_player_id: P_BM,
-      completed_at: new Date(Date.now() - 11 * 3600000).toISOString(),
-      events: fMultiEvents,
-    },
-  ];
-
-  return { matches, frames };
+  return {
+    matches: ACTUAL_MATCHES,
+    frames: ACTUAL_FRAMES,
+  };
 }

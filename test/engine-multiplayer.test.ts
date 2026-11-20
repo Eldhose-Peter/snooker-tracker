@@ -506,27 +506,31 @@ async function testAbandon() {
   assert.strictEqual(snk5P.needed, false); // Eldho has 8, remaining 27 > 8, so no snooker needed yet
   console.log('✓ 5-Player snookers calculation and color clearance phase transition validated.');
 
-  // 22. Verify Clean Initial Leaderboard
-  console.log('\n[22] Verifying Clean Initial Leaderboard & Zeroed Stats...');
-  const cleanLb = await fetchLeaderboard();
-  assert.strictEqual(cleanLb.length, 6, 'Leaderboard must include all 6 members');
-  for (const entry of cleanLb) {
-    assert.strictEqual(entry.matches_played, 0, `${entry.name} matches_played must be 0`);
-    assert.strictEqual(entry.matches_won, 0, `${entry.name} matches_won must be 0`);
-    assert.strictEqual(entry.matches_lost, 0, `${entry.name} matches_lost must be 0`);
-    assert.strictEqual(entry.win_rate, 0, `${entry.name} win_rate must be 0`);
-    assert.strictEqual(entry.frames_won, 0, `${entry.name} frames_won must be 0`);
-    assert.strictEqual(entry.frames_lost, 0, `${entry.name} frames_lost must be 0`);
-    assert.strictEqual(entry.highest_break, 0, `${entry.name} highest_break must be 0`);
-  }
-  console.log('✓ All 6 members start with 0 matches, 0 wins, 0 losses, 0 high break, and clean leaderboard.');
+  // 22. Verify Restored Member Leaderboard
+  console.log('\n[22] Verifying Restored Member Leaderboard & Match Stats...');
+  const memberLb = await fetchLeaderboard();
+  assert.strictEqual(memberLb.length, 6, 'Leaderboard must include all 6 members');
+  const eldhoEntry = memberLb.find(e => e.name === 'Eldho');
+  assert(eldhoEntry, 'Eldho must be in leaderboard');
+  assert.strictEqual(eldhoEntry.highest_break, 61, 'Eldho highest break must be 61');
+  const thomaEntry = memberLb.find(e => e.name === 'Thoma');
+  assert(thomaEntry, 'Thoma must be in leaderboard');
+  assert.strictEqual(thomaEntry.highest_break, 52, 'Thoma highest break must be 52');
+  console.log('✓ All 6 members present with accurately restored match statistics and breaks.');
 
-  // 23. Verify Clean Initial Match History
-  console.log('\n[23] Verifying Clean Initial Match History...');
+  // 23. Verify Restored Actual Match History
+  console.log('\n[23] Verifying Restored Actual Match History...');
   const history = await fetchMatches();
   const completedMatches = history.filter(m => m.status === 'completed');
-  assert.strictEqual(completedMatches.length, 0, 'Completed match history must start completely empty');
-  console.log('✓ Match history starts completely clear (0 completed matches).');
+  assert.strictEqual(completedMatches.length, 3, 'Actual match history must contain 3 completed matches');
+  const match1 = completedMatches.find(m => m.id === 'm1000000-0000-0000-0000-000000000001');
+  assert(match1, 'Match 1 (Eldho vs Thoma) must be present');
+  assert.strictEqual(match1.frames?.length, 3, 'Match 1 must have 3 completed frames');
+  const match2 = completedMatches.find(m => m.id === 'm2000000-0000-0000-0000-000000000002');
+  assert(match2, 'Match 2 (Raju vs Adi) must be present');
+  const match3 = completedMatches.find(m => m.id === 'm3000000-0000-0000-0000-000000000003');
+  assert(match3, 'Match 3 (3-Player) must be present');
+  console.log('✓ Actual match history correctly restored with series results and frame details.');
 
   // 24. Verify Active Press Feedback & Removal of Target Section in Source
   console.log('\n[24] Verifying Active Press Feedback & HUD Layout Integrity...');
@@ -681,8 +685,8 @@ async function testAbandon() {
   assert(sampleMatches.length >= 3, 'Sample match seeding must produce at least 3 completed matches');
   const seededHistory = await fetchMatches();
   assert(seededHistory.length >= 3, 'Seeded match history must contain at least 3 matches');
-  const matchWithFrames = seededHistory.find(m => m.id === 'm_sample_001_eldho_thoma');
-  assert(matchWithFrames, 'Match m_sample_001_eldho_thoma must exist in history');
+  const matchWithFrames = seededHistory.find(m => m.id === 'm1000000-0000-0000-0000-000000000001');
+  assert(matchWithFrames, 'Match m1000000-0000-0000-0000-000000000001 must exist in history');
   assert.strictEqual(matchWithFrames.frames?.length, 3, 'Match must have 3 frames');
   const f1 = matchWithFrames.frames[0];
   assert(f1.events && f1.events.length > 10, 'Frame 1 must contain granular shot events');
@@ -691,7 +695,8 @@ async function testAbandon() {
   await clearAllMatches();
   const clearedHistory = await fetchMatches();
   assert.strictEqual(clearedHistory.filter(m => m.status === 'completed').length, 0, 'Completed history must be 0 after clearAllMatches');
-  console.log('✓ Sample match seeding, shot-by-shot telemetry restoration, and clearing verified.');
+  await seedSampleMatches(true);
+  console.log('✓ Match seeding, shot-by-shot telemetry restoration, and clearing verified.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
