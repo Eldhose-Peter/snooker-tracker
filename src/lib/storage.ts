@@ -1,5 +1,6 @@
 import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState, MatchEvent } from '@/types/snooker';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { getSampleMatchesAndFrames } from './sample-data';
 
 const PLAYERS_KEY = 'snooker_tracker_players_v3';
 const MATCHES_KEY = 'snooker_tracker_matches_v3';
@@ -87,12 +88,51 @@ function setLocal<T>(key: string, value: T): void {
   }
 }
 
-// Clean old mock data / dummy players and ensure our actual members are loaded with clean match history
+// Ensure roster is initialized and legacy data is cleanly migrated without wiping matches
 function ensureLocalSeed(): void {
   if (typeof window === 'undefined') return;
 
-  // Clear legacy and previous version storage to ensure completely clean slate
+  // 1. Decoupled Player Seeding (never touches matches or frames)
+  const existingPlayers = getLocal<Player[]>(PLAYERS_KEY, []);
+  const needsPlayerReseed = existingPlayers.length === 0 || existingPlayers.some(p => 
+    p.name.includes('Alex') || p.name.includes('Liam') || p.name.includes('Marcus') || p.name.includes('Davey')
+  );
+
+  if (needsPlayerReseed) {
+    setLocal(PLAYERS_KEY, INITIAL_PLAYERS);
+  }
+
+  // 2. Safe Legacy Migration (v1 / v2 to v3)
   try {
+    const existingMatches = getLocal<Match[]>(MATCHES_KEY, []);
+    if (existingMatches.length === 0) {
+      const v2Matches = getLocal<Match[]>('snooker_tracker_matches_v2', []);
+      const v1Matches = getLocal<Match[]>('snooker_tracker_matches', []);
+      const legacyMatches = v2Matches.length > 0 ? v2Matches : v1Matches;
+
+      if (legacyMatches.length > 0) {
+        setLocal(MATCHES_KEY, legacyMatches);
+        const v2Frames = getLocal<Frame[]>('snooker_tracker_frames_v2', []);
+        const v1Frames = getLocal<Frame[]>('snooker_tracker_frames', []);
+        const legacyFrames = v2Frames.length > 0 ? v2Frames : v1Frames;
+        if (legacyFrames.length > 0) {
+          setLocal(FRAMES_KEY, legacyFrames);
+        }
+      }
+    } else {
+      // If legacy mock matches were present, filter out only those mock IDs without wiping user matches
+      const hasLegacyMockMatches = existingMatches.some(m => 
+        m.id.startsWith('m1000000-0000') || m.id.startsWith('m2000000-0000') || m.id.startsWith('m3000000-0000')
+      );
+      if (hasLegacyMockMatches) {
+        const cleaned = existingMatches.filter(m => 
+          !m.id.startsWith('m1000000-0000') && !m.id.startsWith('m2000000-0000') && !m.id.startsWith('m3000000-0000')
+        );
+        setLocal(MATCHES_KEY, cleaned);
+      }
+    }
+
+    // Clean up older legacy storage keys to avoid clutter, keeping v3 intact
     window.localStorage.removeItem('snooker_tracker_players');
     window.localStorage.removeItem('snooker_tracker_matches');
     window.localStorage.removeItem('snooker_tracker_frames');
@@ -104,21 +144,46 @@ function ensureLocalSeed(): void {
   } catch {
     // ignore
   }
+}
 
-  const existingPlayers = getLocal<Player[]>(PLAYERS_KEY, []);
-  const needsReseed = existingPlayers.length === 0 || existingPlayers.some(p => 
-    p.name.includes('Alex') || p.name.includes('Liam') || p.name.includes('Marcus') || p.name.includes('Davey')
-  );
+/**
+ * Loads rich sample match histories complete with shot-by-shot event telemetry and charts.
+ * Does not overwrite existing user matches unless force is true.
+ */
+export async function seedSampleMatches(force: boolean = false): Promise<Match[]> {
+  const { matches: sampleMatches, frames: sampleFrames } = getSampleMatchesAndFrames();
 
-  const existingMatches = getLocal<Match[]>(MATCHES_KEY, []);
-  const hasLegacyMockMatches = existingMatches.some(m => 
-    m.id.startsWith('m1000') || m.id.startsWith('m2000') || m.id.startsWith('m3000')
-  );
+  if (typeof window !== 'undefined') {
+    const currentMatches = getLocal<Match[]>(MATCHES_KEY, []);
+    const currentFrames = getLocal<Frame[]>(FRAMES_KEY, []);
 
-  if (needsReseed || hasLegacyMockMatches) {
-    setLocal(PLAYERS_KEY, INITIAL_PLAYERS);
-    setLocal(MATCHES_KEY, INITIAL_MATCHES);
-    setLocal(FRAMES_KEY, INITIAL_FRAMES);
+    if (force || currentMatches.length === 0) {
+      setLocal(MATCHES_KEY, sampleMatches);
+      setLocal(FRAMES_KEY, sampleFrames);
+      return sampleMatches;
+    } else {
+      const existingIds = new Set(currentMatches.map(m => m.id));
+      const newMatches = sampleMatches.filter(m => !existingIds.has(m.id));
+      const updatedMatches = [...newMatches, ...currentMatches];
+      setLocal(MATCHES_KEY, updatedMatches);
+
+      const existingFrameIds = new Set(currentFrames.map(f => f.id));
+      const newFrames = sampleFrames.filter(f => !existingFrameIds.has(f.id));
+      setLocal(FRAMES_KEY, [...currentFrames, ...newFrames]);
+      return updatedMatches;
+    }
+  }
+
+  return sampleMatches;
+}
+
+/**
+ * Clears match history and frame logs (leaves player roster intact).
+ */
+export async function clearAllMatches(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    setLocal(MATCHES_KEY, []);
+    setLocal(FRAMES_KEY, []);
   }
 }
 
@@ -209,12 +274,20 @@ export async function fetchMatches(): Promise<Match[]> {
       .map(id => players.find(p => p.id === id))
       .filter((p): p is Player => Boolean(p));
 
+    const finalPlayers = hydratedPlayers.length > 0
+      ? hydratedPlayers
+      : playerIds.map((id, idx) => ({
+          id,
+          name: idx === 0 ? 'Player 1' : `Player ${idx + 1}`,
+          created_at: new Date().toISOString(),
+        }));
+
     return {
       ...m,
       player_ids: playerIds,
-      players: hydratedPlayers,
-      player1: hydratedPlayers[0] || players.find(p => p.id === m.player1_id),
-      player2: hydratedPlayers[1] || players.find(p => p.id === m.player2_id),
+      players: finalPlayers,
+      player1: finalPlayers[0] || players.find(p => p.id === m.player1_id) || { id: m.player1_id, name: 'Player 1', created_at: '' },
+      player2: finalPlayers[1] || players.find(p => p.id === m.player2_id) || { id: m.player2_id, name: 'Player 2', created_at: '' },
       frames: frames.filter(f => f.match_id === m.id).sort((a, b) => a.frame_number - b.frame_number),
     };
   });

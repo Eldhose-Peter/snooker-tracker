@@ -1,25 +1,66 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Match, Player } from '@/types/snooker';
-import { fetchMatches } from '@/lib/storage';
+import { fetchMatches, seedSampleMatches, clearAllMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
 import { FrameInsightsView } from './insights/FrameInsightsView';
-import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3 } from 'lucide-react';
+import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3, Sparkles, RotateCcw, Play } from 'lucide-react';
 
-export const MatchHistory: React.FC = () => {
+interface MatchHistoryProps {
+  onNavigateTab?: (tab: 'live' | 'leaderboard' | 'history' | 'new-match') => void;
+}
+
+export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [liveSession, setLiveSession] = useState<ActiveLiveSession | null>(null);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [selectedFrameByMatch, setSelectedFrameByMatch] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchMatches().then((data) => {
-      // Show completed matches
+  const reloadMatches = useCallback(async () => {
+    try {
+      const data = await fetchMatches();
       const completed = data.filter((m) => m.status === 'completed');
       setMatches(completed);
+      
+      const session = getLiveSession();
+      if (session && session.match && session.match.status === 'in_progress') {
+        setLiveSession(session);
+      } else {
+        setLiveSession(null);
+      }
+    } finally {
       setLoading(false);
-    });
+    }
   }, []);
+
+  useEffect(() => {
+    reloadMatches();
+  }, [reloadMatches]);
+
+  const handleLoadSampleData = async () => {
+    setActionLoading(true);
+    try {
+      await seedSampleMatches(true);
+      await reloadMatches();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (typeof window !== 'undefined' && !window.confirm('Are you sure you want to clear your match history? (Player roster remains safe)')) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await clearAllMatches();
+      await reloadMatches();
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedMatchId((prev) => (prev === id ? null : id));
@@ -43,7 +84,7 @@ export const MatchHistory: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 space-y-6">
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
             <History className="w-6 h-6 text-emerald-400" />
@@ -55,24 +96,131 @@ export const MatchHistory: React.FC = () => {
             Log of completed matches, series results, and multiplayer frame breakdowns
           </p>
         </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleLoadSampleData}
+            disabled={actionLoading}
+            className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            title="Populate match history with sample matches featuring shot-by-shot visual insights"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>{matches.length === 0 ? 'Load Sample Data' : 'Reset / Demo Data'}</span>
+          </button>
+
+          {matches.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              disabled={actionLoading}
+              className="px-3 py-1.5 bg-gray-900/80 hover:bg-red-950/50 text-gray-400 hover:text-red-400 border border-gray-800 hover:border-red-900/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+              title="Clear all recorded match histories"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Live Match in Progress Banner */}
+      {liveSession && (
+        <div className="bg-gradient-to-r from-emerald-950/80 via-[#0c1913] to-emerald-950/80 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-emerald-950/50">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs uppercase font-black tracking-wider text-emerald-400">
+                Live Match Currently In Progress
+              </span>
+            </div>
+            <div className="text-sm sm:text-base font-bold text-white flex flex-wrap items-center gap-1.5">
+              {liveSession.players.map((p, idx) => (
+                <React.Fragment key={p.id}>
+                  <span>{p.name}</span>
+                  {idx < liveSession.players.length - 1 && (
+                    <span className="text-gray-500 text-xs font-bold">vs</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="text-xs text-gray-400 font-mono">
+              Frame {liveSession.currentFrameNum} • Series: {liveSession.playerFrames.join(' - ')} • Active: {liveSession.players[liveSession.frameState?.activePlayerIndex]?.name || 'Player'}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onNavigateTab) {
+                onNavigateTab('live');
+              } else if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 flex-shrink-0 cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Resume Scoring</span>
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-12 text-center text-emerald-400 font-semibold animate-pulse">
           Loading match records...
         </div>
       ) : matches.length === 0 ? (
-        <div className="text-center py-12 bg-[#0c1611] rounded-2xl border border-emerald-900/30 text-gray-400 space-y-2">
-          <p className="text-sm font-semibold text-gray-300">No matches recorded yet</p>
-          <p className="text-xs">Start a new match and crown your first champion!</p>
+        <div className="text-center py-12 px-4 bg-[#0c1611] rounded-2xl border border-emerald-900/30 text-gray-400 space-y-4">
+          <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-600/40 flex items-center justify-center mx-auto text-emerald-400">
+            <History className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm sm:text-base font-bold text-gray-200">No completed matches recorded yet</p>
+            <p className="text-xs text-gray-400 max-w-md mx-auto">
+              Match history starts with a clean slate. You can start a live game, or load sample matches with shot-by-shot telemetry to explore the new visual insights and charts immediately!
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleLoadSampleData}
+              disabled={actionLoading}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Load Sample Matches with Visual Insights</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigateTab) {
+                  onNavigateTab('new-match');
+                } else if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
+              }}
+              className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700/80 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              Start New Match
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
           {matches.map((m) => {
             const isExpanded = expandedMatchId === m.id;
-            const matchPlayers = m.players && m.players.length > 0
+            const rawPlayers = m.players && m.players.length > 0
               ? m.players
               : [m.player1, m.player2].filter((p): p is Player => Boolean(p));
+
+            const matchPlayers: Player[] = rawPlayers.length > 0
+              ? rawPlayers
+              : [
+                  { id: m.player1_id || 'p1', name: 'Player 1', created_at: '' },
+                  { id: m.player2_id || 'p2', name: 'Player 2', created_at: '' },
+                ];
 
             const winner = matchPlayers.find(p => p.id === m.winner_id);
             const frames = m.frames || [];

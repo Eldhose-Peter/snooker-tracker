@@ -674,6 +674,25 @@ async function testAbandon() {
   assert.strictEqual(insights.discipline[1].penaltyPointsConceded, 4, 'Thoma penalty points conceded must equal 4');
   console.log('✓ Visual insights analytics engine computes accurate telemetry, ball distribution, and discipline stats.');
 
+  // 29. Verifying Sample Match Seeding & History Restoration
+  console.log('\n[29] Verifying Sample Match Seeding & History Restoration...');
+  const { seedSampleMatches, clearAllMatches } = await import('../src/lib/storage');
+  const sampleMatches = await seedSampleMatches(true);
+  assert(sampleMatches.length >= 3, 'Sample match seeding must produce at least 3 completed matches');
+  const seededHistory = await fetchMatches();
+  assert(seededHistory.length >= 3, 'Seeded match history must contain at least 3 matches');
+  const matchWithFrames = seededHistory.find(m => m.id === 'm_sample_001_eldho_thoma');
+  assert(matchWithFrames, 'Match m_sample_001_eldho_thoma must exist in history');
+  assert.strictEqual(matchWithFrames.frames?.length, 3, 'Match must have 3 frames');
+  const f1 = matchWithFrames.frames[0];
+  assert(f1.events && f1.events.length > 10, 'Frame 1 must contain granular shot events');
+
+  // Test clearAllMatches
+  await clearAllMatches();
+  const clearedHistory = await fetchMatches();
+  assert.strictEqual(clearedHistory.filter(m => m.status === 'completed').length, 0, 'Completed history must be 0 after clearAllMatches');
+  console.log('✓ Sample match seeding, shot-by-shot telemetry restoration, and clearing verified.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

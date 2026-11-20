@@ -186,7 +186,7 @@ export default function Home() {
 
         {activeTab === 'leaderboard' && <Leaderboard />}
 
-        {activeTab === 'history' && <MatchHistory />}
+        {activeTab === 'history' && <MatchHistory onNavigateTab={handleTabChange} />}
       </main>
 
       {/* Snooker Rules & Engine Guide Modal */}
