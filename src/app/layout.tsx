@@ -5,6 +5,16 @@ export const metadata: Metadata = {
   title: "SnookerTrack • Live Scorer & Group Leaderboard",
   description: "Live snooker scoring engine, points remaining math, foul handling, and friend group rankings.",
   applicationName: "SnookerTrack",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

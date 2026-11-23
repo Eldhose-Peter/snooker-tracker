@@ -1293,89 +1293,170 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* CONTENT LAYER: RICH BAIZE GREEN FELT CANVAS WITH RADIAL DEPTH */}
-      {/* Precision 1:1 Aramith 3D Balls, Apple Liquid Glass Tray       */}
+      {/* Authentic High-Visibility 3D Aramith Tournament Snooker Balls */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-[28px] p-2.5 sm:p-3.5 shadow-2xl relative overflow-hidden select-none">
+      <div className="baize-felt rounded-2xl sm:rounded-3xl p-2.5 sm:p-3.5 shadow-2xl relative overflow-hidden select-none">
         
         {/* Subtle table boundary hairline & specular top reflection */}
-        <div className="absolute inset-0 rounded-[28px] border border-emerald-400/20 dark:border-white/10 pointer-events-none shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" />
+        <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border border-emerald-400/25 dark:border-white/10 pointer-events-none shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]" />
         
         {/* Overhead Canopy Lighting Vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(52,199,89,0.12)_0%,transparent_75%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(52,199,89,0.14)_0%,transparent_75%)] pointer-events-none" />
 
-        {/* 7-Col Balanced Universal Grid (Mobile & Desktop) */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 relative z-10">
-          {[
-            { ball: 'red' as BallType, name: 'Red', points: 1, surfaceClass: 'ball-surface-red', glowClass: 'shadow-red-500/40 ring-red-400/60' },
-            { ball: 'yellow' as BallType, name: 'Yellow', points: 2, surfaceClass: 'ball-surface-yellow', glowClass: 'shadow-amber-400/40 ring-amber-300/70' },
-            { ball: 'green' as BallType, name: 'Green', points: 3, surfaceClass: 'ball-surface-green', glowClass: 'shadow-emerald-500/40 ring-emerald-400/60' },
-            { ball: 'brown' as BallType, name: 'Brown', points: 4, surfaceClass: 'ball-surface-brown', glowClass: 'shadow-amber-700/40 ring-amber-500/60' },
-            { ball: 'blue' as BallType, name: 'Blue', points: 5, surfaceClass: 'ball-surface-blue', glowClass: 'shadow-blue-500/40 ring-blue-400/60' },
-            { ball: 'pink' as BallType, name: 'Pink', points: 6, surfaceClass: 'ball-surface-pink', glowClass: 'shadow-pink-500/40 ring-pink-400/60' },
-            { ball: 'black' as BallType, name: 'Black', points: 7, surfaceClass: 'ball-surface-black', glowClass: 'shadow-black/80 ring-white/40' },
-          ].map((item) => {
-            const isAvailable = availableBalls.includes(item.ball);
-            const isYellow = item.ball === 'yellow';
-            const isRed = item.ball === 'red';
-
-            return (
-              <button
-                key={item.ball}
-                type="button"
-                disabled={!isAvailable}
-                onClick={() => onPotBall(item.ball)}
-                aria-label={`Pot ${item.name} ball, ${item.points} ${item.points === 1 ? 'point' : 'points'}`}
-                className={`group relative flex flex-col items-center justify-between py-1.5 px-0.5 sm:py-2 sm:px-1 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.28,0.11,0.32,1)] select-none ${
-                  isAvailable
-                    ? 'cursor-pointer hover:bg-white/[0.06] active:scale-95'
-                    : 'opacity-25 grayscale-[65%] scale-[0.96] cursor-not-allowed pointer-events-none'
-                }`}
-              >
-                {/* 1:1 Spherical Aramith Ball */}
-                <div
-                  className={`relative aspect-square w-full max-w-[44px] sm:max-w-[54px] md:max-w-[60px] rounded-full flex items-center justify-center snooker-ball ${item.surfaceClass} transition-all duration-200 ease-[cubic-bezier(0.28,0.11,0.32,1)] ${
-                    isAvailable
-                      ? `shadow-lg ${item.glowClass} ring-1 ring-white/35 group-hover:scale-105 group-hover:shadow-xl`
-                      : 'ring-1 ring-white/10'
-                  }`}
-                  style={{ backgroundColor: BALL_CONFIGS[item.ball].colorHex }}
-                >
-                  {/* Curving Specular Glint Highlight */}
-                  <div className="snooker-ball-highlight" />
-
-                  {/* Centered Large Point Numeral */}
-                  <span
-                    className={`text-base sm:text-xl font-bold sm:font-black tabular-nums leading-none drop-shadow-sm select-none ${
-                      isYellow ? 'text-black font-black' : 'text-white'
-                    }`}
-                  >
-                    {item.points}
+        {/* 4-col mobile grid, 7-col desktop grid for large, effortless hit targets */}
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-2.5 relative z-10">
+          
+          {/* RED BALL (1 pt) - Hero 2-col slot on mobile, 1-col on desktop */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('red')}
+            onClick={() => onPotBall('red')}
+            aria-label={`Pot Red ball, 1 point, ${state.redsRemaining} reds remaining`}
+            className={`col-span-2 sm:col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-red cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('red')
+                ? 'opacity-100 ring-2 ring-red-300 shadow-lg shadow-red-600/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            
+            {/* Mobile Layout: Horizontal Bar with point, name & remaining count */}
+            <div className="flex sm:hidden items-center justify-between w-full px-4">
+              <span className="text-2xl font-black text-white drop-shadow leading-none">1</span>
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-black text-white uppercase tracking-wider leading-none">Red</span>
+                {state.redsRemaining > 0 && (
+                  <span className="text-[10px] font-bold text-white/90 leading-none mt-1">
+                    {state.redsRemaining} left
                   </span>
+                )}
+              </div>
+              <span className="bg-black/35 backdrop-blur-sm text-white font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border border-white/20">
+                {state.redsRemaining}
+              </span>
+            </div>
 
-                  {/* Remaining Reds Count Micro-Badge */}
-                  {isRed && state.redsRemaining > 0 && (
-                    <span
-                      title={`${state.redsRemaining} reds remaining`}
-                      className="absolute -top-1 -right-1 bg-black/80 backdrop-blur-md text-white font-mono font-bold text-[8px] sm:text-[9px] px-1 py-0.5 rounded-full border border-white/20 shadow-xs leading-none"
-                    >
-                      {state.redsRemaining}
-                    </span>
-                  )}
-                </div>
-
-                {/* Apple Typography Full Ball Name Label */}
-                <span
-                  className={`mt-1 sm:mt-1.5 text-[9px] sm:text-[11px] md:text-xs font-semibold tracking-tight transition-colors truncate max-w-full text-center ${
-                    isAvailable
-                      ? 'text-zinc-200 dark:text-zinc-300 group-hover:text-white'
-                      : 'text-zinc-500/70 dark:text-zinc-500/70'
-                  }`}
-                >
-                  {item.name}
+            {/* Desktop Layout: Vertical Stack */}
+            <div className="hidden sm:flex flex-col items-center justify-center">
+              <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">1</span>
+              <span className="text-xs font-extrabold text-white uppercase tracking-wider leading-none mt-1">Red</span>
+              {state.redsRemaining > 0 && (
+                <span className="text-[10px] font-bold text-white/85 leading-none mt-0.5">
+                  ({state.redsRemaining})
                 </span>
-              </button>
-            );
-          })}
+              )}
+            </div>
+          </button>
+
+          {/* YELLOW BALL (2 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('yellow')}
+            onClick={() => onPotBall('yellow')}
+            aria-label="Pot Yellow ball, 2 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-yellow cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('yellow')
+                ? 'opacity-100 ring-2 ring-yellow-200 shadow-lg shadow-yellow-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-zinc-950 leading-none">2</span>
+            <span className="text-[11px] sm:text-xs font-black text-zinc-950/90 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Yellow</span>
+          </button>
+
+          {/* GREEN BALL (3 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('green')}
+            onClick={() => onPotBall('green')}
+            aria-label="Pot Green ball, 3 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-green cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('green')
+                ? 'opacity-100 ring-2 ring-emerald-300 shadow-lg shadow-emerald-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">3</span>
+            <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Green</span>
+          </button>
+
+          {/* BROWN BALL (4 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('brown')}
+            onClick={() => onPotBall('brown')}
+            aria-label="Pot Brown ball, 4 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-brown cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('brown')
+                ? 'opacity-100 ring-2 ring-amber-300 shadow-lg shadow-amber-700/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">4</span>
+            <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Brown</span>
+          </button>
+
+          {/* BLUE BALL (5 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('blue')}
+            onClick={() => onPotBall('blue')}
+            aria-label="Pot Blue ball, 5 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-blue cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('blue')
+                ? 'opacity-100 ring-2 ring-blue-300 shadow-lg shadow-blue-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">5</span>
+            <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Blue</span>
+          </button>
+
+          {/* PINK BALL (6 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('pink')}
+            onClick={() => onPotBall('pink')}
+            aria-label="Pot Pink ball, 6 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-pink cursor-pointer transition-all duration-200 select-none ${
+              availableBalls.includes('pink')
+                ? 'opacity-100 ring-2 ring-pink-200 shadow-lg shadow-pink-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">6</span>
+            <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Pink</span>
+          </button>
+
+          {/* BLACK BALL (7 pts) */}
+          <button
+            type="button"
+            disabled={!availableBalls.includes('black')}
+            onClick={() => onPotBall('black')}
+            aria-label="Pot Black ball, 7 points"
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition-all duration-200 select-none border border-white/30 ${
+              availableBalls.includes('black')
+                ? 'opacity-100 ring-2 ring-white/80 shadow-lg shadow-black/80 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-55 cursor-not-allowed pointer-events-none'
+            }`}
+            style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
+          >
+            <div className="snooker-ball-highlight" />
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">7</span>
+            <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Black</span>
+          </button>
+
         </div>
       </div>
 
