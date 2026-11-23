@@ -124,7 +124,7 @@ export default function Home() {
   const hasActiveMatch = Boolean(currentMatch && matchPlayers.length >= 2);
 
   return (
-    <div className="min-h-screen bg-[#070908] text-zinc-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased">
+    <div className="min-h-[100dvh] bg-[#f4f6f5] dark:bg-[#070908] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased">
       {/* Navigation (Sticky Header on desktop + Fixed Bottom Bar on mobile) */}
       <Navbar
         activeTab={activeTab}
@@ -139,17 +139,17 @@ export default function Home() {
           aria-label="Active match notice"
           className="sticky top-14 sm:top-16 z-30 max-w-5xl mx-auto w-full px-3 sm:px-4 pt-2.5"
         >
-          <div className="glass-panel p-2.5 sm:p-3 flex items-center justify-between shadow-xl border-emerald-500/40 bg-emerald-950/30 backdrop-blur-2xl">
+          <div className="glass-panel p-2.5 sm:p-3 flex items-center justify-between shadow-xl border-emerald-500/40 bg-white/90 dark:bg-emerald-950/30 backdrop-blur-2xl">
             <div className="flex items-center space-x-2.5 min-w-0 pr-2">
               <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
               <div className="min-w-0">
-                <span className="text-xs sm:text-sm font-bold text-white truncate block tracking-tight">
+                <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate block tracking-tight">
                   Match Active: {matchPlayers.map(p => p.name).join(' vs ')}
                 </span>
-                <span className="text-[10px] text-emerald-400/90 font-medium block">
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400/90 font-medium block">
                   Live frame in progress • Tap to resume scoring
                 </span>
               </div>
@@ -167,8 +167,8 @@ export default function Home() {
         </aside>
       )}
 
-      {/* Main Content Area (Optimized mobile padding to fit viewport comfortably without scrolling) */}
-      <main className={`flex-1 ${activeTab === 'live' ? 'py-0.5 sm:py-2 pb-16 sm:pb-20 md:pb-6' : 'py-2 sm:py-4 pb-20 md:pb-6'}`}>
+      {/* Main Content Area (Flexible viewport distribution to fit iPhone screens without vertical dead zones) */}
+      <main className={`flex-1 flex flex-col ${activeTab === 'live' ? 'py-0.5 sm:py-2 pb-16 sm:pb-20 md:pb-6' : 'py-2 sm:py-4 pb-20 md:pb-6'}`}>
         {activeTab === 'live' && hasActiveMatch && currentMatch && (
           <LiveScoreboard
             key={currentMatch.id}
@@ -199,7 +199,7 @@ export default function Home() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.04] py-4 text-center text-xs text-zinc-600 hidden md:block">
+      <footer className="border-t border-black/[0.06] dark:border-white/[0.04] py-4 text-center text-xs text-zinc-500 dark:text-zinc-600 hidden md:block">
         <p>Snooker Tracker & Leaderboard • Built with Next.js, Supabase & Vercel</p>
       </footer>
     </div>

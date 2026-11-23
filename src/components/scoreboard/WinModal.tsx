@@ -90,32 +90,32 @@ export const WinModal: React.FC<WinModalProps> = ({
   const framesToWin = Math.ceil(bestOf / 2);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl text-center space-y-4 border-white/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="glass-panel rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl text-center space-y-4 bg-white dark:bg-[#0c140f] border border-black/[0.08] dark:border-white/10 text-zinc-900 dark:text-white">
         
         {/* Crown / Trophy icon */}
         <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-amber-600 via-amber-400 to-yellow-200 p-1 shadow-2xl shadow-amber-500/20 flex items-center justify-center">
-          <div className="w-full h-full rounded-full bg-[#070908] flex items-center justify-center">
+          <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-[#070908] flex items-center justify-center">
             {isMatchWon ? (
-              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-amber-400" />
+              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500 dark:text-amber-400" />
             ) : (
-              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-400" />
+              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600 dark:text-emerald-400" />
             )}
           </div>
         </div>
 
         {/* Title */}
         <div className="space-y-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
             {isMatchWon ? 'Match Concluded!' : `Frame ${frameNumber} Concluded`}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
             {isMatchWon 
               ? `${matchWinner?.name || frameWinner.name} Wins Match!`
               : `${frameWinner.name} Wins Frame!`
             }
           </h2>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {isMatchWon
               ? `Reached target frames (Best of ${bestOf})`
               : `Best of ${bestOf} (${framesToWin} to win match)`
@@ -124,8 +124,8 @@ export const WinModal: React.FC<WinModalProps> = ({
         </div>
 
         {/* Frame Score Breakdown */}
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 space-y-3">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 block">
+        <div className="bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-4 space-y-3">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400/80 block">
             Frame Scores & Series Standing
           </span>
 
@@ -140,23 +140,23 @@ export const WinModal: React.FC<WinModalProps> = ({
                   key={p.id}
                   className={`p-2.5 rounded-xl border flex items-center justify-between ${
                     isWinner
-                      ? 'bg-emerald-950/60 border-emerald-500/40 text-white font-bold'
-                      : 'bg-black/30 border-white/[0.06] text-zinc-300'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 dark:border-emerald-500/40 text-emerald-950 dark:text-white font-bold shadow-xs'
+                      : 'bg-white dark:bg-black/30 border-black/[0.06] dark:border-white/[0.06] text-zinc-800 dark:text-zinc-300'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs font-mono font-bold text-zinc-500">#{idx + 1}</span>
+                    <span className="text-xs font-mono font-bold text-zinc-400 dark:text-zinc-500">#{idx + 1}</span>
                     <span className="text-sm font-bold">{p.name}</span>
                     {isWinner && (
-                      <span className="text-[10px] bg-emerald-500 text-black font-black px-1.5 py-0.2 rounded">
+                      <span className="text-[10px] bg-emerald-600 dark:bg-emerald-500 text-white dark:text-black font-black px-1.5 py-0.2 rounded">
                         WINNER
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center space-x-3 font-mono">
-                    <span className="text-sm font-black text-emerald-300 tabular-nums">{score} pts</span>
-                    <span className="text-xs text-zinc-400">({framesWon} {framesWon === 1 ? 'frame' : 'frames'})</span>
+                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300 tabular-nums">{score} pts</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">({framesWon} {framesWon === 1 ? 'frame' : 'frames'})</span>
                   </div>
                 </div>
               );
@@ -165,8 +165,8 @@ export const WinModal: React.FC<WinModalProps> = ({
 
           {/* Highest Break */}
           {highestBreak > 0 && highestBreakPlayer && (
-            <div className="pt-2 border-t border-white/[0.08] flex items-center justify-center space-x-1.5 text-xs text-amber-300">
-              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            <div className="pt-2 border-t border-black/[0.08] dark:border-white/[0.08] flex items-center justify-center space-x-1.5 text-xs text-amber-700 dark:text-amber-300">
+              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400" />
               <span>Highest Break: <strong>{highestBreak}</strong> by {highestBreakPlayer.name}</span>
             </div>
           )}
@@ -178,7 +178,7 @@ export const WinModal: React.FC<WinModalProps> = ({
             <button
               type="button"
               onClick={onFinishMatch}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-sm shadow-xl shadow-emerald-950/60 flex items-center justify-center space-x-2 transition active:scale-95 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-sm shadow-xl shadow-emerald-950/40 flex items-center justify-center space-x-2 transition active:scale-95 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Finish Match & Record Result</span>
@@ -188,14 +188,14 @@ export const WinModal: React.FC<WinModalProps> = ({
               <button
                 type="button"
                 onClick={onFinishMatch}
-                className="py-3 px-4 rounded-xl border border-white/[0.1] hover:bg-white/[0.06] text-zinc-300 text-xs font-semibold transition active:scale-95 cursor-pointer"
+                className="py-3 px-4 rounded-xl border border-black/[0.1] dark:border-white/[0.1] hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition active:scale-95 cursor-pointer"
               >
                 Conclude Early
               </button>
               <button
                 type="button"
                 onClick={onNextFrame}
-                className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/60 flex items-center justify-center space-x-1 transition active:scale-95 cursor-pointer"
+                className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center space-x-1 transition active:scale-95 cursor-pointer"
               >
                 <span>Next Frame {frameNumber + 1}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -207,7 +207,7 @@ export const WinModal: React.FC<WinModalProps> = ({
             <button
               type="button"
               onClick={onUndo}
-              className="w-full py-2.5 px-4 rounded-xl border border-sky-500/30 bg-sky-950/40 hover:bg-sky-900/60 text-sky-200 text-xs font-bold transition flex items-center justify-center space-x-1.5 active:scale-95 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl border border-sky-400/50 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 text-sky-800 dark:text-sky-200 text-xs font-bold transition flex items-center justify-center space-x-1.5 active:scale-95 cursor-pointer"
               title="Undo the last action and resume this frame"
             >
               <RotateCcw className="w-3.5 h-3.5" />

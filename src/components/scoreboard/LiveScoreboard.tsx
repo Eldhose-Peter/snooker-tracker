@@ -975,21 +975,21 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   }, [currentActivities]);
 
   return (
-    <div className="w-full max-w-md mx-auto px-2.5 sm:px-4 py-1 space-y-2">
+    <div className="w-full max-w-md mx-auto px-2.5 sm:px-4 py-1 space-y-2 sm:space-y-2.5 flex-1 flex flex-col min-h-[calc(100dvh-5rem)]">
       
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & DISCREET TOP-RIGHT OPTIONS MENU (3-DOTS)       */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between px-3 py-1.5 glass-panel rounded-2xl text-xs gap-2 shadow-sm">
+      <div className="flex items-center justify-between px-3 py-1.5 glass-panel rounded-2xl text-xs gap-2 shadow-sm bg-white/70 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-white/[0.07]">
         <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
-          <span className="font-extrabold text-emerald-400 whitespace-nowrap">Frame {currentFrameNum}</span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-zinc-300 truncate font-medium">
+          <span className="font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Frame {currentFrameNum}</span>
+          <span className="text-zinc-400 dark:text-zinc-600">•</span>
+          <span className="text-zinc-700 dark:text-zinc-300 truncate font-medium">
             {match.best_of === 1 ? 'Single Frame' : `Best of ${match.best_of}`}
           </span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1 whitespace-nowrap">
-            <Users className="w-3 h-3 text-emerald-400" />
+          <span className="text-zinc-400 dark:text-zinc-600">•</span>
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1 whitespace-nowrap">
+            <Users className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             {playerCount}P
           </span>
         </div>
@@ -997,10 +997,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         {/* Frames Tally (when best_of > 1 and 2 players) & Discreet 3-Dots Options Menu */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           {match.best_of > 1 && playerCount === 2 && (
-            <div className="flex items-center space-x-1 font-mono text-xs font-bold text-zinc-300">
-              <span className="text-emerald-400 font-bold">{playerFrames[0] || 0}</span>
-              <span className="text-zinc-500">-</span>
-              <span className="text-emerald-400 font-bold">{playerFrames[1] || 0}</span>
+            <div className="flex items-center space-x-1 font-mono text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{playerFrames[0] || 0}</span>
+              <span className="text-zinc-400 dark:text-zinc-500">-</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{playerFrames[1] || 0}</span>
             </div>
           )}
 
@@ -1009,7 +1009,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             <button
               type="button"
               onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
-              className="p-1 sm:p-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-300 hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm active:scale-95"
+              className="p-1 sm:p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm active:scale-95 min-w-[32px] min-h-[32px]"
               title="Match Options (End Match, Concede, Free Ball)"
               aria-label="Match Options"
             >
@@ -1017,69 +1017,76 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             </button>
 
             {isOptionsMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-52 py-1 glass-panel rounded-2xl shadow-2xl z-50 animate-fade-in text-xs space-y-0.5 border border-white/10">
-                {match.best_of > 1 && playerCount > 2 && (
-                  <div className="px-3 py-1.5 border-b border-white/[0.08] font-mono text-[11px] text-zinc-300">
-                    <div className="text-[9px] uppercase font-bold text-zinc-500 mb-0.5">Frames Tally</div>
-                    <div className="flex flex-wrap gap-2">
-                      {resolvedPlayers.map((p, idx) => (
-                        <span key={p.id}><strong className="text-white">{p.name}:</strong> <span className="text-emerald-400">{playerFrames[idx] || 0}</span></span>
-                      ))}
+              <>
+                {/* Full backdrop overlay */}
+                <div
+                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
+                  onClick={() => setIsOptionsMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-1.5 w-56 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl z-50 animate-fade-in text-xs space-y-0.5">
+                  {match.best_of > 1 && playerCount > 2 && (
+                    <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                      <div className="text-[9px] uppercase font-bold text-zinc-400 dark:text-zinc-500 mb-0.5">Frames Tally</div>
+                      <div className="flex flex-wrap gap-2">
+                        {resolvedPlayers.map((p, idx) => (
+                          <span key={p.id}><strong className="text-zinc-900 dark:text-white">{p.name}:</strong> <span className="text-emerald-600 dark:text-emerald-400">{playerFrames[idx] || 0}</span></span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOptionsMenuOpen(false);
-                    onToggleFreeBall();
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-white/[0.08] flex items-center gap-2 text-zinc-200 hover:text-white transition cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <span>{state.freeBallActive ? 'Cancel Free Ball' : 'Nominate Free Ball'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOptionsMenuOpen(false);
+                      onToggleFreeBall();
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                    <span>{state.freeBallActive ? 'Cancel Free Ball' : 'Nominate Free Ball'}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOptionsMenuOpen(false);
-                    setPendingAdjustReds(state.redsRemaining);
-                    setIsAdjustRedsOpen(true);
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-white/[0.08] flex items-center gap-2 text-zinc-200 hover:text-white transition cursor-pointer"
-                >
-                  <span className="w-3.5 h-3.5 rounded-full bg-rose-600 inline-block flex-shrink-0" />
-                  <span>Adjust Reds ({state.redsRemaining} left)</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOptionsMenuOpen(false);
+                      setPendingAdjustReds(state.redsRemaining);
+                      setIsAdjustRedsOpen(true);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
+                  >
+                    <span className="w-3.5 h-3.5 rounded-full bg-rose-600 inline-block flex-shrink-0 shadow-xs" />
+                    <span>Adjust Reds ({state.redsRemaining} left)</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOptionsMenuOpen(false);
-                    onConcede();
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-white/[0.08] flex items-center gap-2 text-zinc-200 hover:text-white transition cursor-pointer"
-                >
-                  <Flag className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <span>Concede Frame</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOptionsMenuOpen(false);
+                      onConcede();
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
+                  >
+                    <Flag className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                    <span>Concede Frame</span>
+                  </button>
 
-                <div className="border-t border-white/[0.08] my-1" />
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 my-1" />
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOptionsMenuOpen(false);
-                    setIsEndMatchModalOpen(true);
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-rose-950/40 flex items-center gap-2 text-rose-400 hover:text-rose-300 transition cursor-pointer font-bold"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
-                  <span>End Match…</span>
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOptionsMenuOpen(false);
+                      setIsEndMatchModalOpen(true);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 text-rose-600 dark:text-rose-400 transition cursor-pointer font-bold"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                    <span>End Match…</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1106,37 +1113,37 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 title={isActive ? `Scoring for ${player.name}` : `Tap to switch turn to ${player.name}`}
                 className={`relative px-3 py-2 h-[54px] rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between active:scale-[0.98] ${
                   isActive
-                    ? 'bg-gradient-to-br from-emerald-950/80 via-[#0e2c1c]/70 to-[#081b11]/80 border-emerald-400/60 shadow-xl shadow-emerald-950/60 ring-1 ring-emerald-400/30'
-                    : 'bg-white/[0.03] border-white/[0.07] opacity-75 hover:opacity-100 hover:border-white/20'
+                    ? 'bg-gradient-to-br from-emerald-50 via-emerald-100/70 to-emerald-50 dark:from-emerald-950/80 dark:via-[#0e2c1c]/70 dark:to-[#081b11]/80 border-emerald-500/80 dark:border-emerald-400/60 shadow-lg dark:shadow-xl dark:shadow-emerald-950/60 ring-1 ring-emerald-500/40 dark:ring-emerald-400/30'
+                    : 'bg-white/60 dark:bg-white/[0.03] border-zinc-200 dark:border-white/[0.07] opacity-80 hover:opacity-100 hover:border-zinc-300 dark:hover:border-white/20'
                 }`}
               >
                 <div className="min-w-0 pr-1.5 flex flex-col justify-center">
                   <div className="flex items-center gap-1.5">
                     {isActive ? (
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse flex-shrink-0" />
                     ) : (
-                      <span className="text-[10px] font-mono font-bold text-zinc-500">#{idx + 1}</span>
+                      <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500">#{idx + 1}</span>
                     )}
-                    <h2 className={`text-sm sm:text-base font-extrabold truncate ${isActive ? 'text-white' : 'text-zinc-300'}`}>
+                    <h2 className={`text-sm sm:text-base font-extrabold truncate ${isActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
                       {player.name}
                     </h2>
                     {match.best_of > 1 && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-400 font-mono font-bold border border-emerald-500/25 flex-shrink-0">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 font-mono font-bold border border-emerald-300 dark:border-emerald-500/25 flex-shrink-0">
                         {framesWon}F
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     {isActive ? (
-                      <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-0.5">
-                        <Zap className="w-2.5 h-2.5 fill-emerald-400" /> At Table
+                      <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-0.5">
+                        <Zap className="w-2.5 h-2.5 fill-current" /> At Table
                       </span>
                     ) : (
-                      <span className="text-[9px] text-zinc-500 hover:text-zinc-300">Tap to switch</span>
+                      <span className="text-[9px] text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300">Tap to switch</span>
                     )}
                     {highBreak > 0 && (
-                      <span className="text-[9px] text-amber-400 font-mono flex items-center gap-0.5 ml-1">
-                        <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                      <span className="text-[9px] text-amber-500 dark:text-amber-400 font-mono flex items-center gap-0.5 ml-1">
+                        <Flame className="w-2.5 h-2.5 fill-current" />
                         {highBreak}
                       </span>
                     )}
@@ -1156,7 +1163,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                     key={`score-val-${idx}-${score}`}
                     className={`inline-block font-mono font-black text-2xl sm:text-3xl tracking-tight origin-right ${
                       scoreAnims[idx] ? 'animate-score-pulse' : ''
-                    } ${isActive ? 'text-emerald-300' : 'text-white'}`}
+                    } ${isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-900 dark:text-white'}`}
                   >
                     {score}
                   </span>
@@ -1192,23 +1199,23 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 title={isActive ? `Scoring for ${player.name}` : `Tap to switch to ${player.name}`}
                 className={`relative px-2.5 h-[38px] sm:h-10 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between active:scale-[0.98] ${spanClass} ${
                   isActive
-                    ? 'bg-emerald-950/80 border-emerald-400/60 shadow-md ring-1 ring-emerald-400/40'
-                    : 'bg-white/[0.03] border-white/[0.07] hover:border-white/20 hover:bg-white/[0.06]'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500/80 dark:border-emerald-400/60 shadow-md ring-1 ring-emerald-500/40 dark:ring-emerald-400/40'
+                    : 'bg-white/60 dark:bg-white/[0.03] border-zinc-200 dark:border-white/[0.07] hover:border-zinc-300 dark:hover:border-white/20 hover:bg-white/80 dark:hover:bg-white/[0.06]'
                 }`}
               >
                 <div className="flex items-center space-x-1 sm:space-x-1.5 min-w-0 pr-1">
                   {isActive ? (
-                    <Zap className="w-3 h-3 text-emerald-400 fill-emerald-400 flex-shrink-0 animate-pulse" />
+                    <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400 fill-current flex-shrink-0 animate-pulse" />
                   ) : (
-                    <span className="text-[10px] font-mono font-bold text-zinc-500 flex-shrink-0">
+                    <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 flex-shrink-0">
                       #{idx + 1}
                     </span>
                   )}
-                  <span className={`text-[11px] sm:text-xs font-bold truncate ${isActive ? 'text-white font-black' : 'text-zinc-300'}`}>
+                  <span className={`text-[11px] sm:text-xs font-bold truncate ${isActive ? 'text-zinc-900 dark:text-white font-black' : 'text-zinc-700 dark:text-zinc-300'}`}>
                     {player.name}
                   </span>
                   {match.best_of > 1 && framesWon > 0 && (
-                    <span className="text-[8px] sm:text-[9px] px-1 rounded bg-emerald-900/60 text-emerald-300 font-mono font-bold flex-shrink-0">
+                    <span className="text-[8px] sm:text-[9px] px-1 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-mono font-bold flex-shrink-0">
                       {framesWon}F
                     </span>
                   )}
@@ -1216,7 +1223,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
                 <div className="flex items-center space-x-1 flex-shrink-0 pl-1">
                   {highBreak > 0 && (
-                    <span className="text-[9px] text-amber-400 font-mono hidden sm:inline" title={`High Break: ${highBreak}`}>
+                    <span className="text-[9px] text-amber-500 dark:text-amber-400 font-mono hidden sm:inline" title={`High Break: ${highBreak}`}>
                       🔥{highBreak}
                     </span>
                   )}
@@ -1233,7 +1240,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                       key={`score-val-${idx}-${score}`}
                       className={`inline-block font-mono font-black tracking-tight origin-right ${
                         scoreAnims[idx] ? 'animate-score-pulse' : ''
-                      } ${isActive ? 'text-emerald-300 text-base sm:text-lg' : 'text-white text-sm sm:text-base'}`}
+                      } ${isActive ? 'text-emerald-700 dark:text-emerald-300 text-base sm:text-lg' : 'text-zinc-900 dark:text-white text-sm sm:text-base'}`}
                     >
                       {score}
                     </span>
@@ -1248,24 +1255,24 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* UNIFIED SCORER CONSOLE & TABLE HUD STRIP (TARGET REMOVED)     */}
       {/* ------------------------------------------------------------- */}
-      <div className="glass-panel rounded-2xl px-3 py-1.5 shadow-sm">
+      <div className="glass-panel rounded-2xl px-3 py-1.5 shadow-sm bg-white/70 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-white/[0.07]">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Active Scorer */}
           <div className="flex items-center space-x-1.5 min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-400 text-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm flex-shrink-0">
-              <Zap className="w-2.5 h-2.5 fill-black text-black" />
+            <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500 dark:bg-emerald-400 text-white dark:text-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm flex-shrink-0">
+              <Zap className="w-2.5 h-2.5 fill-current" />
               AT TABLE
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-white truncate">
+            <span className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white truncate">
               {activePlayer.name}
             </span>
           </div>
 
           {/* Table Metrics: Remaining Points & Reds */}
           <div className="flex items-center space-x-1.5 text-[10px] sm:text-xs font-mono">
-            <div className="bg-black/40 px-2 py-0.5 rounded-lg flex items-center space-x-1 border border-white/[0.08]">
-              <span className="text-zinc-400 text-[9px] sm:text-[10px]">Left:</span>
-              <span className="font-bold text-white tabular-nums">{state.pointsRemaining}</span>
+            <div className="bg-zinc-100 dark:bg-black/40 px-2 py-0.5 rounded-lg flex items-center space-x-1 border border-zinc-200 dark:border-white/[0.08]">
+              <span className="text-zinc-500 dark:text-zinc-400 text-[9px] sm:text-[10px]">Left:</span>
+              <span className="font-bold text-zinc-900 dark:text-white tabular-nums">{state.pointsRemaining}</span>
             </div>
             <button
               type="button"
@@ -1274,25 +1281,25 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 setIsAdjustRedsOpen(true);
               }}
               title="Click to adjust remaining reds"
-              className="bg-black/40 hover:bg-rose-950/40 px-2 py-0.5 rounded-lg flex items-center space-x-1 border border-white/[0.08] hover:border-rose-500/40 transition cursor-pointer active:scale-95"
+              className="bg-zinc-100 hover:bg-rose-50 dark:bg-black/40 dark:hover:bg-rose-950/40 px-2 py-0.5 rounded-lg flex items-center space-x-1 border border-zinc-200 hover:border-rose-300 dark:border-white/[0.08] dark:hover:border-rose-500/40 transition cursor-pointer active:scale-95"
             >
               <span className="w-2 h-2 rounded-full bg-rose-600 inline-block shadow-sm" />
-              <span className="font-bold text-white tabular-nums">{state.redsRemaining}</span>
+              <span className="font-bold text-zinc-900 dark:text-white tabular-nums">{state.redsRemaining}</span>
             </button>
           </div>
 
           {/* Current Break */}
-          <div className="flex items-center space-x-1 bg-emerald-950/70 px-2 py-0.5 rounded-lg border border-emerald-500/30 flex-shrink-0">
-            <span className="text-[9px] uppercase font-bold text-zinc-400">Break</span>
-            <span className="text-xs sm:text-sm font-black text-emerald-300 font-mono tabular-nums leading-none">{state.currentBreak}</span>
+          <div className="flex items-center space-x-1 bg-emerald-100 dark:bg-emerald-950/70 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-500/30 flex-shrink-0">
+            <span className="text-[9px] uppercase font-bold text-emerald-800 dark:text-zinc-400">Break</span>
+            <span className="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-300 font-mono tabular-nums leading-none">{state.currentBreak}</span>
           </div>
         </div>
       </div>
 
       {/* Snookers Alert Banner (Appears only when snookers needed) */}
       {state.snookersNeeded.needed && (
-        <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl px-2.5 py-1 flex items-center space-x-1.5 text-amber-300 text-[10px] sm:text-[11px]">
-          <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+        <div className="bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-500/30 rounded-xl px-2.5 py-1 flex items-center space-x-1.5 text-amber-900 dark:text-amber-300 text-[10px] sm:text-[11px]">
+          <ShieldAlert className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
           <span className="font-semibold truncate">
             Snookers: {state.snookersNeeded.trailers.map(t => `${resolvedPlayers[t.playerIndex]?.name || `P${t.playerIndex + 1}`} (${t.count})`).join(', ')}
           </span>
@@ -1301,9 +1308,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* Free Ball Active Banner (With 1-tap dismiss) */}
       {state.freeBallActive && (
-        <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl px-2.5 py-1 flex items-center justify-between text-amber-300 text-[10px] sm:text-[11px]">
+        <div className="bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/40 rounded-xl px-2.5 py-1 flex items-center justify-between text-amber-900 dark:text-amber-300 text-[10px] sm:text-[11px]">
           <div className="flex items-center space-x-1.5 min-w-0">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
             <span className="font-bold truncate">FREE BALL: Nominated color is on</span>
           </div>
           <button
@@ -1328,7 +1335,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('red')}
             onClick={() => onPotBall('red')}
-            className={`col-span-2 sm:col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-red cursor-pointer transition select-none ${
+            className={`col-span-2 sm:col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-red cursor-pointer transition select-none ${
               availableBalls.includes('red')
                 ? 'opacity-100 shadow-lg shadow-red-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1345,7 +1352,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('yellow')}
             onClick={() => onPotBall('yellow')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-yellow cursor-pointer transition select-none ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-yellow cursor-pointer transition select-none ${
               availableBalls.includes('yellow')
                 ? 'opacity-100 shadow-lg shadow-yellow-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1362,7 +1369,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('green')}
             onClick={() => onPotBall('green')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-green cursor-pointer transition select-none ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-green cursor-pointer transition select-none ${
               availableBalls.includes('green')
                 ? 'opacity-100 shadow-lg shadow-green-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1379,7 +1386,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('brown')}
             onClick={() => onPotBall('brown')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-brown cursor-pointer transition select-none ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-brown cursor-pointer transition select-none ${
               availableBalls.includes('brown')
                 ? 'opacity-100 shadow-lg shadow-amber-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1396,7 +1403,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('blue')}
             onClick={() => onPotBall('blue')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-blue cursor-pointer transition select-none ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-blue cursor-pointer transition select-none ${
               availableBalls.includes('blue')
                 ? 'opacity-100 shadow-lg shadow-blue-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1413,7 +1420,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('pink')}
             onClick={() => onPotBall('pink')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-pink cursor-pointer transition select-none ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-pink cursor-pointer transition select-none ${
               availableBalls.includes('pink')
                 ? 'opacity-100 shadow-lg shadow-pink-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1430,7 +1437,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             type="button"
             disabled={!availableBalls.includes('black')}
             onClick={() => onPotBall('black')}
-            className={`col-span-1 h-12 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition select-none border border-white/20 ${
+            className={`col-span-1 h-13 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition select-none border border-white/20 ${
               availableBalls.includes('black')
                 ? 'opacity-100 shadow-lg shadow-black/80 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
                 : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
@@ -1454,9 +1461,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onMiss}
-          className="col-span-6 sm:col-span-4 h-9 sm:h-10 px-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] active:scale-95 active:brightness-135 active:bg-amber-950/60 active:border-amber-400/60 text-white font-semibold text-xs sm:text-sm border border-white/[0.08] transition flex items-center justify-center space-x-1.5 shadow-md cursor-pointer select-none"
+          className="col-span-6 sm:col-span-4 h-11 sm:h-11 px-2 rounded-xl bg-white/80 hover:bg-zinc-100 dark:bg-white/[0.05] dark:hover:bg-white/[0.08] active:scale-95 active:brightness-125 text-zinc-800 dark:text-white font-semibold text-xs sm:text-sm border border-zinc-200 dark:border-white/[0.08] transition flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer select-none"
         >
-          <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+          <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>Miss / Switch</span>
         </button>
 
@@ -1464,10 +1471,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={onQuickFoul4}
-          className="col-span-4 sm:col-span-3 h-9 sm:h-10 px-2 rounded-xl bg-gradient-to-r from-rose-950/60 to-red-950/60 hover:from-rose-900/60 hover:to-red-900/60 border border-rose-500/40 active:scale-95 active:brightness-140 text-rose-100 font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-md cursor-pointer select-none"
+          className="col-span-4 sm:col-span-3 h-11 sm:h-11 px-2 rounded-xl bg-gradient-to-r from-rose-100 to-red-100 hover:from-rose-200 hover:to-red-200 dark:from-rose-950/60 dark:to-red-950/60 dark:hover:from-rose-900/60 dark:hover:to-red-900/60 border border-rose-300 dark:border-rose-500/40 active:scale-95 text-rose-800 dark:text-rose-100 font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1 shadow-sm cursor-pointer select-none"
           title="Instant 4-point penalty to opponent"
         >
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+          <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           <span>Foul (+4)</span>
         </button>
 
@@ -1475,7 +1482,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         <button
           type="button"
           onClick={() => setIsFoulModalOpen(true)}
-          className="col-span-2 sm:col-span-1 h-9 sm:h-10 px-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] active:scale-95 text-zinc-300 hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none"
+          className="col-span-2 sm:col-span-1 h-11 sm:h-11 px-1 rounded-xl bg-white/80 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] active:scale-95 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white font-bold text-xs transition flex items-center justify-center cursor-pointer select-none shadow-sm"
           title="Custom foul points (5, 6, 7 pts)"
           aria-label="More Foul Options"
         >
@@ -1487,10 +1494,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={undoStack.length === 0}
           onClick={onUndo}
-          className={`col-span-8 sm:col-span-3 h-9 sm:h-10 px-2 sm:px-3 rounded-xl border font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none ${
+          className={`col-span-8 sm:col-span-3 h-11 sm:h-11 px-2 sm:px-3 rounded-xl border font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1.5 cursor-pointer select-none shadow-sm ${
             undoStack.length > 0
-              ? 'bg-sky-950/50 text-sky-200 border-sky-500/40 hover:bg-sky-900/50 active:scale-95 active:brightness-135 shadow-md shadow-sky-950/40'
-              : 'bg-white/[0.02] text-zinc-600 border-white/[0.04] cursor-not-allowed'
+              ? 'bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100 dark:bg-sky-950/50 dark:text-sky-200 dark:border-sky-500/40 dark:hover:bg-sky-900/50 active:scale-95'
+              : 'bg-zinc-100/50 text-zinc-400 border-zinc-200/50 dark:bg-white/[0.02] dark:text-zinc-600 dark:border-white/[0.04] cursor-not-allowed shadow-none'
           }`}
           title="Undo last action (Ctrl+Z)"
         >
@@ -1503,10 +1510,10 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
           type="button"
           disabled={redoStack.length === 0}
           onClick={onRedo}
-          className={`col-span-4 sm:col-span-1 h-9 sm:h-10 px-2 rounded-xl border font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none ${
+          className={`col-span-4 sm:col-span-1 h-11 sm:h-11 px-2 rounded-xl border font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-1 cursor-pointer select-none shadow-sm ${
             redoStack.length > 0
-              ? 'bg-purple-950/50 text-purple-200 border-purple-500/40 hover:bg-purple-900/50 active:scale-95 active:brightness-135 shadow-md'
-              : 'bg-white/[0.02] text-zinc-600 border-white/[0.04] cursor-not-allowed'
+              ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100 dark:bg-purple-950/50 dark:text-purple-200 dark:border-purple-500/40 dark:hover:bg-purple-900/50 active:scale-95'
+              : 'bg-zinc-100/50 text-zinc-400 border-zinc-200/50 dark:bg-white/[0.02] dark:text-zinc-600 dark:border-white/[0.04] cursor-not-allowed shadow-none'
           }`}
           title="Redo action (Ctrl+Y)"
         >
@@ -1518,18 +1525,18 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* ACTION FEEDBACK BANNER & TOAST (AT BOTTOM) - LAST 7 ACTIVITIES */}
       {/* ------------------------------------------------------------- */}
-      <div className="w-full rounded-2xl glass-panel p-2 sm:p-2.5 shadow-lg space-y-1.5">
-        <div className="flex items-center justify-between px-1 text-[10px] sm:text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      <div className="w-full rounded-2xl glass-panel p-2.5 sm:p-3 shadow-lg space-y-2 flex-1 flex flex-col bg-white/70 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-white/[0.07]">
+        <div className="flex items-center justify-between px-1 text-[10px] sm:text-[11px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
             Recent Activity (Last 7)
           </span>
-          <span className="text-zinc-500 font-mono">
+          <span className="text-zinc-400 dark:text-zinc-500 font-mono">
             {reversedActivities.length} of 7 logged
           </span>
         </div>
 
-        <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-1 pr-0.5">
+        <div className="space-y-1.5 flex-1 pr-0.5">
           {reversedActivities.map((act, index) => {
             const isMostRecent = index === 0;
 
@@ -1537,12 +1544,12 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
               return (
                 <div
                   key={act.id}
-                  className={`w-full px-2.5 sm:px-3 py-1.5 rounded-xl border flex items-center justify-between gap-2 shadow-lg animate-pop-feedback transition-all ${act.bgClass} ${act.borderClass}`}
+                  className={`w-full px-3 py-2 rounded-xl border flex items-center justify-between gap-2 shadow-md animate-pop-feedback transition-all min-h-[44px] ${act.bgClass} ${act.borderClass}`}
                 >
                   <div className="flex items-center space-x-2 min-w-0">
                     {act.ballHex && (
                       <span
-                        className="w-3.5 h-3.5 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
+                        className="w-4 h-4 rounded-full border border-white/80 shadow flex-shrink-0 inline-block"
                         style={{ backgroundColor: act.ballHex }}
                       />
                     )}
@@ -1570,30 +1577,30 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             return (
               <div
                 key={act.id}
-                className="w-full px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-between gap-2 text-zinc-300 hover:bg-white/[0.04] transition-colors"
+                className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/60 dark:border-white/[0.04] flex items-center justify-between gap-2 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.04] transition-colors min-h-[38px]"
               >
                 <div className="flex items-center space-x-2 min-w-0">
                   {act.ballHex ? (
                     <span
-                      className="w-2.5 h-2.5 rounded-full border border-white/40 shadow-xs flex-shrink-0 inline-block opacity-85"
+                      className="w-3 h-3 rounded-full border border-zinc-300 dark:border-white/40 shadow-xs flex-shrink-0 inline-block opacity-90"
                       style={{ backgroundColor: act.ballHex }}
                     />
                   ) : act.icon === 'miss' ? (
-                    <ChevronRight className="w-3.5 h-3.5 text-amber-400/80 flex-shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400/80 flex-shrink-0" />
                   ) : act.icon === 'foul' ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400/80 flex-shrink-0" />
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400/80 flex-shrink-0" />
                   ) : act.icon === 'switch' ? (
-                    <Users className="w-3.5 h-3.5 text-emerald-400/80 flex-shrink-0" />
+                    <Users className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400/80 flex-shrink-0" />
                   ) : (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 flex-shrink-0" />
                   )}
 
-                  <span className="text-[11px] font-bold text-zinc-200 uppercase tracking-wide flex-shrink-0">
+                  <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wide flex-shrink-0">
                     {act.badge}
                   </span>
                 </div>
 
-                <span className="text-[10px] text-zinc-400 truncate font-mono text-right">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate font-mono text-right">
                   {act.detail}
                 </span>
               </div>
@@ -1646,23 +1653,23 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* ADJUST REDS MODAL */}
       {isAdjustRedsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="glass-panel rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4 border-white/10">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
               <div className="flex items-center space-x-2">
                 <span className="w-5 h-5 rounded-full bg-rose-600 inline-block shadow-md" />
-                <h3 className="text-base sm:text-lg font-bold text-white">Adjust Remaining Reds</h3>
+                <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">Adjust Remaining Reds</h3>
               </div>
               <button 
                 type="button"
                 onClick={() => setIsAdjustRedsOpen(false)}
-                className="text-zinc-400 hover:text-white p-1 rounded-lg"
+                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-zinc-300 leading-relaxed">
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
               Use this if the physical table differs from the app (e.g. red potted on a foul, 2 reds potted in one stroke, or an input mistake).
             </p>
 
@@ -1671,19 +1678,19 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 type="button"
                 disabled={pendingAdjustReds <= 0}
                 onClick={() => setPendingAdjustReds(prev => Math.max(0, prev - 1))}
-                className="w-11 h-11 rounded-2xl bg-white/[0.05] border border-white/[0.1] text-white text-xl font-bold hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none active:scale-95"
+                className="w-11 h-11 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] border border-zinc-200 dark:border-white/[0.1] text-zinc-800 dark:text-white text-xl font-bold hover:bg-zinc-200 dark:hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none active:scale-95"
               >
                 −
               </button>
               <div className="flex flex-col items-center">
-                <span className="text-3xl font-black font-mono text-white leading-none tabular-nums">{pendingAdjustReds}</span>
-                <span className="text-[10px] text-zinc-400 uppercase tracking-wider mt-1 font-semibold">Reds Left</span>
+                <span className="text-3xl font-black font-mono text-zinc-900 dark:text-white leading-none tabular-nums">{pendingAdjustReds}</span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1 font-semibold">Reds Left</span>
               </div>
               <button
                 type="button"
                 disabled={pendingAdjustReds >= 15}
                 onClick={() => setPendingAdjustReds(prev => Math.min(15, prev + 1))}
-                className="w-11 h-11 rounded-2xl bg-white/[0.05] border border-white/[0.1] text-white text-xl font-bold hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none active:scale-95"
+                className="w-11 h-11 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] border border-zinc-200 dark:border-white/[0.1] text-zinc-800 dark:text-white text-xl font-bold hover:bg-zinc-200 dark:hover:bg-white/[0.1] disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none active:scale-95"
               >
                 +
               </button>
@@ -1693,7 +1700,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAdjustRedsOpen(false)}
-                className="flex-1 py-2 px-3 rounded-xl border border-white/[0.1] text-zinc-300 hover:bg-white/[0.06] text-xs sm:text-sm font-semibold transition"
+                className="flex-1 py-2 px-3 rounded-xl border border-zinc-200 dark:border-white/[0.1] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-xs sm:text-sm font-semibold transition"
               >
                 Cancel
               </button>

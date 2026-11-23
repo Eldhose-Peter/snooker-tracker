@@ -27,7 +27,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#080c0a",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#070908" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6f5" },
+  ],
 };
 
 export default function RootLayout({
@@ -38,9 +41,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#080c0a] text-gray-100">{children}</body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
