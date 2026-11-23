@@ -1014,38 +1014,6 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* APPLE SEGMENTED CONTROL FOR MULTIPLAYER SWITCHING             */}
-      {/* ------------------------------------------------------------- */}
-      <div className="w-full bg-black/[0.05] dark:bg-black/40 backdrop-blur-md p-1 rounded-2xl flex items-center gap-1 border border-black/[0.04] dark:border-white/[0.06] shadow-inner">
-        {resolvedPlayers.map((player, idx) => {
-          const isActive = state.activePlayerIndex === idx;
-          const framesWon = playerFrames[idx] || 0;
-          return (
-            <button
-              key={player.id}
-              type="button"
-              onClick={() => onSwitchActivePlayer(idx)}
-              className={`flex-1 py-1.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 min-h-[36px] select-none ${
-                isActive
-                  ? 'bg-white dark:bg-[#3a3a3c] text-zinc-950 dark:text-white shadow-sm font-bold'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              {isActive && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-              )}
-              <span className="truncate">{player.name}</span>
-              {match.best_of > 1 && framesWon > 0 && (
-                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 flex-shrink-0">
-                  {framesWon}F
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ------------------------------------------------------------- */}
       {/* FLOATING LIQUID GLASS HUD: PLAYER SCORES & METRICS            */}
       {/* Large Title (34pt+) Tabular Numerals, Specular Highlight       */}
       {/* ------------------------------------------------------------- */}
@@ -1420,98 +1388,92 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* STREAMLINED PRIMARY CONTROLS: FLOATING GLASS ACTION BAR       */}
-      {/* Capsule Island with Undo, Redo, Foul, Concede, End, Switch    */}
+      {/* STREAMLINED PRIMARY CONTROLS: FLOATING ACTION LAYERS          */}
+      {/* Layer 1: Switch, Foul & Foul Menu | Row 2: Undo & Redo        */}
       {/* ------------------------------------------------------------- */}
-      <div className="w-full rounded-full bg-white/80 dark:bg-[#1c1c1e]/85 backdrop-blur-xl border border-black/[0.08] dark:border-white/15 p-1.5 shadow-xl flex items-center justify-between gap-1 select-none">
+      <div className="w-full space-y-2 select-none">
         
-        {/* Switch Player / Miss */}
-        <button
-          type="button"
-          onClick={onMiss}
-          className="h-10 px-3 rounded-full bg-black/[0.05] hover:bg-black/[0.08] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-900 dark:text-white font-semibold text-xs sm:text-sm transition flex items-center gap-1 cursor-pointer active:scale-95"
-          title="Turn to next player"
-        >
-          <ChevronRight className="w-4 h-4 text-emerald-500" />
-          <span>Switch</span>
-        </button>
+        {/* Layer 1: Switch, Foul (+4), and Foul Options Menu */}
+        <div className="w-full rounded-2xl bg-white/80 dark:bg-[#1c1c1e]/85 backdrop-blur-xl border border-black/[0.08] dark:border-white/12 p-1.5 shadow-lg flex items-center gap-1.5">
+          {/* Switch Player / Miss */}
+          <button
+            type="button"
+            onClick={onMiss}
+            className="flex-1 h-11 px-3.5 rounded-xl bg-black/[0.05] hover:bg-black/[0.08] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-900 dark:text-white font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            title="Turn to next player"
+          >
+            <ChevronRight className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <span>Switch</span>
+          </button>
 
-        {/* Quick Foul (+4) Alert Style Button */}
-        <button
-          type="button"
-          onClick={onQuickFoul4}
-          className="h-10 px-3 rounded-full bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-semibold text-xs sm:text-sm transition flex items-center gap-1 cursor-pointer active:scale-95"
-          title="Instant standard 4-point penalty"
-        >
-          <AlertTriangle className="w-4 h-4" />
-          <span>Foul (+4)</span>
-        </button>
+          {/* Quick Foul (+4) Alert Style Button */}
+          <button
+            type="button"
+            onClick={onQuickFoul4}
+            className="flex-1 h-11 px-3.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            title="Instant standard 4-point penalty"
+          >
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>Foul (+4)</span>
+          </button>
 
-        {/* More Foul Options */}
-        <button
-          type="button"
-          onClick={() => setIsFoulModalOpen(true)}
-          className="w-10 h-10 rounded-full bg-black/[0.05] hover:bg-black/[0.08] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-300 font-bold text-xs flex items-center justify-center cursor-pointer transition active:scale-95"
-          title="Custom foul options"
-          aria-label="More Foul Options"
-        >
-          <span>···</span>
-        </button>
+          {/* Foul Options Menu Button */}
+          <button
+            type="button"
+            onClick={() => setIsFoulModalOpen(true)}
+            className="h-11 px-4 rounded-xl bg-black/[0.05] hover:bg-black/[0.08] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-300 font-bold text-sm flex items-center justify-center cursor-pointer transition active:scale-95"
+            title="Custom foul options (5-7 pts, recipient, free ball)"
+            aria-label="More Foul Options"
+          >
+            <span>···</span>
+          </button>
+        </div>
 
-        {/* Undo Button */}
-        <button
-          type="button"
-          disabled={undoStack.length === 0}
-          onClick={onUndo}
-          className={`h-10 px-2.5 rounded-full font-semibold text-xs transition flex items-center gap-1 cursor-pointer select-none active:scale-95 ${
-            undoStack.length > 0
-              ? 'text-sky-600 dark:text-sky-400 hover:bg-sky-500/10'
-              : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
-          }`}
-          title="Undo last shot"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Undo</span>
-          {undoStack.length > 0 && <span className="text-[10px] font-mono">({undoStack.length})</span>}
-        </button>
+        {/* Row 2: Undo and Redo in Next Row */}
+        <div className="w-full grid grid-cols-2 gap-2">
+          {/* Undo Button */}
+          <button
+            type="button"
+            disabled={undoStack.length === 0}
+            onClick={onUndo}
+            className={`h-11 px-4 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer select-none active:scale-95 border ${
+              undoStack.length > 0
+                ? 'bg-white/70 dark:bg-[#1c1c1e]/70 backdrop-blur-xl border-black/[0.06] dark:border-white/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 shadow-sm'
+                : 'bg-black/[0.02] dark:bg-white/[0.02] border-transparent text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
+            }`}
+            title="Undo last shot"
+          >
+            <RotateCcw className="w-4 h-4 flex-shrink-0" />
+            <span>Undo</span>
+            {undoStack.length > 0 && (
+              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400">
+                ({undoStack.length})
+              </span>
+            )}
+          </button>
 
-        {/* Redo Button */}
-        <button
-          type="button"
-          disabled={redoStack.length === 0}
-          onClick={onRedo}
-          className={`h-10 px-2.5 rounded-full font-semibold text-xs transition flex items-center gap-1 cursor-pointer select-none active:scale-95 ${
-            redoStack.length > 0
-              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-500/10'
-              : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
-          }`}
-          title="Redo shot"
-        >
-          <RotateCw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Redo</span>
-        </button>
+          {/* Redo Button */}
+          <button
+            type="button"
+            disabled={redoStack.length === 0}
+            onClick={onRedo}
+            className={`h-11 px-4 rounded-xl font-semibold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer select-none active:scale-95 border ${
+              redoStack.length > 0
+                ? 'bg-white/70 dark:bg-[#1c1c1e]/70 backdrop-blur-xl border-black/[0.06] dark:border-white/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 shadow-sm'
+                : 'bg-black/[0.02] dark:bg-white/[0.02] border-transparent text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
+            }`}
+            title="Redo shot"
+          >
+            <RotateCw className="w-4 h-4 flex-shrink-0" />
+            <span>Redo</span>
+            {redoStack.length > 0 && (
+              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                ({redoStack.length})
+              </span>
+            )}
+          </button>
+        </div>
 
-        {/* Concede Button */}
-        <button
-          type="button"
-          onClick={onConcede}
-          className="h-10 px-2.5 rounded-full text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition flex items-center gap-1 text-xs font-semibold cursor-pointer active:scale-95"
-          title="Concede frame"
-        >
-          <Flag className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Concede</span>
-        </button>
-
-        {/* End Match Button */}
-        <button
-          type="button"
-          onClick={() => setIsEndMatchModalOpen(true)}
-          className="h-10 px-2.5 rounded-full text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition flex items-center gap-1 text-xs font-semibold cursor-pointer active:scale-95"
-          title="End match early"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">End</span>
-        </button>
       </div>
 
       {/* ------------------------------------------------------------- */}
