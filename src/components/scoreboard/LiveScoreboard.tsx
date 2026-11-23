@@ -1292,16 +1292,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* CONTENT LAYER: RICH BAIZE GREEN FELT CANVAS WITH RADIAL DEPTH */}
-      {/* Authentic High-Visibility 3D Aramith Tournament Snooker Balls */}
+      {/* CONTENT LAYER: TOURNAMENT SNOOKER BALL SELECTOR TRAY          */}
+      {/* Light & Dark Mode Liquid Glass Support, No Neon Glow          */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-2xl sm:rounded-3xl p-2.5 sm:p-3.5 shadow-2xl relative overflow-hidden select-none">
+      <div className="rounded-2xl sm:rounded-3xl p-2.5 sm:p-3.5 relative overflow-hidden select-none bg-white/80 dark:bg-[#1c1c1e]/85 backdrop-blur-xl border border-black/[0.08] dark:border-white/12 shadow-sm dark:shadow-xl transition-colors duration-200">
         
-        {/* Subtle table boundary hairline & specular top reflection */}
-        <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border border-emerald-400/25 dark:border-white/10 pointer-events-none shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]" />
+        {/* Subtle Liquid Glass Specular Reflection */}
+        <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border border-black/[0.04] dark:border-white/[0.08] pointer-events-none shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" />
         
-        {/* Overhead Canopy Lighting Vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(52,199,89,0.14)_0%,transparent_75%)] pointer-events-none" />
+        {/* Ambient Top Light Wash */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/[0.015] to-transparent dark:from-white/[0.03] dark:to-transparent pointer-events-none" />
 
         {/* 4-col mobile grid, 7-col desktop grid for large, effortless hit targets */}
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-2.5 relative z-10">
@@ -1314,8 +1314,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label={`Pot Red ball, 1 point, ${state.redsRemaining} reds remaining`}
             className={`col-span-2 sm:col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-red cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('red')
-                ? 'opacity-100 ring-2 ring-red-300 shadow-lg shadow-red-600/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
           >
@@ -1323,7 +1323,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             
             {/* Mobile Layout: Horizontal Bar with point, name & remaining count */}
             <div className="flex sm:hidden items-center justify-between w-full px-4">
-              <span className="text-2xl font-black text-white drop-shadow leading-none">1</span>
+              <span className="text-2xl font-black text-white drop-shadow-sm leading-none">1</span>
               <div className="flex flex-col items-center">
                 <span className="text-sm font-black text-white uppercase tracking-wider leading-none">Red</span>
                 {state.redsRemaining > 0 && (
@@ -1332,14 +1332,14 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                   </span>
                 )}
               </div>
-              <span className="bg-black/35 backdrop-blur-sm text-white font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border border-white/20">
+              <span className="bg-black/25 backdrop-blur-sm text-white font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border border-white/20">
                 {state.redsRemaining}
               </span>
             </div>
 
             {/* Desktop Layout: Vertical Stack */}
             <div className="hidden sm:flex flex-col items-center justify-center">
-              <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">1</span>
+              <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">1</span>
               <span className="text-xs font-extrabold text-white uppercase tracking-wider leading-none mt-1">Red</span>
               {state.redsRemaining > 0 && (
                 <span className="text-[10px] font-bold text-white/85 leading-none mt-0.5">
@@ -1357,8 +1357,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label="Pot Yellow ball, 2 points"
             className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-yellow cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('yellow')
-                ? 'opacity-100 ring-2 ring-yellow-200 shadow-lg shadow-yellow-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
           >
@@ -1375,13 +1375,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label="Pot Green ball, 3 points"
             className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-green cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('green')
-                ? 'opacity-100 ring-2 ring-emerald-300 shadow-lg shadow-emerald-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">3</span>
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">3</span>
             <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Green</span>
           </button>
 
@@ -1393,13 +1393,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label="Pot Brown ball, 4 points"
             className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-brown cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('brown')
-                ? 'opacity-100 ring-2 ring-amber-300 shadow-lg shadow-amber-700/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">4</span>
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">4</span>
             <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Brown</span>
           </button>
 
@@ -1411,13 +1411,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label="Pot Blue ball, 5 points"
             className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-blue cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('blue')
-                ? 'opacity-100 ring-2 ring-blue-300 shadow-lg shadow-blue-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">5</span>
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">5</span>
             <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Blue</span>
           </button>
 
@@ -1429,13 +1429,13 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             aria-label="Pot Pink ball, 6 points"
             className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-pink cursor-pointer transition-all duration-200 select-none ${
               availableBalls.includes('pink')
-                ? 'opacity-100 ring-2 ring-pink-200 shadow-lg shadow-pink-500/50 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none ring-1 ring-white/10'
+                ? 'opacity-100 ring-1.5 ring-black/15 dark:ring-white/30 shadow-md shadow-black/15 dark:shadow-black/40 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none ring-1 ring-black/5 dark:ring-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">6</span>
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">6</span>
             <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Pink</span>
           </button>
 
@@ -1445,15 +1445,15 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             disabled={!availableBalls.includes('black')}
             onClick={() => onPotBall('black')}
             aria-label="Pot Black ball, 7 points"
-            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition-all duration-200 select-none border border-white/30 ${
+            className={`col-span-1 h-16 sm:h-20 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition-all duration-200 select-none border border-black/20 dark:border-white/30 ${
               availableBalls.includes('black')
-                ? 'opacity-100 ring-2 ring-white/80 shadow-lg shadow-black/80 hover:scale-[1.02] active:scale-95 active:brightness-135'
-                : 'opacity-55 cursor-not-allowed pointer-events-none'
+                ? 'opacity-100 ring-1.5 ring-black/25 dark:ring-white/40 shadow-md shadow-black/25 dark:shadow-black/60 hover:scale-[1.02] active:scale-95 active:brightness-135'
+                : 'opacity-35 cursor-not-allowed pointer-events-none border-black/10 dark:border-white/10'
             }`}
             style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
           >
             <div className="snooker-ball-highlight" />
-            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow leading-none">7</span>
+            <span className="text-2xl sm:text-3xl font-black text-white drop-shadow-sm leading-none">7</span>
             <span className="text-[11px] sm:text-xs font-black text-white/95 uppercase tracking-tight leading-none mt-1 truncate max-w-full px-1">Black</span>
           </button>
 
