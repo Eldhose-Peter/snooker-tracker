@@ -9,11 +9,13 @@ interface FoulModalProps {
   onClose: () => void;
   fouledPlayerIndex: number;
   players: Player[];
+  redsRemaining?: number;
   onConfirmFoul: (
     points: number, 
     target: 'all_opponents' | 'next_player' | number, 
     awardFreeBall: boolean, 
-    passBack: boolean
+    passBack: boolean,
+    redsPocketed?: number
   ) => void;
 }
 
@@ -22,12 +24,14 @@ export const FoulModal: React.FC<FoulModalProps> = ({
   onClose,
   fouledPlayerIndex,
   players,
+  redsRemaining = 0,
   onConfirmFoul,
 }) => {
   const [selectedPoints, setSelectedPoints] = useState<number>(4);
   const [targetRecipient, setTargetRecipient] = useState<'all_opponents' | 'next_player' | number>('all_opponents');
   const [isFreeBall, setIsFreeBall] = useState<boolean>(false);
   const [passBack, setPassBack] = useState<boolean>(false);
+  const [redsPocketed, setRedsPocketed] = useState<number>(0);
 
   if (!isOpen) return null;
 
@@ -43,11 +47,12 @@ export const FoulModal: React.FC<FoulModalProps> = ({
   ];
 
   const handleApply = () => {
-    onConfirmFoul(selectedPoints, targetRecipient, isFreeBall, passBack);
+    onConfirmFoul(selectedPoints, targetRecipient, isFreeBall, passBack, redsPocketed);
     setSelectedPoints(4);
     setTargetRecipient('all_opponents');
     setIsFreeBall(false);
     setPassBack(false);
+    setRedsPocketed(0);
     onClose();
   };
 
@@ -155,6 +160,37 @@ export const FoulModal: React.FC<FoulModalProps> = ({
 
         {/* Tactical Options */}
         <div className="space-y-2 pt-1 border-t border-gray-800/80">
+          {/* Red pocketed during foul option */}
+          {redsRemaining > 0 && (
+            <div className="p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs sm:text-sm font-semibold text-white block">Reds Pocketed on Foul</span>
+                  <span className="text-[11px] text-gray-400 leading-tight block">
+                    In snooker, reds pocketed on fouls are not respotted.
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[0, 1, 2].map((cnt) => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      disabled={cnt > redsRemaining}
+                      onClick={() => setRedsPocketed(cnt)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                        redsPocketed === cnt
+                          ? 'bg-red-600 text-white shadow'
+                          : 'bg-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {cnt === 0 ? '0' : `${cnt} Red${cnt > 1 ? 's' : ''}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Free Ball Option */}
           <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
             <input

@@ -96,7 +96,8 @@ export type MatchEventType =
   | 'concede' 
   | 'switch'
   | 'frame_start'
-  | 'frame_end';
+  | 'frame_end'
+  | 'adjust_reds';
 
 export interface MatchEvent {
   id: string;
@@ -115,6 +116,8 @@ export interface MatchEvent {
   awardedTo?: number[];
   freeBallAwarded?: boolean;
   passBack?: boolean;
+  redsPocketedOnFoul?: number;
+  redsRemainingAfter?: number;
   detail: string;
   isBreakEnd?: boolean;
 }
@@ -122,7 +125,7 @@ export interface MatchEvent {
 export interface ActivityItem {
   id: string;
   timestamp: number;
-  type: 'pot' | 'miss' | 'foul' | 'switch' | 'frame_start' | 'concede';
+  type: 'pot' | 'miss' | 'foul' | 'switch' | 'frame_start' | 'concede' | 'adjust_reds';
   playerIndex: number;
   playerName: string;
   badge: string;
@@ -133,7 +136,7 @@ export interface ActivityItem {
   bgClass: string;
   textClass: string;
   borderClass: string;
-  icon?: 'ball' | 'miss' | 'foul' | 'switch';
+  icon?: 'ball' | 'miss' | 'foul' | 'switch' | 'adjust';
 }
 
 export interface TrailerSnookerInfo {

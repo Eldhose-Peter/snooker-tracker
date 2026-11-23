@@ -355,12 +355,12 @@ export async function saveNewMatch(
 
   if (Array.isArray(playerIdsOrP1)) {
     playerIds = playerIdsOrP1;
-    bestOf = typeof player2IdOrBestOf === 'number' ? player2IdOrBestOf : bestOfParam;
-    redsCount = redsCountParam;
+    bestOf = typeof player2IdOrBestOf === 'number' ? player2IdOrBestOf : 1;
+    redsCount = typeof bestOfParam === 'number' ? bestOfParam : 15;
   } else {
     playerIds = [playerIdsOrP1, String(player2IdOrBestOf)];
-    bestOf = bestOfParam;
-    redsCount = redsCountParam;
+    bestOf = typeof bestOfParam === 'number' ? bestOfParam : 1;
+    redsCount = typeof redsCountParam === 'number' ? redsCountParam : 15;
   }
 
   const p1Id = playerIds[0];

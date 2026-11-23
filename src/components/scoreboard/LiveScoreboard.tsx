@@ -17,7 +17,8 @@ import {
   handleMiss, 
   handleFoul, 
   handleSwitchPlayer, 
-  handleConcede 
+  handleConcede,
+  handleAdjustReds
 } from '@/lib/snooker-engine';
 import { FoulModal } from './FoulModal';
 import { WinModal } from './WinModal';
@@ -185,6 +186,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const [isWinModalOpen, setIsWinModalOpen] = useState(false);
   const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const [isAdjustRedsOpen, setIsAdjustRedsOpen] = useState(false);
+  const [pendingAdjustReds, setPendingAdjustReds] = useState<number>(state.redsRemaining);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -327,13 +330,18 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     };
 
     const s = styleMap[ball];
+    const isFreeBallPot = state.freeBallActive;
+    const badgeText = isFreeBallPot 
+      ? `+${ptsScored} ${ball.toUpperCase()} (FREE)` 
+      : `+${ballConfig.points} ${ball.toUpperCase()}`;
+
     const newActivity: ActivityItem = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
       type: 'pot',
       playerIndex: activeIdx,
       playerName: activeName,
-      badge: `+${ballConfig.points} ${ball.toUpperCase()}`,
+      badge: badgeText,
       detail: nextState.isFrameOver 
         ? `${activeName} won Frame ${currentFrameNum}!` 
         : `${activeName} • Break: ${nextState.currentBreak} pts`,
@@ -342,7 +350,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       borderClass: s.border,
       ballHex: ballConfig.colorHex,
       ballType: ball,
-      points: ballConfig.points,
+      points: ptsScored,
       icon: 'ball',
     };
 
@@ -413,15 +421,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     points: number, 
     target: 'all_opponents' | 'next_player' | number, 
     awardFreeBall: boolean, 
-    passBack: boolean
+    passBack: boolean,
+    redsPocketed: number = 0
   ) => {
     triggerHaptic([20, 50, 20]);
-    const nextState = handleFoul(state, points, target, awardFreeBall, passBack);
+    const nextState = handleFoul(state, points, target, awardFreeBall, passBack, redsPocketed);
 
     const activeIdx = state.activePlayerIndex;
     const activePlayer = resolvedPlayers[activeIdx];
     const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
     const nextPlayerName = resolvedPlayers[nextState.activePlayerIndex]?.name || `Player ${nextState.activePlayerIndex + 1}`;
+    const redsPocketedDesc = redsPocketed > 0 ? ` • ${redsPocketed} red${redsPocketed > 1 ? 's' : ''} pocketed` : '';
     const newActivity: ActivityItem = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       timestamp: Date.now(),
@@ -430,8 +440,8 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       playerName: activeName,
       badge: `FOUL (+${points} PTS)`,
       detail: passBack 
-        ? `${activeName} fouled (+${points}) • Turn passed back` 
-        : `${activeName} fouled (+${points}) • Turn to ${nextPlayerName}`,
+        ? `${activeName} fouled (+${points})${redsPocketedDesc} • Turn passed back` 
+        : `${activeName} fouled (+${points})${redsPocketedDesc} • Turn to ${nextPlayerName}`,
       bgClass: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700',
       textClass: 'text-white font-black',
       borderClass: 'border-red-300 ring-2 ring-red-400/90 shadow-xl shadow-red-950',
@@ -460,15 +470,59 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       awardedTo: awardedIndices,
       freeBallAwarded: awardFreeBall,
       passBack,
+      redsPocketedOnFoul: redsPocketed,
+      redsRemainingAfter: nextState.redsRemaining,
       breakScore: state.currentBreak,
       isBreakEnd: state.currentBreak > 0,
       scoresAfter: [...nextState.playerScores],
       detail: passBack 
-        ? `${activeName} fouled (+${points} pts). Turn passed back.` 
-        : `${activeName} fouled (+${points} pts). Turn to ${nextPlayerName}.`,
+        ? `${activeName} fouled (+${points} pts)${redsPocketedDesc}. Turn passed back.` 
+        : `${activeName} fouled (+${points} pts)${redsPocketedDesc}. Turn to ${nextPlayerName}.`,
     };
 
     applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
+  };
+
+  const onAdjustReds = (newCount: number) => {
+    if (newCount === state.redsRemaining) {
+      setIsAdjustRedsOpen(false);
+      return;
+    }
+    triggerHaptic(14);
+    const nextState = handleAdjustReds(state, newCount);
+    const activeIdx = state.activePlayerIndex;
+    const activePlayer = resolvedPlayers[activeIdx];
+    const activeName = activePlayer?.name || `Player ${activeIdx + 1}`;
+
+    const newActivity: ActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+      type: 'adjust_reds',
+      playerIndex: activeIdx,
+      playerName: activeName,
+      badge: `REDS: ${newCount}`,
+      detail: `${activeName} • Reds adjusted from ${state.redsRemaining} to ${newCount}`,
+      bgClass: 'bg-red-950/80',
+      textClass: 'text-red-300 font-bold',
+      borderClass: 'border-red-500/60 ring-2 ring-red-500/50',
+      icon: 'adjust',
+    };
+
+    const newEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'adjust_reds',
+      playerIndex: activeIdx,
+      playerId: activePlayer?.id,
+      playerName: activeName,
+      redsRemainingAfter: newCount,
+      scoresAfter: [...nextState.playerScores],
+      detail: `Reds remaining adjusted from ${state.redsRemaining} to ${newCount}.`,
+    };
+
+    applyStateMutation(appendActionAndEvent(nextState, newActivity, newEvent));
+    setIsAdjustRedsOpen(false);
   };
 
   // Instant 1-tap standard 4-point foul (most common in casual snooker)
@@ -991,6 +1045,19 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                   type="button"
                   onClick={() => {
                     setIsOptionsMenuOpen(false);
+                    setPendingAdjustReds(state.redsRemaining);
+                    setIsAdjustRedsOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-emerald-950/80 flex items-center gap-2 text-gray-200 hover:text-white transition cursor-pointer"
+                >
+                  <span className="w-3.5 h-3.5 rounded-full bg-red-600 inline-block flex-shrink-0" />
+                  <span>Adjust Reds ({state.redsRemaining} left)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOptionsMenuOpen(false);
                     onConcede();
                   }}
                   className="w-full px-3 py-2 text-left hover:bg-emerald-950/80 flex items-center gap-2 text-gray-200 hover:text-white transition cursor-pointer"
@@ -1200,10 +1267,18 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
               <span className="text-gray-400 text-[9px] sm:text-[10px]">Left:</span>
               <span className="font-bold text-white">{state.pointsRemaining}</span>
             </div>
-            <div className="bg-black/40 px-1.5 sm:px-2 py-0.5 rounded flex items-center space-x-1 border border-gray-800/60">
+            <button
+              type="button"
+              onClick={() => {
+                setPendingAdjustReds(state.redsRemaining);
+                setIsAdjustRedsOpen(true);
+              }}
+              title="Click to adjust remaining reds"
+              className="bg-black/40 hover:bg-red-950/50 px-1.5 sm:px-2 py-0.5 rounded flex items-center space-x-1 border border-gray-800/60 hover:border-red-500/50 transition cursor-pointer"
+            >
               <span className="w-2 h-2 rounded-full bg-red-600 inline-block shadow-sm" />
               <span className="font-bold text-white">{state.redsRemaining}</span>
-            </div>
+            </button>
           </div>
 
           {/* Current Break */}
@@ -1535,6 +1610,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         onClose={() => setIsFoulModalOpen(false)}
         fouledPlayerIndex={state.activePlayerIndex}
         players={resolvedPlayers}
+        redsRemaining={state.redsRemaining}
         onConfirmFoul={onConfirmFoul}
       />
 
@@ -1566,6 +1642,71 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         onConcedeMatch={handleEndMatchConcede}
         onAbandonMatch={handleEndMatchAbandon}
       />
+
+      {/* ADJUST REDS MODAL */}
+      {isAdjustRedsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0f1712] border border-red-500/40 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-red-600 inline-block shadow-md" />
+                <h3 className="text-base sm:text-lg font-bold text-white">Adjust Remaining Reds</h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsAdjustRedsOpen(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Use this if the physical table differs from the app (e.g. red potted on a foul, 2 reds potted in one stroke, or an input mistake).
+            </p>
+
+            <div className="flex items-center justify-center space-x-4 py-2">
+              <button
+                type="button"
+                disabled={pendingAdjustReds <= 0}
+                onClick={() => setPendingAdjustReds(prev => Math.max(0, prev - 1))}
+                className="w-11 h-11 rounded-xl bg-gray-900 border border-gray-700 text-white text-xl font-bold hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none"
+              >
+                −
+              </button>
+              <div className="flex flex-col items-center">
+                <span className="text-3xl font-black font-mono text-white leading-none">{pendingAdjustReds}</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Reds Left</span>
+              </div>
+              <button
+                type="button"
+                disabled={pendingAdjustReds >= 15}
+                onClick={() => setPendingAdjustReds(prev => Math.min(15, prev + 1))}
+                className="w-11 h-11 rounded-xl bg-gray-900 border border-gray-700 text-white text-xl font-bold hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center cursor-pointer select-none"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAdjustRedsOpen(false)}
+                className="flex-1 py-2 px-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 text-xs sm:text-sm font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => onAdjustReds(pendingAdjustReds)}
+                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-red-900/40 transition"
+              >
+                Set Reds ({pendingAdjustReds})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

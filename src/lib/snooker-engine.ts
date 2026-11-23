@@ -240,9 +240,20 @@ export function handlePot(prevState: FrameState, ball: BallType): FrameState {
     if (prevState.tablePhase === 'RED') {
       pointsToAdd = 1;
       newPhase = 'COLOR_AFTER_RED';
+      // If the player potted an actual red ball during a free ball, decrement remaining reds
+      if (ball === 'red') {
+        newReds = Math.max(0, prevState.redsRemaining - 1);
+      }
     } else if (prevState.tablePhase === 'COLORS_SEQUENCE') {
       const ballOn = COLOR_ORDER[prevState.colorsSequenceIndex];
       pointsToAdd = BALL_CONFIGS[ballOn].points;
+      // If the player potted the actual ball on during a free ball, advance the colors sequence
+      if (ball === ballOn) {
+        newSeqIndex += 1;
+        if (newSeqIndex >= COLOR_ORDER.length) {
+          newPhase = 'FRAME_OVER';
+        }
+      }
     }
   } else {
     // Normal Pot
@@ -306,13 +317,15 @@ export function handlePot(prevState: FrameState, ball: BallType): FrameState {
   const snookersNeeded = checkSnookersNeeded(nextScores, pointsRemaining);
 
   let actionDesc: string;
+  const isFreeBallPot = prevState.freeBallActive;
+  const freeBallTag = isFreeBallPot ? ' as Free Ball' : '';
   if (isOver && winnerIndex !== null) {
     const winName = getPlayerName(prevState, winnerIndex);
-    actionDesc = `${activeName} potted ${ballConfig.name} (+${pointsToAdd} pts). ${winName} wins frame!`;
+    actionDesc = `${activeName} potted ${ballConfig.name}${freeBallTag} (+${pointsToAdd} pts). ${winName} wins frame!`;
   } else if (!isOver && newSeqIndex === 5 && newPhase === 'COLORS_SEQUENCE' && newReds === 0 && winReason?.includes('Re-spotted')) {
-    actionDesc = `${activeName} potted ${ballConfig.name} (+${pointsToAdd} pts). Scores TIED (${nextScores.join(' - ')})! Re-spotted black for the win!`;
+    actionDesc = `${activeName} potted ${ballConfig.name}${freeBallTag} (+${pointsToAdd} pts). Scores TIED (${nextScores.join(' - ')})! Re-spotted black for the win!`;
   } else {
-    actionDesc = `${activeName} potted ${ballConfig.name} (+${pointsToAdd} pts). Break: ${newBreak}.`;
+    actionDesc = `${activeName} potted ${ballConfig.name}${freeBallTag} (+${pointsToAdd} pts). Break: ${newBreak}.`;
   }
 
   return syncFrameStateProps({
@@ -376,6 +389,7 @@ export function handleMiss(prevState: FrameState): FrameState {
  * - Awards penalty points (4-7) to recipient(s).
  * - Target can be 'all_opponents' (default for cutthroat/ring games), 'next_player', or specific player index/indices.
  * - Resets break.
+ * - Decrements remaining reds if any were pocketed on the foul (in snooker, reds are never respotted on fouls).
  * - Resets table phase to RED or next sequence color.
  * - Switches turn to next player (or passes back to fouled player).
  * - Allows activating Free Ball if snookered.
@@ -385,7 +399,8 @@ export function handleFoul(
   foulPoints: number, 
   target: 'all_opponents' | 'next_player' | number | number[] = 'all_opponents',
   awardFreeBall: boolean = false,
-  passBackToSamePlayer: boolean = false
+  passBackToSamePlayer: boolean = false,
+  redsPocketed: number = 0
 ): FrameState {
   if (prevState.isFrameOver) return prevState;
 
@@ -424,9 +439,14 @@ export function handleFoul(
 
   const nextActiveIndex = passBackToSamePlayer ? fouledIdx : ((fouledIdx + 1) % playerCount);
 
+  // In official snooker, any red potted or forced off the table during a foul remains off and is NOT respotted
+  const newReds = Math.max(0, prevState.redsRemaining - redsPocketed);
+
   let newPhase = prevState.tablePhase;
   if (newPhase === 'COLOR_AFTER_RED') {
-    newPhase = prevState.redsRemaining > 0 ? 'RED' : 'COLORS_SEQUENCE';
+    newPhase = newReds > 0 ? 'RED' : 'COLORS_SEQUENCE';
+  } else if (newPhase === 'RED' && newReds === 0) {
+    newPhase = 'COLORS_SEQUENCE';
   }
 
   let isOver: boolean = prevState.isFrameOver;
@@ -453,10 +473,11 @@ export function handleFoul(
     }
   }
 
-  const pointsRemaining = isOver ? 0 : calculatePointsRemaining(prevState.redsRemaining, newPhase, prevState.colorsSequenceIndex);
+  const pointsRemaining = isOver ? 0 : calculatePointsRemaining(newReds, newPhase, prevState.colorsSequenceIndex);
   const snookersNeeded = checkSnookersNeeded(nextScores, pointsRemaining);
 
-  const actionDesc = `Foul by ${fouledName}! +${foulPoints} pts awarded to ${recipientDesc}.${awardFreeBall ? ' Free ball awarded!' : ''}`;
+  const redsDesc = redsPocketed > 0 ? ` • ${redsPocketed} red${redsPocketed > 1 ? 's' : ''} pocketed (not respotted)` : '';
+  const actionDesc = `Foul by ${fouledName}! +${foulPoints} pts awarded to ${recipientDesc}.${awardFreeBall ? ' Free ball awarded!' : ''}${redsDesc}`;
 
   return syncFrameStateProps({
     ...prevState,
@@ -464,6 +485,7 @@ export function handleFoul(
     activePlayerIndex: nextActiveIndex,
     currentBreak: 0,
     currentBreakBalls: [],
+    redsRemaining: newReds,
     tablePhase: newPhase,
     freeBallActive: awardFreeBall,
     pointsRemaining,
@@ -488,6 +510,8 @@ export function handleSwitchPlayer(prevState: FrameState, targetPlayerIndex: num
     newPhase = prevState.redsRemaining > 0 ? 'RED' : 'COLORS_SEQUENCE';
   }
 
+  const pointsRemaining = calculatePointsRemaining(prevState.redsRemaining, newPhase, prevState.colorsSequenceIndex);
+  const snookersNeeded = checkSnookersNeeded(prevState.playerScores, pointsRemaining);
   const targetName = getPlayerName(prevState, targetPlayerIndex);
 
   return syncFrameStateProps({
@@ -497,7 +521,36 @@ export function handleSwitchPlayer(prevState: FrameState, targetPlayerIndex: num
     currentBreakBalls: [],
     tablePhase: newPhase,
     freeBallActive: false,
+    pointsRemaining,
+    snookersNeeded,
     lastActionDescription: `Switched active player to ${targetName}.`,
+  });
+}
+
+/**
+ * Handle manual adjustment of reds remaining (e.g. to correct input mistakes, multiple reds in 1 stroke, etc.).
+ */
+export function handleAdjustReds(prevState: FrameState, newRedsRemaining: number): FrameState {
+  if (prevState.isFrameOver) return prevState;
+  const clampedReds = Math.max(0, Math.min(15, newRedsRemaining));
+  let newPhase = prevState.tablePhase;
+
+  if (clampedReds === 0 && newPhase === 'RED') {
+    newPhase = 'COLORS_SEQUENCE';
+  } else if (clampedReds > 0 && newPhase === 'COLORS_SEQUENCE') {
+    newPhase = 'RED';
+  }
+
+  const pointsRemaining = calculatePointsRemaining(clampedReds, newPhase, prevState.colorsSequenceIndex);
+  const snookersNeeded = checkSnookersNeeded(prevState.playerScores, pointsRemaining);
+
+  return syncFrameStateProps({
+    ...prevState,
+    redsRemaining: clampedReds,
+    tablePhase: newPhase,
+    pointsRemaining,
+    snookersNeeded,
+    lastActionDescription: `Reds remaining manually adjusted to ${clampedReds}.`,
   });
 }
 

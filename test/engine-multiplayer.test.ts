@@ -6,7 +6,8 @@ import {
   handleFoul, 
   handleSwitchPlayer, 
   handleConcede, 
-  checkSnookersNeeded
+  checkSnookersNeeded,
+  handleAdjustReds
 } from '../src/lib/snooker-engine';
 import { 
   INITIAL_PLAYERS,
@@ -696,6 +697,59 @@ async function testAbandon() {
   const resetHistory = await fetchMatches();
   assert.strictEqual(resetHistory.filter(m => m.status === 'completed').length, 3, 'Foundational actual matches must remain safely intact');
   console.log('✓ Match restoration, shot-by-shot telemetry hydration, and history safety verified.');
+
+  // 30. Verifying Red Ball Count Rules & Bug Fixes
+  console.log('\n[30] Verifying Red Ball Count Rules & Bug Fixes...');
+  
+  // 30.1 saveNewMatch correctly stores 10 and 6 reds (not defaulting to 15)
+  const match10R = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 1, 10);
+  assert.strictEqual(match10R.reds_count, 10, '10-red match must retain reds_count = 10');
+  const match6R = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 3, 6);
+  assert.strictEqual(match6R.reds_count, 6, '6-red match must retain reds_count = 6');
+
+  // 30.2 Free Ball potting a Red decrements redsRemaining
+  let fbRedState = createInitialFrameState(2, 15);
+  fbRedState.freeBallActive = true;
+  fbRedState = handlePot(fbRedState, 'red');
+  assert.strictEqual(fbRedState.redsRemaining, 14, 'Potting Red on Free Ball must decrement redsRemaining from 15 to 14');
+  assert.strictEqual(fbRedState.playerScores[0], 1, 'Potting Red on Free Ball scores 1 pt');
+  assert.strictEqual(fbRedState.tablePhase, 'COLOR_AFTER_RED');
+
+  // 30.3 Free Ball potting a nominated color does NOT decrement redsRemaining (color is respotted)
+  let fbColorState = createInitialFrameState(2, 15);
+  fbColorState.freeBallActive = true;
+  fbColorState = handlePot(fbColorState, 'black'); // Nominate black as substitute for red
+  assert.strictEqual(fbColorState.redsRemaining, 15, 'Potting color as Free Ball must preserve 15 reds on table');
+  assert.strictEqual(fbColorState.playerScores[0], 1, 'Nominated color potted as free red scores 1 pt');
+  assert.strictEqual(fbColorState.tablePhase, 'COLOR_AFTER_RED');
+
+  // 30.4 handleSwitchPlayer recalculates pointsRemaining from COLOR_AFTER_RED
+  let switchState = createInitialFrameState(2, 15);
+  switchState = handlePot(switchState, 'red'); // redsRemaining: 14, pointsRemaining: 146
+  assert.strictEqual(switchState.pointsRemaining, 146);
+  switchState = handleSwitchPlayer(switchState, 1);
+  assert.strictEqual(switchState.tablePhase, 'RED');
+  assert.strictEqual(switchState.pointsRemaining, 139, 'Points remaining must be 14*8 + 27 = 139 after switching player');
+
+  // 30.5 handleFoul with redsPocketed decrements redsRemaining
+  let foulRedState = createInitialFrameState(2, 15);
+  foulRedState = handleFoul(foulRedState, 4, 'next_player', false, false, 1);
+  assert.strictEqual(foulRedState.redsRemaining, 14, 'Foul with 1 red pocketed must leave 14 reds');
+  assert.strictEqual(foulRedState.pointsRemaining, 139, 'Points remaining must be 14*8 + 27 = 139');
+  assert(foulRedState.lastActionDescription?.includes('1 red pocketed'), 'Action description must mention red pocketed');
+
+  // 30.6 handleAdjustReds modifies redsRemaining, phase, points, and snookers
+  let adjustState = createInitialFrameState(2, 15);
+  adjustState = handleAdjustReds(adjustState, 12);
+  assert.strictEqual(adjustState.redsRemaining, 12, 'Adjusted reds must be 12');
+  assert.strictEqual(adjustState.pointsRemaining, 123, 'Points remaining must be 12*8 + 27 = 123');
+
+  // Adjust to 0 transitions tablePhase to COLORS_SEQUENCE
+  adjustState = handleAdjustReds(adjustState, 0);
+  assert.strictEqual(adjustState.redsRemaining, 0);
+  assert.strictEqual(adjustState.tablePhase, 'COLORS_SEQUENCE');
+  assert.strictEqual(adjustState.pointsRemaining, 27);
+  console.log('✓ All Red Ball rules, free ball scenarios, foul pocketing, and manual adjustment mechanics verified.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');

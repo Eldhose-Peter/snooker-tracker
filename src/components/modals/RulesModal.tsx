@@ -91,6 +91,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
           </p>
         </div>
 
+        {/* Red Ball Rules & Table Mechanics */}
+        <div className="space-y-2 bg-[#102419] p-3.5 rounded-2xl border border-emerald-800/40 text-xs">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-red-400 flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded-full bg-red-600 inline-block shadow-sm" />
+            Red Ball Rules & Count Mechanics
+          </h4>
+          <ul className="list-disc pl-4 space-y-1.5 text-gray-300">
+            <li>
+              <strong>Reds Pocketed on Fouls (Never Respotted):</strong> In official snooker, if any red ball is pocketed or knocked off the table during a foul, it remains in the pocket and is <em>never</em> respotted. The app allows recording reds pocketed during a foul, or tapping the red pill on the HUD to deduct it.
+            </li>
+            <li>
+              <strong>Multiple Reds in One Stroke (WPBSA Rule 3.3a):</strong> Striker may legally pot two or more reds in the same shot. Each red scores 1 point and remains in the pocket. You can adjust the remaining red count directly via the scoreboard HUD.
+            </li>
+            <li>
+              <strong>Free Ball with Reds:</strong> If a player nominates a colour as a Free Ball when reds are on, potting it scores 1 point and the colour is <em>respotted</em>. The remaining reds on the table do <em>not</em> decrease (enabling breaks up to 155). If an actual red is potted, it is not respotted and decrements the red count.
+            </li>
+          </ul>
+        </div>
+
         {/* Fouls & Free Ball */}
         <div className="space-y-2 bg-[#102419] p-3.5 rounded-2xl border border-emerald-800/40 text-xs">
           <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-300 flex items-center gap-1.5">
