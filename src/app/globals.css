@@ -100,10 +100,9 @@
 
   /* Aramith 3D Balls */
   --ball-shadow: 
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
-    inset 0 -3.5px 6px rgba(0, 0, 0, 0.65),
-    0 4px 10px -1px rgba(0, 0, 0, 0.5),
-    0 2px 4px -1px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.08);
 
   color-scheme: light;
 }
@@ -181,10 +180,9 @@
   --scrollbar-thumb-hover: rgba(48, 209, 88, 0.4);
 
   --ball-shadow: 
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.4),
-    inset 0 -3.5px 6px rgba(0, 0, 0, 0.65),
-    0 4px 10px -1px rgba(0, 0, 0, 0.65),
-    0 2px 4px -1px rgba(0, 0, 0, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.25);
 
   color-scheme: dark;
 }
@@ -246,10 +244,9 @@
     --scrollbar-thumb-hover: rgba(48, 209, 88, 0.4);
 
     --ball-shadow: 
-      inset 0 1.5px 2px rgba(255, 255, 255, 0.4),
-      inset 0 -3.5px 6px rgba(0, 0, 0, 0.65),
-      0 4px 10px -1px rgba(0, 0, 0, 0.65),
-      0 2px 4px -1px rgba(0, 0, 0, 0.45);
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+      0 1px 3px rgba(0, 0, 0, 0.25);
 
     color-scheme: dark;
   }
@@ -517,72 +514,53 @@ body {
 
 .snooker-ball:active,
 .group:active .snooker-ball {
-  transform: scale(0.92) translateY(1px);
-  filter: brightness(1.35) drop-shadow(0 0 14px rgba(255, 255, 255, 0.6));
+  transform: scale(0.96) translateY(1px);
+  filter: brightness(1.35);
   box-shadow: 
-    inset 0 2px 4px rgba(255, 255, 255, 0.6),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.8),
-    0 2px 5px rgba(0, 0, 0, 0.8);
+    inset 0 1px 2px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.08);
 }
 
-/* Natural Curved Specular Glint Highlight */
+/* Specular Glints disabled for clean, non-glossy luxury satin finish */
 .snooker-ball-highlight {
-  position: absolute;
-  top: 10%;
-  left: 14%;
-  width: 40%;
-  height: 28%;
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.25) 45%, rgba(255, 255, 255, 0) 75%);
-  border-radius: 9999px;
-  transform: rotate(-25deg);
-  pointer-events: none;
+  display: none !important;
 }
 
-/* Secondary Ambient Rim Bounce Light */
 .snooker-ball::after {
-  content: '';
-  position: absolute;
-  bottom: 6%;
-  right: 14%;
-  width: 32%;
-  height: 18%;
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
-  border-radius: 9999px;
-  transform: rotate(20deg);
-  pointer-events: none;
+  display: none !important;
 }
 
-/* Individual Ball Color Radiance - Aramith Tournament Pigments */
+/* Individual Ball Color Radiance - Authentic Aramith Tournament Satin Finishes */
 .ball-surface-red {
-  background: radial-gradient(circle at 35% 26%, #ff4b4b 0%, #dc2626 38%, #b91c1c 70%, #7f1d1d 100%);
+  background: linear-gradient(180deg, #e11d48 0%, #dc2626 28%, #b91c1c 70%, #991b1b 100%);
 }
 
 .ball-surface-yellow {
-  background: radial-gradient(circle at 35% 26%, #fef08a 0%, #facc15 36%, #ca8a04 70%, #854d0e 100%);
+  background: linear-gradient(180deg, #fde047 0%, #facc15 28%, #eab308 70%, #ca8a04 100%);
 }
 
 .ball-surface-green {
-  background: radial-gradient(circle at 35% 26%, #86efac 0%, #16a34a 36%, #15803d 70%, #14532d 100%);
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 28%, #15803d 70%, #14532d 100%);
 }
 
 .ball-surface-brown {
-  background: radial-gradient(circle at 35% 26%, #fde68a 0%, #b45309 34%, #78350f 70%, #451a03 100%);
+  background: linear-gradient(180deg, #a16207 0%, #854d0e 28%, #713f12 70%, #451a03 100%);
 }
 
 .ball-surface-blue {
-  background: radial-gradient(circle at 35% 26%, #93c5fd 0%, #2563eb 36%, #1d4ed8 70%, #172554 100%);
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 28%, #1d4ed8 70%, #1e3a8a 100%);
 }
 
 .ball-surface-pink {
-  background: radial-gradient(circle at 35% 26%, #fbcfe8 0%, #ec4899 36%, #be185d 70%, #700733 100%);
+  background: linear-gradient(180deg, #f472b6 0%, #ec4899 28%, #db2777 70%, #9d174d 100%);
 }
 
 .ball-surface-black {
-  background: radial-gradient(circle at 35% 26%, #64748b 0%, #1e293b 36%, #0f172a 70%, #020617 100%);
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 28%, #18181b 70%, #09090b 100%);
 }
 
 .ball-surface-white {
-  background: radial-gradient(circle at 35% 26%, #ffffff 0%, #f8fafc 36%, #cbd5e1 70%, #64748b 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f4f5 28%, #e4e4e7 70%, #d4d4d8 100%);
 }
 
 /* ------------------------------------------------------------- */
