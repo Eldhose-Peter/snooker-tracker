@@ -36,7 +36,8 @@ import {
   ShieldAlert, 
   Users,
   LogOut,
-  MoreVertical
+  MoreVertical,
+  X
 } from 'lucide-react';
 
 
@@ -975,7 +976,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   }, [currentActivities]);
 
   return (
-    <div className="w-full max-w-md mx-auto px-2.5 sm:px-4 py-1 space-y-2 sm:space-y-2.5 flex-1 flex flex-col min-h-[calc(100dvh-5rem)]">
+    <div className="w-full max-w-md mx-auto px-2.5 sm:px-4 py-1 space-y-2 sm:space-y-2.5 flex-1 flex flex-col justify-between">
       
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & DISCREET TOP-RIGHT OPTIONS MENU (3-DOTS)       */}
@@ -1004,91 +1005,16 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
             </div>
           )}
 
-          {/* 3-Dots Kebab Options Menu */}
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
-              className="p-1 sm:p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm active:scale-95 min-w-[32px] min-h-[32px]"
-              title="Match Options (End Match, Concede, Free Ball)"
-              aria-label="Match Options"
-            >
-              <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-
-            {isOptionsMenuOpen && (
-              <>
-                {/* Full backdrop overlay */}
-                <div
-                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
-                  onClick={() => setIsOptionsMenuOpen(false)}
-                />
-                <div className="absolute right-0 mt-1.5 w-56 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl z-50 animate-fade-in text-xs space-y-0.5">
-                  {match.best_of > 1 && playerCount > 2 && (
-                    <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
-                      <div className="text-[9px] uppercase font-bold text-zinc-400 dark:text-zinc-500 mb-0.5">Frames Tally</div>
-                      <div className="flex flex-wrap gap-2">
-                        {resolvedPlayers.map((p, idx) => (
-                          <span key={p.id}><strong className="text-zinc-900 dark:text-white">{p.name}:</strong> <span className="text-emerald-600 dark:text-emerald-400">{playerFrames[idx] || 0}</span></span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOptionsMenuOpen(false);
-                      onToggleFreeBall();
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-                    <span>{state.freeBallActive ? 'Cancel Free Ball' : 'Nominate Free Ball'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOptionsMenuOpen(false);
-                      setPendingAdjustReds(state.redsRemaining);
-                      setIsAdjustRedsOpen(true);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
-                  >
-                    <span className="w-3.5 h-3.5 rounded-full bg-rose-600 inline-block flex-shrink-0 shadow-xs" />
-                    <span>Adjust Reds ({state.redsRemaining} left)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOptionsMenuOpen(false);
-                      onConcede();
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 font-medium transition cursor-pointer"
-                  >
-                    <Flag className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-                    <span>Concede Frame</span>
-                  </button>
-
-                  <div className="border-t border-zinc-200 dark:border-zinc-800 my-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOptionsMenuOpen(false);
-                      setIsEndMatchModalOpen(true);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 text-rose-600 dark:text-rose-400 transition cursor-pointer font-bold"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-                    <span>End Match…</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          {/* 3-Dots Match Options Button (Triggers Action Sheet Modal - Zero Overlap) */}
+          <button
+            type="button"
+            onClick={() => setIsOptionsMenuOpen(true)}
+            className="p-1 sm:p-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition flex items-center justify-center cursor-pointer shadow-sm active:scale-95 min-w-[32px] min-h-[32px]"
+            title="Match Options (End Match, Concede, Free Ball, Adjust Reds)"
+            aria-label="Match Options"
+          >
+            <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
         </div>
       </div>
 
@@ -1712,6 +1638,162 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
                 Set Reds ({pendingAdjustReds})
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* MATCH OPTIONS ACTION SHEET MODAL (ZERO OVERLAP WITH GAMEPLAY) */}
+      {/* ------------------------------------------------------------- */}
+      {isOptionsMenuOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => setIsOptionsMenuOpen(false)}
+        >
+          <div 
+            className="w-full max-w-sm bg-white dark:bg-[#111613] border-t sm:border border-zinc-200 dark:border-white/[0.1] rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-3.5 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Action Sheet Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <MoreVertical className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">Match Options</h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                    Frame {currentFrameNum} • {match.best_of === 1 ? 'Single Frame' : `Best of ${match.best_of}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOptionsMenuOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition cursor-pointer"
+                aria-label="Close Options"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Multiplayer Frames Tally */}
+            {match.best_of > 1 && playerCount > 2 && (
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.06] font-mono text-xs">
+                <div className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Frames Tally</div>
+                <div className="flex flex-wrap gap-2.5">
+                  {resolvedPlayers.map((p, idx) => (
+                    <span key={p.id}>
+                      <strong className="text-zinc-900 dark:text-white">{p.name}:</strong>{' '}
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{playerFrames[idx] || 0}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Options List */}
+            <div className="space-y-2">
+              {/* Free Ball Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOptionsMenuOpen(false);
+                  onToggleFreeBall();
+                }}
+                className="w-full h-12 px-3.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] flex items-center justify-between text-zinc-900 dark:text-white font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block leading-tight">{state.freeBallActive ? 'Cancel Free Ball' : 'Nominate Free Ball'}</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal">Awarded after opponent foul</span>
+                  </div>
+                </div>
+                {state.freeBallActive && (
+                  <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    Active
+                  </span>
+                )}
+              </button>
+
+              {/* Adjust Reds Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOptionsMenuOpen(false);
+                  setPendingAdjustReds(state.redsRemaining);
+                  setIsAdjustRedsOpen(true);
+                }}
+                className="w-full h-12 px-3.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] flex items-center justify-between text-zinc-900 dark:text-white font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500">
+                    <span className="w-3.5 h-3.5 rounded-full bg-rose-600 inline-block shadow-xs" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block leading-tight">Adjust Reds on Table</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal">Correct table count if fouls pocketed reds</span>
+                  </div>
+                </div>
+                <span className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-lg">
+                  {state.redsRemaining} Left
+                </span>
+              </button>
+
+              {/* Concede Frame Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOptionsMenuOpen(false);
+                  onConcede();
+                }}
+                className="w-full h-12 px-3.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] flex items-center justify-between text-zinc-900 dark:text-white font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <Flag className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block leading-tight">Concede Frame</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal">Concede current frame to opponents</span>
+                  </div>
+                </div>
+              </button>
+
+              <div className="border-t border-zinc-100 dark:border-white/[0.08] my-1" />
+
+              {/* End Match Early Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOptionsMenuOpen(false);
+                  setIsEndMatchModalOpen(true);
+                }}
+                className="w-full h-12 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/25 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 flex items-center justify-between text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                    <LogOut className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block leading-tight">End Match Early…</span>
+                    <span className="text-[10px] text-rose-500/80 font-normal">Abandon match and declare final result</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Cancel Button */}
+            <button
+              type="button"
+              onClick={() => setIsOptionsMenuOpen(false)}
+              className="w-full h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-200 font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] mt-2"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
