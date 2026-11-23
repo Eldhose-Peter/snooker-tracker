@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx tsx test/engine-multiplayer.test.ts"
+    "test": "npx tsx test/engine-multiplayer.test.ts",
+    "db:setup": "node scripts/setup-db.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
