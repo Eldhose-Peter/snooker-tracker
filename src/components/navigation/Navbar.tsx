@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { SnookerIcon } from './SnookerIcon';
 
 interface NavbarProps {
   activeTab: 'live' | 'leaderboard' | 'history' | 'new-match';
@@ -31,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ----------------------------------------------------------------- */}
       {/* PINNED TOP NAVIGATION HEADER (LIQUID GLASS APP BAR)              */}
       {/* ----------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-white/80 dark:bg-[#070908]/85 backdrop-blur-2xl border-b border-black/[0.06] dark:border-white/[0.08] pt-[env(safe-area-inset-top,0px)] will-change-transform transform-gpu">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-white/85 dark:bg-black/85 backdrop-blur-2xl border-b border-black/[0.06] dark:border-white/[0.08] pt-[env(safe-area-inset-top,0px)] will-change-transform transform-gpu">
         <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between gap-2">
           
           {/* Brand (SnookerTrack + Live Status) */}
@@ -42,8 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             tabIndex={0}
             aria-label="SnookerTrack Home"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-950/40 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform duration-200">
-              <span className="text-sm sm:text-base leading-none select-none">🎱</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 dark:border-emerald-400/25 flex items-center justify-center shadow-sm dark:shadow-[0_0_12px_rgba(16,185,129,0.12)] flex-shrink-0 group-hover:scale-105 group-active:scale-95 transition-all duration-200">
+              <SnookerIcon className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
             </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-sm font-bold tracking-tight text-[var(--label)] flex items-center gap-1.5 leading-none">
