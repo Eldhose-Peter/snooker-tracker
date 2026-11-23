@@ -29,42 +29,36 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* ----------------------------------------------------------------- */}
-      {/* PROGRESSIVE SCROLL-EDGE BLUR EFFECT (CONTENT FADES UNDER BARS)    */}
+      {/* PINNED TOP NAVIGATION HEADER (LIQUID GLASS APP BAR)              */}
       {/* ----------------------------------------------------------------- */}
-      <div className="scroll-edge" aria-hidden="true" />
-
-      {/* ----------------------------------------------------------------- */}
-      {/* FLOATING TOP NAVIGATION HEADER (LIQUID GLASS CAPSULE ISLAND)       */}
-      {/* ----------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full pt-[env(safe-area-inset-top,0px)] pointer-events-none">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 pointer-events-auto">
-          <div className="w-full glass rounded-full px-3.5 sm:px-5 h-11 sm:h-12 flex items-center justify-between border border-white/20 dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-            
-            {/* Brand (SnookerTrack + Live Status) */}
-            <div 
-              onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-              className="flex items-center space-x-2.5 cursor-pointer select-none group min-h-[44px]"
-              role="button"
-              tabIndex={0}
-              aria-label="SnookerTrack Home"
-            >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-950/40 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform duration-200">
-                <span className="text-sm sm:text-base leading-none select-none">🎱</span>
-              </div>
-              <div>
-                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-[var(--label)] flex items-center gap-1.5 leading-none">
-                  Snooker<span className="text-emerald-500 dark:text-emerald-400">Track</span>
-                  {hasActiveMatch && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-[9px] font-semibold flex items-center gap-1 tracking-wide">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" /> Live
-                    </span>
-                  )}
-                </h1>
-                <p className="text-[10px] text-[var(--label-3)] font-medium hidden sm:block mt-0.5 tracking-tight">
-                  Tournament Scorer & Club Leaderboard
-                </p>
-              </div>
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-white/80 dark:bg-[#070908]/85 backdrop-blur-2xl border-b border-black/[0.06] dark:border-white/[0.08] pt-[env(safe-area-inset-top,0px)] will-change-transform transform-gpu">
+        <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between gap-2">
+          
+          {/* Brand (SnookerTrack + Live Status) */}
+          <div 
+            onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
+            className="flex items-center space-x-2.5 cursor-pointer select-none group min-h-[44px] min-w-0"
+            role="button"
+            tabIndex={0}
+            aria-label="SnookerTrack Home"
+          >
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-950/40 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform duration-200">
+              <span className="text-sm sm:text-base leading-none select-none">🎱</span>
             </div>
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-sm font-bold tracking-tight text-[var(--label)] flex items-center gap-1.5 leading-none">
+                <span className="truncate">Snooker<span className="text-emerald-500 dark:text-emerald-400">Track</span></span>
+                {hasActiveMatch && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-[9px] font-semibold flex items-center gap-1 tracking-wide flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" /> Live
+                  </span>
+                )}
+              </h1>
+              <p className="text-[10px] text-[var(--label-3)] font-medium hidden sm:block mt-0.5 tracking-tight truncate">
+                Tournament Scorer & Club Leaderboard
+              </p>
+            </div>
+          </div>
 
             {/* Desktop Navigation Tabs (Styled as Apple segmented Liquid Glass pills) */}
             <nav aria-label="Desktop Navigation" className="hidden md:flex items-center space-x-1">
@@ -152,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenRules}
-                className="w-11 h-11 flex items-center justify-center text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-transform duration-200 active:scale-95 cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-transform duration-200 active:scale-95 cursor-pointer flex-shrink-0"
                 title="Snooker Rules & Guide"
                 aria-label="Snooker Rules & Guide"
               >
@@ -160,7 +154,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-          </div>
         </div>
       </header>
 
@@ -169,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ----------------------------------------------------------------- */}
       <nav 
         aria-label="Mobile Navigation"
-        className="fixed left-1/2 -translate-x-1/2 bottom-[max(16px,env(safe-area-inset-bottom,16px))] z-40 flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full glass border border-white/25 dark:border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.65)] select-none pointer-events-auto md:hidden"
+        className="fixed left-1/2 -translate-x-1/2 bottom-[max(12px,env(safe-area-inset-bottom,12px))] z-40 w-[calc(100%-20px)] max-w-sm grid grid-cols-4 gap-1 p-1 rounded-full glass border border-white/25 dark:border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.65)] select-none pointer-events-auto md:hidden"
       >
         {/* TAB 1: LIVE MATCH */}
         <button
@@ -177,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
           aria-label={hasActiveMatch ? "Live Game" : "Live"}
           aria-current={activeTab === 'live' ? 'page' : undefined}
-          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+          className={`w-full min-h-[44px] h-[46px] px-1 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
             activeTab === 'live'
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
               : 'text-[var(--label-2)] hover:text-[var(--label)]'
@@ -189,7 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
             )}
           </div>
-          <span className="text-[10px] tracking-tight font-medium mt-0.5">
+          <span className="text-[10px] tracking-tight font-medium mt-0.5 truncate max-w-full px-0.5">
             {hasActiveMatch ? 'Live Game' : 'Live'}
           </span>
         </button>
@@ -200,14 +193,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('new-match')}
           aria-label="Start Game"
           aria-current={activeTab === 'new-match' ? 'page' : undefined}
-          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+          className={`w-full min-h-[44px] h-[46px] px-1 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
             activeTab === 'new-match'
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
               : 'text-[var(--label-2)] hover:text-[var(--label)]'
           }`}
         >
           <PlusCircle className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'new-match' ? 'scale-110 text-emerald-600 dark:text-emerald-400' : 'text-[var(--label-2)]'}`} />
-          <span className="text-[10px] tracking-tight font-medium mt-0.5">Start Game</span>
+          <span className="text-[10px] tracking-tight font-medium mt-0.5 truncate max-w-full px-0.5">Start Game</span>
         </button>
 
         {/* TAB 3: LEADERBOARD */}
@@ -216,14 +209,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('leaderboard')}
           aria-label="Rankings"
           aria-current={activeTab === 'leaderboard' ? 'page' : undefined}
-          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+          className={`w-full min-h-[44px] h-[46px] px-1 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
             activeTab === 'leaderboard'
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
               : 'text-[var(--label-2)] hover:text-[var(--label)]'
           }`}
         >
           <Trophy className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'leaderboard' ? 'scale-110 text-amber-500 dark:text-amber-400' : 'text-[var(--label-2)]'}`} />
-          <span className="text-[10px] tracking-tight font-medium mt-0.5">Rankings</span>
+          <span className="text-[10px] tracking-tight font-medium mt-0.5 truncate max-w-full px-0.5">Rankings</span>
         </button>
 
         {/* TAB 4: HISTORY */}
@@ -232,14 +225,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('history')}
           aria-label="History"
           aria-current={activeTab === 'history' ? 'page' : undefined}
-          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+          className={`w-full min-h-[44px] h-[46px] px-1 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
             activeTab === 'history'
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
               : 'text-[var(--label-2)] hover:text-[var(--label)]'
           }`}
         >
           <History className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'history' ? 'scale-110 text-emerald-600 dark:text-emerald-400' : 'text-[var(--label-2)]'}`} />
-          <span className="text-[10px] tracking-tight font-medium mt-0.5">History</span>
+          <span className="text-[10px] tracking-tight font-medium mt-0.5 truncate max-w-full px-0.5">History</span>
         </button>
       </nav>
     </>

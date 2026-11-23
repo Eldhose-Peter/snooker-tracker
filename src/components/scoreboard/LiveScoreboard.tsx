@@ -969,7 +969,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   }, [currentActivities]);
 
   return (
-    <div className="w-full max-w-lg mx-auto px-2 sm:px-4 py-2 space-y-2.5 sm:space-y-3 flex-1 flex flex-col justify-between select-none">
+    <div className="w-full max-w-lg mx-auto px-2 sm:px-4 py-2 space-y-2.5 sm:space-y-3 flex-1 flex flex-col select-none pb-4">
       
       {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING LIQUID GLASS NAVIGATION BAR                     */}

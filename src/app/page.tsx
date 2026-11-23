@@ -124,7 +124,7 @@ export default function Home() {
   const hasActiveMatch = Boolean(currentMatch && matchPlayers.length >= 2);
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--bg)] text-[var(--label)] flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased relative">
+    <div className="min-h-[100dvh] bg-[var(--bg)] text-[var(--label)] flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased relative overflow-x-hidden">
       {/* Liquid Glass Navigation: Floating Top Header & Floating Bottom Tab Bar */}
       <Navbar
         activeTab={activeTab}
@@ -168,10 +168,10 @@ export default function Home() {
       )}
 
       {/* Edge-to-edge Content Container scrolling smoothly behind floating bars */}
-      <main className={`flex-1 flex flex-col w-full max-w-5xl mx-auto px-2 sm:px-4 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4.25rem+env(safe-area-inset-top,0px))] ${
+      <main className={`flex-1 flex flex-col w-full max-w-5xl mx-auto px-2 sm:px-4 pt-[calc(3.75rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4.5rem+env(safe-area-inset-top,0px))] ${
         activeTab === 'live' 
-          ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom,16px))] sm:pb-[calc(6rem+env(safe-area-inset-bottom,16px))] md:pb-8' 
-          : 'pb-[calc(5.5rem+env(safe-area-inset-bottom,16px))] sm:pb-[calc(6rem+env(safe-area-inset-bottom,16px))] md:pb-10'
+          ? 'pb-[calc(6.5rem+env(safe-area-inset-bottom,20px))] sm:pb-[calc(7rem+env(safe-area-inset-bottom,20px))] md:pb-12' 
+          : 'pb-[calc(6.5rem+env(safe-area-inset-bottom,20px))] sm:pb-[calc(7rem+env(safe-area-inset-bottom,20px))] md:pb-12'
       }`}>
         {activeTab === 'live' && hasActiveMatch && currentMatch && (
           <LiveScoreboard
