@@ -31,8 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ----------------------------------------------------------------- */}
       {/* TOP HEADER (Brand, Cloud Status, Rules Help, Desktop Nav)        */}
       {/* ----------------------------------------------------------------- */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-[#070908]/85 backdrop-blur-2xl border-b border-zinc-200/80 dark:border-white/[0.06]">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full flex-shrink-0 bg-white/90 dark:bg-[#070908]/90 backdrop-blur-2xl border-b border-zinc-200/80 dark:border-white/[0.06] pt-[env(safe-area-inset-top,0px)] will-change-transform transform-gpu">
+        <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between">
           
           {/* Brand */}
           <div 
@@ -143,6 +143,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         </div>
       </header>
+
+      {/* Non-collapsible layout placeholder to lock in rigid height and prevent scroll jump/underlap */}
+      <div 
+        className="w-full flex-shrink-0 pointer-events-none select-none h-[calc(3rem+env(safe-area-inset-top,0px))] sm:h-[calc(3.5rem+env(safe-area-inset-top,0px))]" 
+        aria-hidden="true" 
+      />
 
       {/* ----------------------------------------------------------------- */}
       {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-optimized iOS app bar)        */}

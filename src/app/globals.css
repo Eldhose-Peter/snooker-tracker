@@ -260,7 +260,7 @@ body {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 

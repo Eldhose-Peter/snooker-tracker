@@ -137,7 +137,7 @@ export default function Home() {
       {hasActiveMatch && activeTab !== 'live' && (
         <aside 
           aria-label="Active match notice"
-          className="sticky top-14 sm:top-16 z-30 max-w-5xl mx-auto w-full px-3 sm:px-4 pt-2.5"
+          className="sticky top-[calc(3rem+env(safe-area-inset-top,0px))] sm:top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 max-w-5xl mx-auto w-full px-3 sm:px-4 pt-2.5"
         >
           <div className="glass-panel p-2.5 sm:p-3 flex items-center justify-between shadow-xl border-emerald-500/40 bg-white/90 dark:bg-emerald-950/30 backdrop-blur-2xl">
             <div className="flex items-center space-x-2.5 min-w-0 pr-2">

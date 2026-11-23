@@ -981,7 +981,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       {/* ------------------------------------------------------------- */}
       {/* MATCH HEADER & DISCREET TOP-RIGHT OPTIONS MENU (3-DOTS)       */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex items-center justify-between px-3 py-1.5 glass-panel rounded-2xl text-xs gap-2 shadow-sm bg-white/70 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-white/[0.07]">
+      <div className="w-full flex-shrink-0 flex items-center justify-between px-3 py-1.5 glass-panel rounded-2xl text-xs gap-2 shadow-sm bg-white/70 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-white/[0.07]">
         <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
           <span className="font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Frame {currentFrameNum}</span>
           <span className="text-zinc-400 dark:text-zinc-600">•</span>
