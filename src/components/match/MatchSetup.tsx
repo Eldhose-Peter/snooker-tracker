@@ -33,7 +33,6 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
   // Quick Add Player Modal
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickName, setQuickName] = useState('');
-  const [quickNickname, setQuickNickname] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -113,13 +112,12 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
   const handleQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickName.trim()) return;
-    const created = await createPlayer(quickName.trim(), quickNickname.trim() || undefined);
+    const created = await createPlayer(quickName.trim());
     setQuickName('');
-    setQuickNickname('');
     setIsQuickAddOpen(false);
-    setAllPlayers(prev => [...prev, created]);
+    setAllPlayers(prev => [...prev.filter(p => p.id !== created.id), created]);
     if (selectedPlayers.length < 6) {
-      setSelectedPlayers(prev => [...prev, created]);
+      setSelectedPlayers(prev => [...prev.filter(p => p.id !== created.id), created]);
     }
   };
 
@@ -269,9 +267,6 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
 
                   <span className="text-xs sm:text-sm font-bold truncate w-full text-zinc-900 dark:text-white">
                     {p.name}
-                  </span>
-                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400/90 truncate w-full mt-0.5">
-                    {p.nickname || 'Member'}
                   </span>
                 </button>
               );
@@ -535,19 +530,6 @@ export const MatchSetup: React.FC<MatchSetupProps> = ({ onStartMatch }) => {
                   placeholder="e.g. John"
                   value={quickName}
                   onChange={(e) => setQuickName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-black/50 border border-zinc-300 dark:border-white/[0.12] text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Nickname (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Lightning"
-                  value={quickNickname}
-                  onChange={(e) => setQuickNickname(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-black/50 border border-zinc-300 dark:border-white/[0.12] text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                 />
               </div>

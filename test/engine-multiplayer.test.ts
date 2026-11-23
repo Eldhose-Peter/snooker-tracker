@@ -447,7 +447,6 @@ async function testAbandon() {
   // 18. Verify Scoring Assignment & Clean Names (No Nicknames)
   console.log('\n[18] Verifying Scoring Assignment & Clean Names...');
   const memberNamesOnly = INITIAL_PLAYERS.map(p => p.name);
-  const memberNicknames = INITIAL_PLAYERS.map(p => p.nickname).filter(Boolean) as string[];
   const testCleanState = createInitialFrameState(3, 15, memberNamesOnly);
   
   // Player at index 0 pots red
@@ -455,10 +454,6 @@ async function testAbandon() {
   assert.strictEqual(scored.playerScores[0], 1, 'Points must be awarded specifically to active player at table');
   assert.strictEqual(scored.playerScores[1], 0);
   assert.strictEqual(scored.playerScores[2], 0);
-  // Verify lastActionDescription uses player name and not nickname
-  for (const nick of memberNicknames) {
-    assert(!scored.lastActionDescription?.includes(nick), `Action description must not contain nickname '${nick}'`);
-  }
   assert(scored.lastActionDescription?.includes(memberNamesOnly[0]), `Action description must contain clean name '${memberNamesOnly[0]}'`);
   console.log('✓ Points are unambiguously marked for active player and nicknames are absent.');
 
@@ -754,7 +749,7 @@ async function testAbandon() {
   // 31. Verifying Member Addition & Retention
   console.log('\n[31] Verifying Member Addition & Persistence...');
   const { createPlayer, fetchPlayers: fetchAllPlayers } = await import('../src/lib/storage');
-  const addedPlayer = await createPlayer('Charlie', 'The Rookie');
+  const addedPlayer = await createPlayer('Charlie');
   assert.strictEqual(addedPlayer.name, 'Charlie');
   const playersWithCharlie = await fetchAllPlayers();
   assert(playersWithCharlie.some(p => p.name === 'Charlie'), 'Added member Charlie must be remembered and returned by fetchPlayers()');

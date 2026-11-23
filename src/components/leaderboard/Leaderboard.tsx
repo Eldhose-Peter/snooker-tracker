@@ -23,7 +23,6 @@ export const Leaderboard: React.FC = () => {
   // Add Player Modal State
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [newPlayerNickname, setNewPlayerNickname] = useState('');
   const [savingPlayer, setSavingPlayer] = useState(false);
 
   // Head-to-Head Modal State
@@ -85,9 +84,8 @@ export const Leaderboard: React.FC = () => {
     if (!newPlayerName.trim()) return;
 
     setSavingPlayer(true);
-    await createPlayer(newPlayerName.trim(), newPlayerNickname.trim() || undefined);
+    await createPlayer(newPlayerName.trim());
     setNewPlayerName('');
-    setNewPlayerNickname('');
     setIsAddPlayerOpen(false);
     setSavingPlayer(false);
     await loadData();
@@ -97,7 +95,7 @@ export const Leaderboard: React.FC = () => {
   const filteredEntries = entries
     .filter((e) => {
       const q = searchQuery.toLowerCase();
-      return e.name.toLowerCase().includes(q) || (e.nickname && e.nickname.toLowerCase().includes(q));
+      return e.name.toLowerCase().includes(q);
     })
     .sort((a, b) => {
       if (sortBy === 'win_rate') return b.win_rate - a.win_rate || b.matches_won - a.matches_won;
@@ -248,11 +246,6 @@ export const Leaderboard: React.FC = () => {
                     <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate">
                       {player.name}
                     </h3>
-                    {player.nickname && (
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400/90 font-medium truncate">
-                        &ldquo;{player.nickname}&rdquo;
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -339,19 +332,6 @@ export const Leaderboard: React.FC = () => {
                   placeholder="e.g. John Doe"
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/[0.08] text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/30 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Nickname (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. The Rocket, Cue Master"
-                  value={newPlayerNickname}
-                  onChange={(e) => setNewPlayerNickname(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/[0.08] text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/30 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                 />
               </div>

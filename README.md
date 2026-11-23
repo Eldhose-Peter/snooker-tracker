@@ -76,7 +76,7 @@ Restart your dev server (`npm run dev`). The status indicator in the top navbar 
 
 ## 📐 Database Schema Overview
 
-* `players`: Friend profiles (id, name, nickname, avatar_url, created_at).
+* `players`: Friend profiles (id, name, avatar_url, created_at).
 * `matches`: Match series tracking (player1_id, player2_id, best_of, status, winner_id, player1_frames, player2_frames).
 * `frames`: Frame-level scores and highest breaks (match_id, frame_number, scores, winner_id, highest_break).
 * `breaks`: High runs log for breaks ≥ 20 points.

@@ -23,42 +23,36 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: 'p1000000-0000-0000-0000-000000000001',
     name: 'Eldho',
-    nickname: 'The Captain',
     avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
   },
   {
     id: 'p2000000-0000-0000-0000-000000000002',
     name: 'Thoma',
-    nickname: 'The Tactician',
     avatar_url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 25 * 86400000).toISOString(),
   },
   {
     id: 'p3000000-0000-0000-0000-000000000003',
     name: 'Raju',
-    nickname: 'The Professor',
     avatar_url: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 20 * 86400000).toISOString(),
   },
   {
     id: 'p4000000-0000-0000-0000-000000000004',
     name: 'Adi',
-    nickname: 'The Whirlwind',
     avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 15 * 86400000).toISOString(),
   },
   {
     id: 'p5000000-0000-0000-0000-000000000005',
     name: 'BM',
-    nickname: 'The Sniper',
     avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
   },
   {
     id: 'p6000000-0000-0000-0000-000000000006',
     name: 'Sam',
-    nickname: 'The Wizard',
     avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -233,7 +227,6 @@ export async function fetchPlayers(): Promise<Player[]> {
             .insert(INITIAL_PLAYERS.map(p => ({
               id: p.id,
               name: p.name,
-              nickname: p.nickname,
               avatar_url: p.avatar_url,
             })))
             .select();
@@ -258,11 +251,10 @@ export async function fetchPlayers(): Promise<Player[]> {
   return local.length > 0 ? local : INITIAL_PLAYERS;
 }
 
-export async function createPlayer(name: string, nickname?: string, avatarUrl?: string): Promise<Player> {
+export async function createPlayer(name: string, avatarUrl?: string): Promise<Player> {
   const newPlayer: Player = {
     id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `p_${Date.now()}`,
     name,
-    nickname: nickname || null,
     avatar_url: avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
     created_at: new Date().toISOString(),
   };
@@ -274,7 +266,6 @@ export async function createPlayer(name: string, nickname?: string, avatarUrl?: 
       const { data, error } = await supabase.from('players').insert({
         id: newPlayer.id,
         name: newPlayer.name,
-        nickname: newPlayer.nickname,
         avatar_url: newPlayer.avatar_url,
       }).select().single();
 
@@ -778,7 +769,6 @@ function computeLeaderboard(players: Player[], matches: Match[], frames: Frame[]
     return {
       id: player.id,
       name: player.name,
-      nickname: player.nickname,
       avatar_url: player.avatar_url,
       matches_played: matchesPlayed,
       matches_won: matchesWon,
