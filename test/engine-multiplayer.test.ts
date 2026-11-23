@@ -755,6 +755,86 @@ async function testAbandon() {
   assert(playersWithCharlie.some(p => p.name === 'Charlie'), 'Added member Charlie must be remembered and returned by fetchPlayers()');
   console.log('✓ Member addition correctly persists and is remembered.');
 
+  // 32. Verifying Early Match Ending Telemetry Retention & Insights
+  console.log('\n[32] Verifying Early Match Ending Telemetry Retention & Insights...');
+  const earlyMatch = await saveNewMatch(['p1000000-0000-0000-0000-000000000001', 'p2000000-0000-0000-0000-000000000002'], 3, 15);
+  const earlyEvents: MatchEvent[] = [
+    {
+      id: 'evt-early-1',
+      timestamp: Date.now() - 30000,
+      frameNumber: 1,
+      type: 'pot',
+      playerIndex: 0,
+      playerId: 'p1000000-0000-0000-0000-000000000001',
+      playerName: 'Eldho',
+      ball: 'red',
+      points: 1,
+      breakScore: 1,
+      scoresAfter: [1, 0],
+      detail: 'Eldho potted Red (+1 pt)',
+    },
+    {
+      id: 'evt-early-2',
+      timestamp: Date.now() - 20000,
+      frameNumber: 1,
+      type: 'pot',
+      playerIndex: 0,
+      playerId: 'p1000000-0000-0000-0000-000000000001',
+      playerName: 'Eldho',
+      ball: 'black',
+      points: 7,
+      breakScore: 8,
+      scoresAfter: [8, 0],
+      detail: 'Eldho potted Black (+7 pts)',
+    },
+    {
+      id: 'evt-early-concede',
+      timestamp: Date.now() - 1000,
+      frameNumber: 1,
+      type: 'concede',
+      playerIndex: 1,
+      playerId: 'p2000000-0000-0000-0000-000000000002',
+      playerName: 'Thoma',
+      scoresAfter: [8, 0],
+      detail: 'Thoma conceded match in Frame 1. Eldho wins.',
+    },
+  ];
+
+  await recordFrameCompleted(
+    earlyMatch.id,
+    1,
+    [8, 0],
+    'p1000000-0000-0000-0000-000000000001',
+    8,
+    'p1000000-0000-0000-0000-000000000001',
+    earlyEvents
+  );
+  await finishMatch(earlyMatch.id, 'p1000000-0000-0000-0000-000000000001', [1, 0]);
+
+  const allMatchesAfterEarly = await fetchMatches();
+  const foundEarlyMatch = allMatchesAfterEarly.find(m => m.id === earlyMatch.id);
+  assert(foundEarlyMatch, 'Early concluded match must exist in storage');
+  assert.strictEqual(foundEarlyMatch.status, 'completed');
+  assert(foundEarlyMatch.frames && foundEarlyMatch.frames.length === 1);
+  const earlyFrame = foundEarlyMatch.frames[0];
+  assert(earlyFrame.events && earlyFrame.events.length === 3, 'Frame must contain all 3 events including concession');
+  assert.strictEqual(earlyFrame.events[2].type, 'concede');
+
+  // Verify computeFrameInsights generates valid analytics for this early concluded frame
+  const earlyInsights = computeFrameInsights(
+    earlyFrame.events,
+    [
+      { id: 'p1000000-0000-0000-0000-000000000001', name: 'Eldho' },
+      { id: 'p2000000-0000-0000-0000-000000000002', name: 'Thoma' },
+    ],
+    [8, 0]
+  );
+  assert(earlyInsights !== null, 'Insights must be successfully computed for early concluded frame');
+  assert.strictEqual(earlyInsights.totalEvents, 3);
+  assert.strictEqual(earlyInsights.scoringSources[0].pointsFromPots, 8);
+  assert.strictEqual(earlyInsights.timeline.length, 4); // init + 3 events
+  console.log('✓ Early match ending telemetry retention and visual insights verified.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');

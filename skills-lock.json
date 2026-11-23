@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "apple-design": {
+      "source": "SudewaJay/apple-design-skill",
+      "commit": "57bfab7daf8766a9a45cfc405790e749c71eda30",
+      "sourceType": "github",
+      "skillPath": "apple-design/SKILL.md",
+      "computedHash": "b2eac99e8c9de7ab21be0bf83dc06dee7fab4971f02d989cced9aea4558efbc8"
+    }
+  }
+}

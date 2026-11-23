@@ -118,7 +118,7 @@ export default function Home() {
     clearLiveSession();
     setCurrentMatch(null);
     setMatchPlayers([]);
-    handleTabChange('new-match');
+    handleTabChange('history');
   };
 
   const hasActiveMatch = Boolean(currentMatch && matchPlayers.length >= 2);

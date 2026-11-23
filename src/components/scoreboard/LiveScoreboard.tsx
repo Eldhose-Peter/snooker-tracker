@@ -850,30 +850,52 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   const handleEndMatchWithLeader = async () => {
     const finalFrames = [...playerFrames];
     const hasPointsInFrame = state.playerScores.some(s => s > 0);
+    const hasEventsInFrame = Boolean(state.events && state.events.length > 0);
 
-    if (hasPointsInFrame) {
+    if (hasPointsInFrame || hasEventsInFrame) {
       const maxScore = Math.max(...state.playerScores);
       const scoreLeaders = state.playerScores
         .map((s, idx) => (s === maxScore ? idx : -1))
         .filter(idx => idx !== -1);
 
-      if (scoreLeaders.length === 1) {
-        const frameLeaderIdx = scoreLeaders[0];
-        const frameLeader = resolvedPlayers[frameLeaderIdx] || resolvedPlayers[0];
-        const highestBreak = Math.max(...state.playerHighestBreaks);
-        const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
-        const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
-
-        finalFrames[frameLeaderIdx] = (finalFrames[frameLeaderIdx] || 0) + 1;
-        await recordFrameCompleted(
-          match.id,
-          currentFrameNum,
-          state.playerScores,
-          frameLeader.id,
-          highestBreak,
-          highBreakPlayerId
-        );
+      let frameLeaderIdx = scoreLeaders[0] ?? 0;
+      if (scoreLeaders.length !== 1) {
+        // If frame scores are tied, crown overall series frame leader or active player
+        const maxWon = Math.max(...finalFrames);
+        const wonLeaders = finalFrames.map((f, i) => (f === maxWon ? i : -1)).filter(i => i !== -1);
+        frameLeaderIdx = wonLeaders[0] ?? state.activePlayerIndex ?? 0;
       }
+
+      const frameLeader = resolvedPlayers[frameLeaderIdx] || resolvedPlayers[0];
+      const highestBreak = Math.max(...state.playerHighestBreaks);
+      const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
+      const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
+
+      finalFrames[frameLeaderIdx] = (finalFrames[frameLeaderIdx] || 0) + 1;
+
+      const endEvent: MatchEvent = {
+        id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: Date.now(),
+        frameNumber: currentFrameNum,
+        type: 'frame_end',
+        playerIndex: frameLeaderIdx,
+        playerId: frameLeader.id,
+        playerName: frameLeader.name,
+        scoresAfter: [...state.playerScores],
+        detail: `Match ended early. ${frameLeader.name} awarded frame win (${state.playerScores.join(' - ')}).`,
+      };
+
+      const frameEvents = [...(state.events || []), endEvent];
+
+      await recordFrameCompleted(
+        match.id,
+        currentFrameNum,
+        state.playerScores,
+        frameLeader.id,
+        highestBreak,
+        highBreakPlayerId,
+        frameEvents
+      );
     }
 
     const maxWonFrames = Math.max(...finalFrames);
@@ -911,13 +933,29 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     const highBreakPlayerIdx = state.playerHighestBreaks.indexOf(highestBreak);
     const highBreakPlayerId = highestBreak > 0 ? (resolvedPlayers[highBreakPlayerIdx]?.id || null) : null;
 
+    const concedingPlayer = resolvedPlayers[concedingPlayerIndex] || { name: `Player ${concedingPlayerIndex + 1}` };
+    const concedeEvent: MatchEvent = {
+      id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      frameNumber: currentFrameNum,
+      type: 'concede',
+      playerIndex: concedingPlayerIndex,
+      playerId: concedingPlayer.id,
+      playerName: concedingPlayer.name,
+      scoresAfter: [...state.playerScores],
+      detail: `${concedingPlayer.name} conceded match in Frame ${currentFrameNum}. ${overallWinner.name} wins.`,
+    };
+
+    const frameEvents = [...(state.events || []), concedeEvent];
+
     await recordFrameCompleted(
       match.id,
       currentFrameNum,
       state.playerScores,
       overallWinner.id,
       highestBreak,
-      highBreakPlayerId
+      highBreakPlayerId,
+      frameEvents
     );
 
     await finishMatch(match.id, overallWinner.id, finalFrames);
@@ -1255,135 +1293,89 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
 
       {/* ------------------------------------------------------------- */}
       {/* CONTENT LAYER: RICH BAIZE GREEN FELT CANVAS WITH RADIAL DEPTH */}
-      {/* 48x48pt Aramith 3D Balls with Authentic Shine, 44pt+ Hits     */}
+      {/* Precision 1:1 Aramith 3D Balls, Apple Liquid Glass Tray       */}
       {/* ------------------------------------------------------------- */}
-      <div className="baize-felt rounded-3xl p-3 sm:p-4 shadow-2xl relative overflow-hidden select-none">
+      <div className="baize-felt rounded-[28px] p-2.5 sm:p-3.5 shadow-2xl relative overflow-hidden select-none">
         
-        {/* Subtle table boundary hairline */}
-        <div className="absolute inset-0 rounded-3xl border border-emerald-400/20 pointer-events-none" />
+        {/* Subtle table boundary hairline & specular top reflection */}
+        <div className="absolute inset-0 rounded-[28px] border border-emerald-400/20 dark:border-white/10 pointer-events-none shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" />
+        
+        {/* Overhead Canopy Lighting Vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(52,199,89,0.12)_0%,transparent_75%)] pointer-events-none" />
 
-        {/* 4-col mobile grid, 7-col desktop grid */}
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-          
-          {/* RED BALL (1 pt) - 48x48pt+ */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('red')}
-            onClick={() => onPotBall('red')}
-            className={`col-span-2 sm:col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-red cursor-pointer transition select-none ${
-              availableBalls.includes('red')
-                ? 'opacity-100 shadow-lg shadow-red-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.red.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">1</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase tracking-wider leading-none mt-0.5">Red</span>
-          </button>
+        {/* 7-Col Balanced Universal Grid (Mobile & Desktop) */}
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 relative z-10">
+          {[
+            { ball: 'red' as BallType, name: 'Red', points: 1, surfaceClass: 'ball-surface-red', glowClass: 'shadow-red-500/40 ring-red-400/60' },
+            { ball: 'yellow' as BallType, name: 'Yellow', points: 2, surfaceClass: 'ball-surface-yellow', glowClass: 'shadow-amber-400/40 ring-amber-300/70' },
+            { ball: 'green' as BallType, name: 'Green', points: 3, surfaceClass: 'ball-surface-green', glowClass: 'shadow-emerald-500/40 ring-emerald-400/60' },
+            { ball: 'brown' as BallType, name: 'Brown', points: 4, surfaceClass: 'ball-surface-brown', glowClass: 'shadow-amber-700/40 ring-amber-500/60' },
+            { ball: 'blue' as BallType, name: 'Blue', points: 5, surfaceClass: 'ball-surface-blue', glowClass: 'shadow-blue-500/40 ring-blue-400/60' },
+            { ball: 'pink' as BallType, name: 'Pink', points: 6, surfaceClass: 'ball-surface-pink', glowClass: 'shadow-pink-500/40 ring-pink-400/60' },
+            { ball: 'black' as BallType, name: 'Black', points: 7, surfaceClass: 'ball-surface-black', glowClass: 'shadow-black/80 ring-white/40' },
+          ].map((item) => {
+            const isAvailable = availableBalls.includes(item.ball);
+            const isYellow = item.ball === 'yellow';
+            const isRed = item.ball === 'red';
 
-          {/* YELLOW (2 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('yellow')}
-            onClick={() => onPotBall('yellow')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-yellow cursor-pointer transition select-none ${
-              availableBalls.includes('yellow')
-                ? 'opacity-100 shadow-lg shadow-yellow-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.yellow.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-black drop-shadow leading-none">2</span>
-            <span className="text-[10px] sm:text-xs font-bold text-black/85 uppercase leading-none mt-0.5">Yel</span>
-          </button>
+            return (
+              <button
+                key={item.ball}
+                type="button"
+                disabled={!isAvailable}
+                onClick={() => onPotBall(item.ball)}
+                aria-label={`Pot ${item.name} ball, ${item.points} ${item.points === 1 ? 'point' : 'points'}`}
+                className={`group relative flex flex-col items-center justify-between py-1.5 px-0.5 sm:py-2 sm:px-1 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.28,0.11,0.32,1)] select-none ${
+                  isAvailable
+                    ? 'cursor-pointer hover:bg-white/[0.06] active:scale-95'
+                    : 'opacity-25 grayscale-[65%] scale-[0.96] cursor-not-allowed pointer-events-none'
+                }`}
+              >
+                {/* 1:1 Spherical Aramith Ball */}
+                <div
+                  className={`relative aspect-square w-full max-w-[44px] sm:max-w-[54px] md:max-w-[60px] rounded-full flex items-center justify-center snooker-ball ${item.surfaceClass} transition-all duration-200 ease-[cubic-bezier(0.28,0.11,0.32,1)] ${
+                    isAvailable
+                      ? `shadow-lg ${item.glowClass} ring-1 ring-white/35 group-hover:scale-105 group-hover:shadow-xl`
+                      : 'ring-1 ring-white/10'
+                  }`}
+                  style={{ backgroundColor: BALL_CONFIGS[item.ball].colorHex }}
+                >
+                  {/* Curving Specular Glint Highlight */}
+                  <div className="snooker-ball-highlight" />
 
-          {/* GREEN (3 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('green')}
-            onClick={() => onPotBall('green')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-green cursor-pointer transition select-none ${
-              availableBalls.includes('green')
-                ? 'opacity-100 shadow-lg shadow-green-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.green.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">3</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Grn</span>
-          </button>
+                  {/* Centered Large Point Numeral */}
+                  <span
+                    className={`text-base sm:text-xl font-bold sm:font-black tabular-nums leading-none drop-shadow-sm select-none ${
+                      isYellow ? 'text-black font-black' : 'text-white'
+                    }`}
+                  >
+                    {item.points}
+                  </span>
 
-          {/* BROWN (4 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('brown')}
-            onClick={() => onPotBall('brown')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-brown cursor-pointer transition select-none ${
-              availableBalls.includes('brown')
-                ? 'opacity-100 shadow-lg shadow-amber-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.brown.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">4</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Brn</span>
-          </button>
+                  {/* Remaining Reds Count Micro-Badge */}
+                  {isRed && state.redsRemaining > 0 && (
+                    <span
+                      title={`${state.redsRemaining} reds remaining`}
+                      className="absolute -top-1 -right-1 bg-black/80 backdrop-blur-md text-white font-mono font-bold text-[8px] sm:text-[9px] px-1 py-0.5 rounded-full border border-white/20 shadow-xs leading-none"
+                    >
+                      {state.redsRemaining}
+                    </span>
+                  )}
+                </div>
 
-          {/* BLUE (5 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('blue')}
-            onClick={() => onPotBall('blue')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-blue cursor-pointer transition select-none ${
-              availableBalls.includes('blue')
-                ? 'opacity-100 shadow-lg shadow-blue-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.blue.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">5</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Blu</span>
-          </button>
-
-          {/* PINK (6 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('pink')}
-            onClick={() => onPotBall('pink')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-pink cursor-pointer transition select-none ${
-              availableBalls.includes('pink')
-                ? 'opacity-100 shadow-lg shadow-pink-950/60 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.pink.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">6</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Pnk</span>
-          </button>
-
-          {/* BLACK (7 pts) */}
-          <button
-            type="button"
-            disabled={!availableBalls.includes('black')}
-            onClick={() => onPotBall('black')}
-            className={`col-span-1 h-14 sm:h-16 rounded-2xl flex flex-col items-center justify-center snooker-ball ball-surface-black cursor-pointer transition select-none border border-white/20 ${
-              availableBalls.includes('black')
-                ? 'opacity-100 shadow-lg shadow-black/80 ring-1 ring-white/30 hover:scale-102 active:scale-90 active:brightness-135'
-                : 'opacity-20 grayscale cursor-not-allowed pointer-events-none'
-            }`}
-            style={{ backgroundColor: BALL_CONFIGS.black.colorHex }}
-          >
-            <div className="snooker-ball-highlight" />
-            <span className="text-xl sm:text-2xl font-black text-white drop-shadow leading-none">7</span>
-            <span className="text-[10px] sm:text-xs font-bold text-white/95 uppercase leading-none mt-0.5">Blk</span>
-          </button>
-
+                {/* Apple Typography Full Ball Name Label */}
+                <span
+                  className={`mt-1 sm:mt-1.5 text-[9px] sm:text-[11px] md:text-xs font-semibold tracking-tight transition-colors truncate max-w-full text-center ${
+                    isAvailable
+                      ? 'text-zinc-200 dark:text-zinc-300 group-hover:text-white'
+                      : 'text-zinc-500/70 dark:text-zinc-500/70'
+                  }`}
+                >
+                  {item.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
