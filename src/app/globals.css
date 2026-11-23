@@ -471,13 +471,13 @@ body {
 /* ------------------------------------------------------------- */
 /* GROUPED LIST (SETTINGS STYLE)                                 */
 /* ------------------------------------------------------------- */
-.group {
+.apple-grouped-list {
   background: var(--bg-grouped-cell);
   border-radius: 14px;
   margin: 0 16px;
   overflow: hidden;
 }
-.row {
+.apple-grouped-row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -486,15 +486,15 @@ body {
   font-size: 17px;
   transition: background-color 0.15s var(--ease-apple);
 }
-.row + .row {
+.apple-grouped-row + .apple-grouped-row {
   border-top: 0.5px solid var(--separator);
   margin-left: 16px;
   padding-left: 0;
 }
-.row:active {
+.apple-grouped-row:active {
   background: rgba(0, 0, 0, 0.05);
 }
-.dark .row:active {
+.dark .apple-grouped-row:active {
   background: rgba(255, 255, 255, 0.05);
 }
 

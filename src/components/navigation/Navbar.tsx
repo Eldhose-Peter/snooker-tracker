@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Brand (SnookerTrack + Live Status) */}
           <div 
             onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-            className="flex items-center space-x-2.5 cursor-pointer select-none group min-h-[44px] min-w-0"
+            className="flex items-center space-x-2.5 cursor-pointer select-none group min-h-[44px] min-w-0 bg-transparent"
             role="button"
             tabIndex={0}
             aria-label="SnookerTrack Home"
