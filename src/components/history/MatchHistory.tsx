@@ -57,18 +57,20 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 space-y-6">
+    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-4 space-y-4 sm:space-y-6">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <History className="w-6 h-6 text-emerald-400" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <History className="w-4 h-4 text-emerald-400" />
+            </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               Match History
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-emerald-400/80 mt-0.5">
+          <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
             Log of completed matches, series results, and multiplayer frame breakdowns
           </p>
         </div>
@@ -76,11 +78,14 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
 
       {/* Live Match in Progress Banner */}
       {liveSession && (
-        <div className="bg-gradient-to-r from-emerald-950/80 via-[#0c1913] to-emerald-950/80 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-emerald-950/50">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg border-emerald-500/40 bg-emerald-950/30 backdrop-blur-2xl">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs uppercase font-black tracking-wider text-emerald-400">
+              <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+              <span className="text-xs uppercase font-bold tracking-wider text-emerald-400">
                 Live Match Currently In Progress
               </span>
             </div>
@@ -89,12 +94,12 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                 <React.Fragment key={p.id}>
                   <span>{p.name}</span>
                   {idx < liveSession.players.length - 1 && (
-                    <span className="text-gray-500 text-xs font-bold">vs</span>
+                    <span className="text-zinc-500 text-xs font-bold">vs</span>
                   )}
                 </React.Fragment>
               ))}
             </div>
-            <div className="text-xs text-gray-400 font-mono">
+            <div className="text-xs text-zinc-400 font-mono tabular-nums">
               Frame {liveSession.currentFrameNum} • Series: {liveSession.playerFrames.join(' - ')} • Active: {liveSession.players[liveSession.frameState?.activePlayerIndex]?.name || 'Player'}
             </div>
           </div>
@@ -108,9 +113,9 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                 window.location.reload();
               }
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 flex-shrink-0 cursor-pointer"
+            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black font-bold text-xs rounded-xl transition active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/60 flex-shrink-0 cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
+            <Play className="w-3.5 h-3.5 fill-black" />
             <span>Resume Scoring</span>
           </button>
         </div>
@@ -121,13 +126,13 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
           Loading match records...
         </div>
       ) : matches.length === 0 ? (
-        <div className="text-center py-12 px-4 bg-[#0c1611] rounded-2xl border border-emerald-900/30 text-gray-400 space-y-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-600/40 flex items-center justify-center mx-auto text-emerald-400">
+        <div className="text-center py-12 px-4 glass-panel rounded-2xl border border-white/[0.06] text-zinc-400 space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-emerald-400">
             <History className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
-            <p className="text-sm sm:text-base font-bold text-gray-200">No completed matches recorded yet</p>
-            <p className="text-xs text-gray-400 max-w-md mx-auto">
+            <p className="text-sm sm:text-base font-bold text-zinc-200">No completed matches recorded yet</p>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">
               Your match records are currently empty. Start a new match to record scores and track visual insights!
             </p>
           </div>
@@ -141,9 +146,9 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                   window.location.reload();
                 }
               }}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer"
+              className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black rounded-xl text-xs font-bold transition active:scale-[0.98] flex items-center gap-2 shadow-md shadow-emerald-950/60 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-current" />
+              <Play className="w-4 h-4 fill-black" />
               <span>Start New Match</span>
             </button>
           </div>
@@ -180,7 +185,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
             return (
               <div
                 key={m.id}
-                className="bg-[#0d1712] border border-emerald-900/40 rounded-2xl overflow-hidden transition-all hover:border-emerald-700/50"
+                className="glass-panel border border-white/[0.06] hover:border-emerald-500/25 rounded-2xl overflow-hidden transition-all bg-[#0c140f]/75"
               >
                 {/* Main Match Summary Row */}
                 <div
@@ -268,9 +273,9 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
 
                 {/* Expanded Frame-by-Frame Breakdown & Visual Telemetry */}
                 {isExpanded && (
-                  <div className="bg-[#09110d] px-4 py-4 border-t border-emerald-950/80 space-y-4">
+                  <div className="bg-[#070d0a]/90 px-3.5 sm:px-5 py-4 border-t border-white/[0.06] space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="text-xs uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1.5">
+                      <div className="text-xs uppercase font-bold text-zinc-400 tracking-wider flex items-center gap-1.5">
                         <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
                         <span>Frame Breakdown & Visual Insights</span>
                       </div>
@@ -287,10 +292,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                                   e.stopPropagation();
                                   setSelectedFrameByMatch(prev => ({ ...prev, [m.id]: f.id }));
                                 }}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                                className={`px-2.5 py-1 rounded-lg text-xs font-mono tabular-nums font-bold transition-all active:scale-[0.98] ${
                                   isSelected
-                                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
-                                    : 'bg-gray-900/80 text-gray-400 hover:text-white border border-gray-800'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
+                                    : 'bg-black/30 text-zinc-400 hover:text-white border border-white/[0.06]'
                                 }`}
                               >
                                 Frame {f.frame_number}
@@ -302,7 +307,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                     </div>
 
                     {frames.length === 0 ? (
-                      <p className="text-xs text-gray-500 italic py-2">
+                      <p className="text-xs text-zinc-500 italic py-2">
                         Individual frame shot details were not archived for this match.
                       </p>
                     ) : (
@@ -322,13 +327,13 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                                   e.stopPropagation();
                                   setSelectedFrameByMatch(prev => ({ ...prev, [m.id]: f.id }));
                                 }}
-                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl border text-xs font-mono gap-2 cursor-pointer transition-all ${
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-xl border text-xs font-mono tabular-nums gap-2 cursor-pointer transition-all ${
                                   isSelected
-                                    ? 'bg-emerald-950/40 border-emerald-600/60 ring-1 ring-emerald-500/40'
-                                    : 'bg-gray-900/50 border-gray-800/80 hover:border-gray-700'
+                                    ? 'glass-panel bg-emerald-950/20 border-emerald-500/40 ring-1 ring-emerald-500/30'
+                                    : 'glass-panel bg-black/20 border-white/[0.04] hover:border-white/[0.1]'
                                 }`}
                               >
-                                <span className={`font-semibold ${isSelected ? 'text-emerald-300 font-bold' : 'text-gray-400'}`}>
+                                <span className={`font-semibold ${isSelected ? 'text-emerald-300 font-bold' : 'text-zinc-400'}`}>
                                   Frame {f.frame_number} {f.events && f.events.length > 0 ? `(${f.events.length} events)` : ''}
                                 </span>
 
@@ -339,10 +344,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                                     return (
                                       <span 
                                         key={p.id} 
-                                        className={isWinner ? 'text-emerald-400 font-black' : 'text-gray-300'}
+                                        className={isWinner ? 'text-emerald-400 font-black' : 'text-zinc-300'}
                                       >
                                         {p.name}: {score}
-                                        {idx < matchPlayers.length - 1 && <span className="text-gray-600 ml-2">|</span>}
+                                        {idx < matchPlayers.length - 1 && <span className="text-zinc-600 ml-2">|</span>}
                                       </span>
                                     );
                                   })}
@@ -355,10 +360,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                                       Break {f.highest_break}
                                     </span>
                                   ) : (
-                                    <span className="text-gray-600">-</span>
+                                    <span className="text-zinc-600">-</span>
                                   )}
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
-                                    isSelected ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400'
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md uppercase font-bold ${
+                                    isSelected ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.04] text-zinc-400 border border-white/[0.06]'
                                   }`}>
                                     {isSelected ? 'Viewing' : 'Inspect'}
                                   </span>

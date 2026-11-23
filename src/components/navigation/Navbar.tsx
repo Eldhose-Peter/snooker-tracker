@@ -31,44 +31,44 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ----------------------------------------------------------------- */}
       {/* TOP HEADER (Brand, Cloud Status, Rules Help, Desktop Nav)        */}
       {/* ----------------------------------------------------------------- */}
-      <header className="sticky top-0 z-40 bg-[#080d0a]/95 backdrop-blur-md border-b border-emerald-900/40">
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 h-11 sm:h-14 md:h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-[#070908]/85 backdrop-blur-2xl border-b border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between">
           
           {/* Brand */}
           <div 
             onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-            className="flex items-center space-x-2 sm:space-x-2.5 cursor-pointer select-none"
+            className="flex items-center space-x-2.5 cursor-pointer select-none group"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-900/50 border border-emerald-400/30 flex-shrink-0">
-              <span className="text-base sm:text-lg md:text-xl">🎱</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-700 via-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-950/60 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform">
+              <span className="text-base leading-none">🎱</span>
             </div>
             <div>
-              <h1 className="text-xs sm:text-sm md:text-base font-black tracking-tight text-white flex items-center gap-1.5">
+              <h1 className="text-sm sm:text-base font-extrabold tracking-tight text-white flex items-center gap-1.5 leading-none">
                 Snooker<span className="text-emerald-400">Track</span>
                 {hasActiveMatch && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-[9px] sm:text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" /> Live
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-bold flex items-center gap-1 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" /> Live
                   </span>
                 )}
               </h1>
-              <p className="text-[10px] text-emerald-400/70 -mt-0.5 font-medium hidden sm:block">
-                Group Rankings & Live Scorer
+              <p className="text-[10px] text-zinc-400/80 font-medium hidden sm:block mt-0.5">
+                Tournament Scorer & Club Leaderboard
               </p>
             </div>
           </div>
 
           {/* Desktop Navigation Tabs (Hidden on mobile, mobile uses bottom bar) */}
-          <nav className="hidden md:flex items-center space-x-1.5">
+          <nav className="hidden md:flex items-center space-x-1">
             {hasActiveMatch && (
               <button
                 onClick={() => setActiveTab('live')}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'live'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50'
-                    : 'text-gray-300 hover:text-white hover:bg-emerald-950/40'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/60'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-0.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
                 <PlayCircle className="w-4 h-4" />
                 <span>Live Frame</span>
               </button>
@@ -76,22 +76,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setActiveTab('new-match')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'new-match'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-900/60'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/60'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
               }`}
             >
-              <PlusCircle className="w-4 h-4 text-emerald-400" />
+              <PlusCircle className="w-4 h-4" />
               <span>Start Match</span>
             </button>
 
             <button
               onClick={() => setActiveTab('leaderboard')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'leaderboard'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50'
-                  : 'text-gray-300 hover:text-white hover:bg-emerald-950/40'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/60'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
               }`}
             >
               <Trophy className="w-4 h-4 text-amber-400" />
@@ -100,10 +100,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'history'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50'
-                  : 'text-gray-300 hover:text-white hover:bg-emerald-950/40'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/60'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
               }`}
             >
               <History className="w-4 h-4" />
@@ -112,32 +112,32 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Right Tools: Supabase Status & Rules Help */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <div className="flex items-center space-x-1.5">
             {/* Cloud Status */}
             <div 
-              title={isSupabaseConfigured ? 'Connected to Supabase Cloud Database' : 'Running in Offline / LocalStorage mode'}
-              className={`flex items-center space-x-1 px-2 py-1 rounded-full text-[10px] sm:text-[11px] font-medium border ${
+              title={isSupabaseConfigured ? 'Connected to Supabase Cloud' : 'Running in Offline mode'}
+              className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 isSupabaseConfigured
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/40'
-                  : 'bg-amber-950/80 text-amber-300 border-amber-600/40'
+                  ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20'
+                  : 'bg-zinc-900/60 text-zinc-400 border-white/[0.06]'
               }`}
             >
               <Database className="w-3 h-3" />
-              <span className="hidden sm:inline">{isSupabaseConfigured ? 'Supabase' : 'Offline Mode'}</span>
+              <span className="hidden sm:inline">{isSupabaseConfigured ? 'Cloud' : 'Offline'}</span>
               {isSupabaseConfigured ? (
                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
               ) : (
-                <AlertCircle className="w-3 h-3 text-amber-400" />
+                <AlertCircle className="w-3 h-3 text-zinc-400" />
               )}
             </div>
 
             <button
               onClick={onOpenRules}
-              className="p-1.5 sm:p-2 text-gray-400 hover:text-white hover:bg-emerald-950/40 rounded-xl transition cursor-pointer"
-              title="Snooker Rules & Math Guide"
-              aria-label="Snooker Rules"
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/[0.06] rounded-xl transition cursor-pointer active:scale-95"
+              title="Snooker Rules & Guide"
+              aria-label="Snooker Rules & Guide"
             >
-              <HelpCircle className="w-5 h-5 text-emerald-400" />
+              <HelpCircle className="w-4 h-4 text-emerald-400/90" />
             </button>
           </div>
 
@@ -145,32 +145,35 @@ export const Navbar: React.FC<NavbarProps> = ({
       </header>
 
       {/* ----------------------------------------------------------------- */}
-      {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly iOS/Android app bar) */}
+      {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-optimized iOS app bar)        */}
       {/* ----------------------------------------------------------------- */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#080d0a]/95 backdrop-blur-xl border-t border-emerald-900/60 md:hidden pb-safe shadow-2xl">
-        <div className="grid grid-cols-4 h-16 max-w-lg mx-auto px-2">
+      <nav 
+        aria-label="Mobile Navigation"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-[#070908]/90 backdrop-blur-2xl border-t border-white/[0.07] md:hidden pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+      >
+        <div className="grid grid-cols-4 h-14 max-w-md mx-auto px-2">
           
           {/* TAB 1: LIVE MATCH */}
           <button
             type="button"
             onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-            className={`flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
               activeTab === 'live'
                 ? 'text-emerald-400 font-bold'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <div className="relative">
-              <PlayCircle className={`w-5 h-5 ${activeTab === 'live' ? 'text-emerald-400' : 'text-gray-400'}`} />
+              <PlayCircle className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'live' ? 'text-emerald-400 scale-105' : 'text-zinc-400'}`} />
               {hasActiveMatch && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               )}
             </div>
-            <span className="text-[10px] tracking-tight">
+            <span className="text-[10px] tracking-tight font-medium">
               {hasActiveMatch ? 'Live Game' : 'Live'}
             </span>
             {activeTab === 'live' && (
-              <span className="absolute bottom-0 w-8 h-0.5 bg-emerald-400 rounded-full" />
+              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-400 rounded-full" />
             )}
           </button>
 
@@ -178,16 +181,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('new-match')}
-            className={`flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
               activeTab === 'new-match'
                 ? 'text-emerald-400 font-bold'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <PlusCircle className={`w-5 h-5 ${activeTab === 'new-match' ? 'text-emerald-400' : 'text-gray-400'}`} />
-            <span className="text-[10px] tracking-tight">Start Game</span>
+            <PlusCircle className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'new-match' ? 'text-emerald-400 scale-105' : 'text-zinc-400'}`} />
+            <span className="text-[10px] tracking-tight font-medium">Start Game</span>
             {activeTab === 'new-match' && (
-              <span className="absolute bottom-0 w-8 h-0.5 bg-emerald-400 rounded-full" />
+              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-400 rounded-full" />
             )}
           </button>
 
@@ -195,16 +198,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('leaderboard')}
-            className={`flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
               activeTab === 'leaderboard'
                 ? 'text-emerald-400 font-bold'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Trophy className={`w-5 h-5 ${activeTab === 'leaderboard' ? 'text-amber-400' : 'text-gray-400'}`} />
-            <span className="text-[10px] tracking-tight">Rankings</span>
+            <Trophy className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'leaderboard' ? 'text-amber-400 scale-105' : 'text-zinc-400'}`} />
+            <span className="text-[10px] tracking-tight font-medium">Rankings</span>
             {activeTab === 'leaderboard' && (
-              <span className="absolute bottom-0 w-8 h-0.5 bg-emerald-400 rounded-full" />
+              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-400 rounded-full" />
             )}
           </button>
 
@@ -212,16 +215,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className={`flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer relative ${
+            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
               activeTab === 'history'
                 ? 'text-emerald-400 font-bold'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <History className={`w-5 h-5 ${activeTab === 'history' ? 'text-emerald-400' : 'text-gray-400'}`} />
-            <span className="text-[10px] tracking-tight">History</span>
+            <History className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'history' ? 'text-emerald-400 scale-105' : 'text-zinc-400'}`} />
+            <span className="text-[10px] tracking-tight font-medium">History</span>
             {activeTab === 'history' && (
-              <span className="absolute bottom-0 w-8 h-0.5 bg-emerald-400 rounded-full" />
+              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-400 rounded-full" />
             )}
           </button>
 
@@ -230,4 +233,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </>
   );
 };
-

@@ -40,10 +40,10 @@ export const FoulModal: React.FC<FoulModalProps> = ({
   const isMultiplayer = players.length > 2;
 
   const foulOptions = [
-    { points: 4, label: 'Red / Yellow / Green / Brown / General', color: 'bg-emerald-700' },
-    { points: 5, label: 'Blue Ball Involved', color: 'bg-blue-600' },
-    { points: 6, label: 'Pink Ball Involved', color: 'bg-pink-600' },
-    { points: 7, label: 'Black Ball Involved', color: 'bg-slate-900 border border-slate-700' },
+    { points: 4, label: 'Red / Colors 2-4 / General', color: 'bg-emerald-500' },
+    { points: 5, label: 'Blue Ball Involved', color: 'bg-blue-500' },
+    { points: 6, label: 'Pink Ball Involved', color: 'bg-pink-500' },
+    { points: 7, label: 'Black Ball Involved', color: 'bg-zinc-800 border border-white/20' },
   ];
 
   const handleApply = () => {
@@ -57,25 +57,27 @@ export const FoulModal: React.FC<FoulModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#0f1712] border border-red-500/40 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="glass-panel rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 border-white/10">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
           <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-full bg-red-950/80 border border-red-500/50 flex items-center justify-center text-red-400">
+            <div className="w-9 h-9 rounded-2xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center text-rose-400">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Record Foul Penalty</h3>
-              <p className="text-xs text-red-400 font-semibold">
+              <h3 className="text-base sm:text-lg font-bold text-white">Record Foul Penalty</h3>
+              <p className="text-xs text-rose-400 font-medium">
                 Foul committed by {fouledPlayer.name}
               </p>
             </div>
           </div>
           <button 
+            type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 rounded-lg"
+            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.08] transition cursor-pointer"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -83,7 +85,7 @@ export const FoulModal: React.FC<FoulModalProps> = ({
 
         {/* Penalty Points Selector */}
         <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider font-semibold text-gray-400">
+          <label className="text-xs uppercase tracking-wider font-semibold text-zinc-400">
             Penalty Points
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -92,18 +94,18 @@ export const FoulModal: React.FC<FoulModalProps> = ({
                 key={opt.points}
                 type="button"
                 onClick={() => setSelectedPoints(opt.points)}
-                className={`p-2.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                className={`p-3 rounded-2xl border flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95 ${
                   selectedPoints === opt.points
-                    ? 'border-red-500 bg-red-950/60 shadow-md shadow-red-950/50 text-white'
-                    : 'border-gray-800 bg-gray-900/60 hover:bg-gray-800/80 text-gray-300'
+                    ? 'border-rose-500/60 bg-rose-950/50 shadow-lg shadow-rose-950/40 text-white'
+                    : 'border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300'
                 }`}
               >
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`w-3.5 h-3.5 rounded-full ${opt.color}`} />
-                  <span className="text-xl font-black">{opt.points}</span>
-                  <span className="text-xs text-gray-400">pts</span>
+                  <span className={`w-3.5 h-3.5 rounded-full ${opt.color} shadow-sm`} />
+                  <span className="text-xl font-black font-mono">{opt.points}</span>
+                  <span className="text-xs text-zinc-400 font-semibold">pts</span>
                 </div>
-                <span className="text-[10px] text-gray-400 text-center leading-tight">
+                <span className="text-[10px] text-zinc-400 text-center leading-tight">
                   {opt.label}
                 </span>
               </button>
@@ -122,14 +124,14 @@ export const FoulModal: React.FC<FoulModalProps> = ({
               <button
                 type="button"
                 onClick={() => setTargetRecipient('all_opponents')}
-                className={`p-2 rounded-xl border text-xs text-left transition ${
+                className={`p-2.5 rounded-2xl border text-xs text-left transition cursor-pointer ${
                   targetRecipient === 'all_opponents'
-                    ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300 font-bold'
-                    : 'border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-700'
+                    ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300 font-bold'
+                    : 'border-white/[0.08] bg-white/[0.03] text-zinc-400 hover:border-white/20'
                 }`}
               >
                 <span className="block font-bold">All Other Players</span>
-                <span className="text-[10px] text-gray-500 block">+{selectedPoints} pts to each</span>
+                <span className="text-[10px] text-zinc-500 block">+{selectedPoints} pts to each</span>
               </button>
 
               {players.map((p, idx) => {
@@ -141,16 +143,16 @@ export const FoulModal: React.FC<FoulModalProps> = ({
                     key={p.id}
                     type="button"
                     onClick={() => setTargetRecipient(idx)}
-                    className={`p-2 rounded-xl border text-xs text-left transition ${
+                    className={`p-2.5 rounded-2xl border text-xs text-left transition cursor-pointer ${
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300 font-bold'
-                        : 'border-gray-800 bg-gray-900/60 text-gray-400 hover:border-gray-700'
+                        ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-300 font-bold'
+                        : 'border-white/[0.08] bg-white/[0.03] text-zinc-400 hover:border-white/20'
                     }`}
                   >
                     <span className="block font-bold truncate">
                       {p.name} {isNext ? '(Next Turn)' : ''}
                     </span>
-                    <span className="text-[10px] text-gray-500 block">+{selectedPoints} pts only</span>
+                    <span className="text-[10px] text-zinc-500 block">+{selectedPoints} pts only</span>
                   </button>
                 );
               })}
@@ -159,15 +161,15 @@ export const FoulModal: React.FC<FoulModalProps> = ({
         )}
 
         {/* Tactical Options */}
-        <div className="space-y-2 pt-1 border-t border-gray-800/80">
+        <div className="space-y-2 pt-1 border-t border-white/[0.08]">
           {/* Red pocketed during foul option */}
           {redsRemaining > 0 && (
-            <div className="p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 space-y-1.5">
+            <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-1.5">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs sm:text-sm font-semibold text-white block">Reds Pocketed on Foul</span>
-                  <span className="text-[11px] text-gray-400 leading-tight block">
-                    In snooker, reds pocketed on fouls are not respotted.
+                  <span className="text-[11px] text-zinc-400 leading-tight block">
+                    Reds pocketed on fouls are not respotted.
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -177,10 +179,10 @@ export const FoulModal: React.FC<FoulModalProps> = ({
                       type="button"
                       disabled={cnt > redsRemaining}
                       onClick={() => setRedsPocketed(cnt)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
                         redsPocketed === cnt
-                          ? 'bg-red-600 text-white shadow'
-                          : 'bg-gray-800 text-gray-400 hover:text-white'
+                          ? 'bg-rose-600 text-white shadow-md'
+                          : 'bg-white/[0.06] text-zinc-400 hover:text-white'
                       }`}
                     >
                       {cnt === 0 ? '0' : `${cnt} Red${cnt > 1 ? 's' : ''}`}
@@ -192,32 +194,32 @@ export const FoulModal: React.FC<FoulModalProps> = ({
           )}
 
           {/* Free Ball Option */}
-          <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
+          <label className="flex items-start space-x-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] cursor-pointer hover:bg-white/[0.06] transition">
             <input
               type="checkbox"
               checked={isFreeBall}
               onChange={(e) => setIsFreeBall(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-gray-700 text-emerald-600 focus:ring-emerald-500 bg-gray-800"
+              className="mt-0.5 h-4 w-4 rounded border-white/20 text-emerald-500 focus:ring-emerald-500 bg-black/40"
             />
             <div className="flex-1">
               <span className="text-xs sm:text-sm font-semibold text-white block">Award Free Ball</span>
-              <span className="text-[11px] text-gray-400 leading-tight block">
+              <span className="text-[11px] text-zinc-400 leading-tight block">
                 Incoming player is snookered on all balls on. Any color can be nominated as ball on.
               </span>
             </div>
           </label>
 
           {/* Pass shot back option */}
-          <label className="flex items-start space-x-2.5 p-2.5 rounded-xl bg-gray-900/60 border border-gray-800 cursor-pointer hover:border-gray-700 transition">
+          <label className="flex items-start space-x-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] cursor-pointer hover:bg-white/[0.06] transition">
             <input
               type="checkbox"
               checked={passBack}
               onChange={(e) => setPassBack(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-gray-700 text-emerald-600 focus:ring-emerald-500 bg-gray-800"
+              className="mt-0.5 h-4 w-4 rounded border-white/20 text-emerald-500 focus:ring-emerald-500 bg-black/40"
             />
             <div className="flex-1">
               <span className="text-xs sm:text-sm font-semibold text-white block">Pass Turn Back</span>
-              <span className="text-[11px] text-gray-400 leading-tight block">
+              <span className="text-[11px] text-zinc-400 leading-tight block">
                 Incoming player elects to make {fouledPlayer.name} shoot again from current position.
               </span>
             </div>
@@ -229,14 +231,14 @@ export const FoulModal: React.FC<FoulModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 px-4 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 text-sm font-semibold transition"
+            className="flex-1 py-2.5 px-4 rounded-2xl border border-white/[0.1] text-zinc-300 hover:bg-white/[0.06] text-xs sm:text-sm font-semibold transition cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow-lg shadow-red-900/40 transition flex items-center justify-center space-x-1.5"
+            className="flex-1 py-2.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-950/60 transition flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
           >
             <Check className="w-4 h-4" />
             <span>Apply Foul (+{selectedPoints})</span>
