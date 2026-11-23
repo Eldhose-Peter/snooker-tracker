@@ -91,8 +91,6 @@ function setLocal<T>(key: string, value: T): void {
 // Ensure roster is initialized and actual played matches are restored and preserved
 function ensureLocalSeed(): void {
   if (typeof window === 'undefined') return;
-  // When Supabase is configured, Supabase is the primary store (do not seed mock matches into localStorage)
-  if (isSupabaseConfigured) return;
 
   // Clear any legacy cleared flags that may prevent actual match restoration
   try {
@@ -104,13 +102,12 @@ function ensureLocalSeed(): void {
 
   // 1. Decoupled Player Seeding (never touches matches or frames)
   const existingPlayers = getLocal<Player[]>(PLAYERS_KEY, []);
-  const needsPlayerReseed = existingPlayers.length === 0 || existingPlayers.some(p => 
-    p.name.includes('Alex') || p.name.includes('Liam') || p.name.includes('Marcus') || p.name.includes('Davey')
-  );
-
-  if (needsPlayerReseed) {
+  if (existingPlayers.length === 0) {
     setLocal(PLAYERS_KEY, INITIAL_PLAYERS);
   }
+
+  // When Supabase is configured, Supabase is the primary store for matches (do not seed mock matches into localStorage)
+  if (isSupabaseConfigured) return;
 
   // 2. Ensure Actual Played Matches and Frames are Restored and Preserved
   try {
@@ -223,39 +220,42 @@ export async function fetchPlayers(): Promise<Player[]> {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('players').select('*').order('name');
-      if (error) {
-        console.error('Supabase fetchPlayers error:', error);
-        return [];
-      }
-      if (data && data.length > 0) {
-        return data as Player[];
-      }
-      // If table exists but is empty, automatically seed friend group members to Supabase once
-      try {
-        const { data: seeded, error: seedErr } = await supabase
-          .from('players')
-          .insert(INITIAL_PLAYERS.map(p => ({
-            id: p.id,
-            name: p.name,
-            nickname: p.nickname,
-            avatar_url: p.avatar_url,
-          })))
-          .select();
-        if (!seedErr && seeded && seeded.length > 0) {
-          return seeded as Player[];
+      if (!error && data) {
+        if (data.length > 0) {
+          // Sync to local cache so offline access works
+          setLocal(PLAYERS_KEY, data as Player[]);
+          return data as Player[];
         }
-      } catch (seedErr) {
-        console.warn('Auto-seed initial players to Supabase error:', seedErr);
+        // If table exists but is empty, try seeding the friend group roster to Supabase once
+        try {
+          const { data: seeded, error: seedErr } = await supabase
+            .from('players')
+            .insert(INITIAL_PLAYERS.map(p => ({
+              id: p.id,
+              name: p.name,
+              nickname: p.nickname,
+              avatar_url: p.avatar_url,
+            })))
+            .select();
+          if (!seedErr && seeded && seeded.length > 0) {
+            setLocal(PLAYERS_KEY, seeded as Player[]);
+            return seeded as Player[];
+          }
+        } catch (seedErr) {
+          console.warn('Auto-seed initial players to Supabase error:', seedErr);
+        }
       }
-      return (data || []) as Player[];
+      if (error) {
+        console.warn('Supabase fetchPlayers error (falling back to local roster):', error);
+      }
     } catch (err) {
-      console.error('Supabase fetchPlayers exception:', err);
-      return [];
+      console.warn('Supabase fetchPlayers exception (falling back to local roster):', err);
     }
   }
 
   ensureLocalSeed();
-  return getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
+  const local = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
+  return local.length > 0 ? local : INITIAL_PLAYERS;
 }
 
 export async function createPlayer(name: string, nickname?: string, avatarUrl?: string): Promise<Player> {
@@ -267,6 +267,8 @@ export async function createPlayer(name: string, nickname?: string, avatarUrl?: 
     created_at: new Date().toISOString(),
   };
 
+  let savedPlayer: Player = newPlayer;
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('players').insert({
@@ -277,21 +279,25 @@ export async function createPlayer(name: string, nickname?: string, avatarUrl?: 
       }).select().single();
 
       if (error) {
-        console.error('Supabase createPlayer error:', error);
+        console.warn('Supabase createPlayer error (saving to local storage):', error);
       } else if (data) {
-        return data as Player;
+        savedPlayer = data as Player;
       }
     } catch (err) {
-      console.error('Supabase createPlayer exception:', err);
+      console.warn('Supabase createPlayer exception (saving to local storage):', err);
     }
-    return newPlayer;
   }
 
+  // ALWAYS save to local storage so the member is immediately remembered
   ensureLocalSeed();
   const current = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
-  const updated = [...current, newPlayer];
+  const exists = current.some(p => p.id === savedPlayer.id || p.name.toLowerCase() === savedPlayer.name.toLowerCase());
+  const updated = exists
+    ? current.map(p => (p.id === savedPlayer.id || p.name.toLowerCase() === savedPlayer.name.toLowerCase()) ? savedPlayer : p)
+    : [...current, savedPlayer];
   setLocal(PLAYERS_KEY, updated);
-  return newPlayer;
+
+  return savedPlayer;
 }
 
 export async function fetchMatches(): Promise<Match[]> {

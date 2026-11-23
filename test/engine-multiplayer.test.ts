@@ -751,6 +751,15 @@ async function testAbandon() {
   assert.strictEqual(adjustState.pointsRemaining, 27);
   console.log('✓ All Red Ball rules, free ball scenarios, foul pocketing, and manual adjustment mechanics verified.');
 
+  // 31. Verifying Member Addition & Retention
+  console.log('\n[31] Verifying Member Addition & Persistence...');
+  const { createPlayer, fetchPlayers: fetchAllPlayers } = await import('../src/lib/storage');
+  const addedPlayer = await createPlayer('Charlie', 'The Rookie');
+  assert.strictEqual(addedPlayer.name, 'Charlie');
+  const playersWithCharlie = await fetchAllPlayers();
+  assert(playersWithCharlie.some(p => p.name === 'Charlie'), 'Added member Charlie must be remembered and returned by fetchPlayers()');
+  console.log('✓ Member addition correctly persists and is remembered.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');
