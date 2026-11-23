@@ -45,29 +45,29 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
 
   if (!hasEvents || !insights) {
     return (
-      <div className="bg-white dark:bg-[#07100b] border border-black/[0.08] dark:border-emerald-950/80 rounded-2xl p-5 text-center space-y-3 shadow-xs">
-        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800/40 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+      <div className="bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-6 text-center space-y-3 shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mx-auto text-emerald-600 dark:text-[#30d158]">
           <BarChart3 className="w-5 h-5" />
         </div>
         <div>
-          <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+          <h4 className="text-sm font-bold text-zinc-900 dark:text-[#f5f5f7]">
             Frame {frame.frame_number} Summary
           </h4>
-          <p className="text-xs text-zinc-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
-            Detailed shot telemetry was not recorded for this historical frame. Granular event tracking and progression charts are active for all newly scored games!
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
+            Granular shot telemetry was not recorded for this historical frame. Active telemetry and trend curves are enabled for newly scored games.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2 font-mono text-xs">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2 font-mono text-xs">
           {players.map((p, idx) => (
-            <div key={p.id} className="bg-zinc-100 dark:bg-gray-900/80 px-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-gray-800">
-              <span className="text-zinc-600 dark:text-gray-400">{p.name}: </span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-black">{scores[idx] ?? 0} pts</span>
+            <div key={p.id} className="bg-black/[0.04] dark:bg-white/[0.06] px-3 py-1.5 rounded-full border border-black/[0.06] dark:border-white/[0.08]">
+              <span className="text-zinc-600 dark:text-zinc-400">{p.name}: </span>
+              <span className="text-emerald-700 dark:text-[#30d158] font-bold">{scores[idx] ?? 0} pts</span>
             </div>
           ))}
           {frame.highest_break > 0 && (
-            <div className="bg-amber-50 dark:bg-amber-950/50 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400" />
+            <div className="bg-amber-400/15 px-3 py-1.5 rounded-full border border-amber-400/30 text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 fill-amber-500" />
               <span>High Break: {frame.highest_break}</span>
             </div>
           )}
@@ -84,54 +84,90 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Quick Summary Pill Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white dark:bg-[#07110c] border border-black/[0.08] dark:border-emerald-950 rounded-xl text-xs shadow-xs">
-        <div className="flex items-center space-x-3">
-          <span className="font-bold text-zinc-900 dark:text-white">
-            Frame {frame.frame_number} Insights
-          </span>
-          <span className="text-zinc-400 dark:text-gray-600">•</span>
-          <span className="text-zinc-600 dark:text-gray-400 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-emerald-600 dark:text-emerald-500" />
-            {formatDuration(insights.durationSeconds)}
-          </span>
-          <span className="text-zinc-400 dark:text-gray-600">•</span>
-          <span className="text-zinc-600 dark:text-gray-400">
-            {insights.totalEvents} shots & events
-          </span>
+    <div className="space-y-4 font-sans">
+      {/* Apple Health App Style Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-[#0091ff]">
+            <Clock className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider block">
+              Frame Duration
+            </span>
+            <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-zinc-900 dark:text-[#f5f5f7]">
+              {formatDuration(insights.durationSeconds)}
+            </span>
+          </div>
         </div>
 
-        {insights.breaks.length > 0 && (
-          <div className="flex items-center space-x-1.5 text-amber-700 dark:text-amber-300 font-mono font-semibold">
-            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400" />
-            <span>High Run: {insights.breaks[0].totalPoints} ({insights.breaks[0].playerName})</span>
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-[#30d158]">
+            <BarChart3 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider block">
+              Total Shots
+            </span>
+            <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-zinc-900 dark:text-[#f5f5f7]">
+              {insights.totalEvents} actions
+            </span>
+          </div>
+        </div>
+
+        {insights.breaks.length > 0 ? (
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center space-x-3 col-span-2 sm:col-span-1">
+            <div className="w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-500">
+              <Flame className="w-4 h-4 fill-amber-500" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider block">
+                Top Break
+              </span>
+              <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400">
+                {insights.breaks[0].totalPoints} pts <span className="text-xs font-normal text-zinc-400 font-sans">({insights.breaks[0].playerName})</span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center space-x-3 col-span-2 sm:col-span-1">
+            <div className="w-8 h-8 rounded-xl bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-400">
+              <Flame className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider block">
+                Lead Changes
+              </span>
+              <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-zinc-900 dark:text-[#f5f5f7]">
+                {insights.leadChanges} changes
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Sub-Tabs Navigation */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-black/[0.08] dark:border-emerald-950/80 pb-2">
+      {/* Apple Segmented Control for Insights Tabs */}
+      <div className="flex overflow-x-auto p-1 bg-black/[0.05] dark:bg-white/[0.08] rounded-full border border-black/[0.04] dark:border-white/[0.04] scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('timeline')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`min-h-[36px] flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition active:scale-[0.97] whitespace-nowrap cursor-pointer ${
             activeTab === 'timeline'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-              : 'text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-gray-900/60'
+              ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
         >
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>Score Progression</span>
+          <span>Progression</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('balls')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`min-h-[36px] flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition active:scale-[0.97] whitespace-nowrap cursor-pointer ${
             activeTab === 'balls'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-              : 'text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-gray-900/60'
+              ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
         >
           <PieChart className="w-3.5 h-3.5" />
@@ -141,10 +177,10 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('breaks')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`min-h-[36px] flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition active:scale-[0.97] whitespace-nowrap cursor-pointer ${
             activeTab === 'breaks'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-              : 'text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-gray-900/60'
+              ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
         >
           <Flame className="w-3.5 h-3.5" />
@@ -154,27 +190,27 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('discipline')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`min-h-[36px] flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition active:scale-[0.97] whitespace-nowrap cursor-pointer ${
             activeTab === 'discipline'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-              : 'text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-gray-900/60'
+              ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
         >
           <ShieldAlert className="w-3.5 h-3.5" />
-          <span>Discipline & Fouls</span>
+          <span>Discipline</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('log')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`min-h-[36px] flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-semibold transition active:scale-[0.97] whitespace-nowrap cursor-pointer ${
             activeTab === 'log'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-              : 'text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-gray-900/60'
+              ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
         >
           <ListFilter className="w-3.5 h-3.5" />
-          <span>Shot Log ({events.length})</span>
+          <span>Event Feed ({events.length})</span>
         </button>
       </div>
 

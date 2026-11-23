@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { X, BookOpen, ShieldAlert, Sparkles, Flame } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { BookOpen, ShieldAlert, Sparkles, Flame } from 'lucide-react';
 import { BALL_CONFIGS } from '@/types/snooker';
 
 interface RulesModalProps {
@@ -10,125 +10,137 @@ interface RulesModalProps {
 }
 
 export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
+  // Support Escape key to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel border border-black/[0.08] dark:border-white/10 rounded-3xl max-w-xl w-full max-h-[85vh] overflow-y-auto p-5 sm:p-7 shadow-2xl space-y-5 bg-white dark:bg-[#0c140f] text-zinc-900 dark:text-zinc-100">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] pb-3 sticky top-0 bg-white/95 dark:bg-[#0c140f]/95 backdrop-blur-md z-10">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
-              Snooker Rules & Math Engine
-            </h3>
-          </div>
+    <div 
+      className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center bg-black/40 dark:bg-black/60 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full sm:max-w-xl bg-white dark:bg-[#1c1c1e] rounded-t-[20px] sm:rounded-2xl max-h-[88vh] flex flex-col shadow-2xl border-t sm:border border-black/[0.08] dark:border-white/[0.1] text-zinc-900 dark:text-zinc-100 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Apple 36x5px Grabber Pill */}
+        <div className="pt-2.5 pb-1 flex justify-center">
+          <div className="w-[36px] h-[5px] rounded-full bg-black/20 dark:bg-white/20" />
+        </div>
+
+        {/* Apple Navigation Bar with Title & Trailing "Done" Button */}
+        <div className="flex items-center justify-between px-5 py-2.5 border-b border-black/[0.08] dark:border-white/[0.08] bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-lg sticky top-0 z-10">
+          <div className="w-12" /> {/* Leading spacer to center title */}
+          <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white text-center">
+            Rules & Scoring
+          </h2>
           <button 
+            type="button"
             onClick={onClose}
-            className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-1 rounded-lg transition hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer"
-            aria-label="Close"
+            className="text-emerald-600 dark:text-emerald-400 font-semibold text-[17px] hover:opacity-80 active:opacity-60 transition cursor-pointer min-h-[44px] min-w-[48px] flex items-center justify-end select-none"
           >
-            <X className="w-5 h-5" />
+            Done
           </button>
         </div>
 
-        {/* Ball Values Grid */}
-        <div className="space-y-2">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-400">
-            Ball Point Values
-          </h4>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-            {Object.values(BALL_CONFIGS).map((b) => (
-              <div
-                key={b.type}
-                className="p-2 rounded-xl glass-panel border border-black/[0.06] dark:border-white/[0.06] text-center flex flex-col items-center justify-center bg-zinc-50 dark:bg-black/20"
-              >
+        {/* Scrollable Body: Grouped Inset Cards */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+          
+          {/* Grouped Inset Card 1: Snooker Ball Values (Aramith Colored Badges) */}
+          <div className="bg-[#f2f2f7] dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Snooker Ball Values</span>
+            </div>
+            
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {Object.values(BALL_CONFIGS).map((b) => (
                 <div
-                  className="w-5 h-5 rounded-full mb-1 shadow-md ring-1 ring-black/10 dark:ring-white/10"
-                  style={{ backgroundColor: b.colorHex }}
-                />
-                <span className="text-sm font-black text-zinc-900 dark:text-white font-mono tabular-nums">{b.points}</span>
-                <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{b.name}</span>
-              </div>
-            ))}
+                  key={b.type}
+                  className="p-2 rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.06] text-center flex flex-col items-center justify-center shadow-xs"
+                >
+                  <div
+                    className="w-6 h-6 rounded-full mb-1.5 shadow-md ring-1 ring-black/10 dark:ring-white/10"
+                    style={{ 
+                      backgroundColor: b.colorHex,
+                      boxShadow: 'inset 0 1.5px 2px rgba(255, 255, 255, 0.45), inset 0 -2.5px 4px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0,0,0,0.25)' 
+                    }}
+                  />
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white font-mono tabular-nums leading-none">
+                    {b.points}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 capitalize">
+                    {b.name}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Points Remaining Math */}
-        <div className="space-y-2 glass-panel p-3.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] text-xs bg-zinc-50 dark:bg-black/20">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-            Points Remaining on Table (Max Break 147)
-          </h4>
-          <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-            While reds remain, each red can be followed by the Black ball (1 + 7 = 8 points), followed by the 6 colors (27 points).
-          </p>
-          <div className="bg-white dark:bg-black/50 p-2.5 rounded-xl font-mono text-emerald-800 dark:text-emerald-300 text-[11px] space-y-1 border border-black/[0.06] dark:border-white/[0.04]">
-            <div>• With Reds on table: <code>(Reds × 8) + 27</code></div>
-            <div>• On a nominated Color: <code>7 + (Reds × 8) + 27</code></div>
-            <div>• Colors sequence: Yellow (27) → Green (25) → Brown (22) → Blue (18) → Pink (13) → Black (7)</div>
+          {/* Grouped Inset Card 2: Foul Penalties */}
+          <div className="bg-[#f2f2f7] dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Foul Penalties & Awards</span>
+            </div>
+            <ul className="text-[13px] text-zinc-700 dark:text-zinc-300 space-y-1.5 leading-relaxed">
+              <li>
+                <strong className="text-zinc-900 dark:text-white">4 Points Minimum:</strong> Standard fouls (cue ball in-off, touching any ball, missing ball on, or fouling on red or yellow/green/brown) award 4 points to opponent(s).
+              </li>
+              <li>
+                <strong className="text-zinc-900 dark:text-white">Higher Value Balls:</strong> If Blue (5), Pink (6), or Black (7) was involved or nominated as the ball on, the penalty is equal to that ball&apos;s higher value.
+              </li>
+              <li>
+                <strong className="text-zinc-900 dark:text-white">Next Player Options:</strong> After any foul, the incoming player may accept the table as it lies or require the fouling player to play again from that position.
+              </li>
+            </ul>
           </div>
-        </div>
 
-        {/* Snookers Required Formula */}
-        <div className="space-y-2 glass-panel p-3.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] text-xs bg-zinc-50 dark:bg-black/20">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-            Snookers Required Calculation
-          </h4>
-          <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
-            If the trailing player&apos;s score plus the remaining points on the table cannot overtake the leader:
-          </p>
-          <div className="bg-white dark:bg-black/50 p-2.5 rounded-xl font-mono text-amber-800 dark:text-amber-300 text-[11px] border border-black/[0.06] dark:border-white/[0.04]">
-            Points Deficit = Leader Score - (Trailer Score + Table Remaining)<br />
-            Snookers Required = ⌈Points Deficit / 4⌉
+          {/* Grouped Inset Card 3: Snookers Math & Maximum Break */}
+          <div className="bg-[#f2f2f7] dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2.5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5" />
+              <span>Snookers Math & Points Remaining</span>
+            </div>
+            <p className="text-[13px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              While reds remain, each red can yield up to 8 points (1 for red + 7 for nominated black), followed by the 27 points of all 6 colors in clearance sequence.
+            </p>
+            <div className="bg-white dark:bg-[#1c1c1e] p-3 rounded-xl border border-black/[0.06] dark:border-white/[0.06] font-mono text-[12px] space-y-1 text-zinc-800 dark:text-zinc-200">
+              <div>• Table Remaining: <code>(Reds × 8) + 27</code> (Max 147 break)</div>
+              <div>• On a nominated Color: <code>7 + (Reds × 8) + 27</code></div>
+              <div>• Sequence: Yellow (27) → Green (25) → Brown (22) → Blue (18) → Pink (13) → Black (7)</div>
+              <div>• Snookers Formula: <code>⌈(Deficit - Points Remaining) / 4⌉</code></div>
+            </div>
           </div>
-          <p className="text-zinc-500 text-[11px]">
-            (4 points is the minimum penalty awarded for any opponent foul).
-          </p>
+
+          {/* Grouped Inset Card 4: Free Ball & Red Ball Rules */}
+          <div className="bg-[#f2f2f7] dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Free Ball & Red Ball Rules</span>
+            </div>
+            <ul className="text-[13px] text-zinc-700 dark:text-zinc-300 space-y-1.5 leading-relaxed">
+              <li>
+                <strong className="text-zinc-900 dark:text-white">Free Ball (WPBSA 3.12):</strong> Awarded when an opponent foul snookers the incoming striker on all balls on. Any nominated ball acts as the ball on and is respotted (enabling breaks up to 155).
+              </li>
+              <li>
+                <strong className="text-zinc-900 dark:text-white">Reds Pocketed on Fouls:</strong> Any red ball pocketed during a foul remains in the pocket and is <em>never</em> respotted in official snooker.
+              </li>
+              <li>
+                <strong className="text-zinc-900 dark:text-white">Multiple Reds in One Stroke:</strong> A striker may legally pot multiple reds in a single stroke (Rule 3.3a), scoring 1 point for each red pocketed.
+              </li>
+            </ul>
+          </div>
+
         </div>
-
-        {/* Red Ball Rules & Table Mechanics */}
-        <div className="space-y-2 glass-panel p-3.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] text-xs bg-zinc-50 dark:bg-black/20">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-rose-600 dark:text-red-400 flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 rounded-full bg-red-600 inline-block shadow-sm" />
-            Red Ball Rules & Count Mechanics
-          </h4>
-          <ul className="list-disc pl-4 space-y-1.5 text-zinc-700 dark:text-zinc-300">
-            <li>
-              <strong>Reds Pocketed on Fouls (Never Respotted):</strong> In official snooker, if any red ball is pocketed or knocked off the table during a foul, it remains in the pocket and is <em>never</em> respotted. The app allows recording reds pocketed during a foul, or tapping the red pill on the HUD to deduct it.
-            </li>
-            <li>
-              <strong>Multiple Reds in One Stroke (WPBSA Rule 3.3a):</strong> Striker may legally pot two or more reds in the same shot. Each red scores 1 point and remains in the pocket. You can adjust the remaining red count directly via the scoreboard HUD.
-            </li>
-            <li>
-              <strong>Free Ball with Reds:</strong> If a player nominates a colour as a Free Ball when reds are on, potting it scores 1 point and the colour is <em>respotted</em>. The remaining reds on the table do <em>not</em> decrease (enabling breaks up to 155). If an actual red is potted, it is not respotted and decrements the red count.
-            </li>
-          </ul>
-        </div>
-
-        {/* Fouls & Free Ball */}
-        <div className="space-y-2 glass-panel p-3.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] text-xs bg-zinc-50 dark:bg-black/20">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-500 dark:text-yellow-400" />
-            Fouls & Free Ball Rules
-          </h4>
-          <ul className="list-disc pl-4 space-y-1 text-zinc-700 dark:text-zinc-300">
-            <li><strong>Foul Penalty:</strong> 4 points minimum, or 5 (Blue), 6 (Pink), 7 (Black) if higher value ball was involved. Points are awarded directly to opponent.</li>
-            <li><strong>Free Ball:</strong> If an opponent fouls and leaves the incoming player snookered on all balls on, the referee awards a Free Ball. Any ball can be nominated and counts as the ball on.</li>
-          </ul>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black font-bold text-sm shadow-md shadow-emerald-950/40 transition active:scale-[0.98] cursor-pointer"
-        >
-          Got it
-        </button>
-
       </div>
     </div>
   );

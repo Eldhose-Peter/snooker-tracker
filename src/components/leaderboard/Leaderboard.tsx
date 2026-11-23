@@ -10,7 +10,10 @@ import {
   Search, 
   Swords, 
   X,
-  Medal
+  Medal,
+  Percent,
+  Check,
+  ChevronRight
 } from 'lucide-react';
 
 export const Leaderboard: React.FC = () => {
@@ -103,88 +106,90 @@ export const Leaderboard: React.FC = () => {
       return b.matches_won - a.matches_won || b.win_rate - a.win_rate;
     });
 
+  // Top 3 for Podium
+  const top1 = filteredEntries[0];
+  const top2 = filteredEntries[1];
+  const top3 = filteredEntries[2];
+
+  const getMetricDisplay = (player: LeaderboardEntry) => {
+    if (sortBy === 'win_rate') {
+      return { value: `${player.win_rate}%`, label: 'Win Rate' };
+    }
+    if (sortBy === 'highest_break') {
+      return { value: `${player.highest_break}`, label: 'High Break' };
+    }
+    return { value: `${player.matches_won}W`, label: `${player.matches_won}/${player.matches_played} Won` };
+  };
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-4 space-y-4 sm:space-y-6 flex-1 flex flex-col">
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 sm:py-6 space-y-6 flex-1 flex flex-col font-sans">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Apple Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
-              <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/25 flex items-center justify-center shadow-xs">
+              <Trophy className="w-5 h-5 text-amber-500 dark:text-amber-400" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
-              The Chart Board
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-[#f5f5f7]">
+              Leaderboard
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Group snooker rankings, win rates, and all-time highest breaks
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Official group rankings, win percentages, and high break telemetry
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 self-start sm:self-auto">
           {/* Head to Head Button */}
           <button
             onClick={() => setIsH2HOpen(true)}
-            className="py-2 px-3.5 rounded-xl bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition active:scale-[0.98] border border-black/[0.08] dark:border-white/[0.08] shadow-xs cursor-pointer"
+            className="min-h-[44px] px-4 rounded-full bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-zinc-900 dark:text-[#f5f5f7] text-xs sm:text-sm font-semibold flex items-center space-x-2 transition active:scale-[0.97] active:opacity-80 border border-black/[0.06] dark:border-white/[0.08] cursor-pointer"
           >
-            <Swords className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <Swords className="w-4 h-4 text-emerald-600 dark:text-[#30d158]" />
             <span>Head-to-Head</span>
           </button>
 
           {/* Add Friend Button */}
           <button
             onClick={() => setIsAddPlayerOpen(true)}
-            className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black text-xs sm:text-sm font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-950/40 transition active:scale-[0.98] cursor-pointer"
+            className="min-h-[44px] px-4 rounded-full bg-[#30d158] hover:bg-[#28b84c] text-white text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-xs transition active:scale-[0.97] active:opacity-80 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add Friend</span>
+            <span>Add Player</span>
           </button>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-        
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400 dark:text-zinc-500" />
-          <input
-            type="text"
-            placeholder="Search friend by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-[#0c130f]/80 border border-black/[0.08] dark:border-white/[0.06] text-zinc-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/30 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600 shadow-xs dark:shadow-none"
-          />
-        </div>
-
-        {/* Sort Pill Buttons */}
-        <div className="flex items-center space-x-1 bg-black/[0.04] dark:bg-black/40 p-1 rounded-xl border border-black/[0.06] dark:border-white/[0.06] self-end sm:self-auto">
+      {/* Filter / Sort Segmented Slider & Search */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        {/* Apple Segmented Control for Sorting */}
+        <div className="inline-flex p-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full self-start sm:self-auto border border-black/[0.04] dark:border-white/[0.04]">
           <button
             onClick={() => setSortBy('matches_won')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
+            className={`min-h-[36px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition active:scale-[0.97] cursor-pointer ${
               sortBy === 'matches_won'
-                ? 'bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-600/30 dark:border-emerald-500/30 shadow-xs'
+                ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
-            Wins
+            Total Wins
           </button>
           <button
             onClick={() => setSortBy('win_rate')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
+            className={`min-h-[36px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition active:scale-[0.97] cursor-pointer ${
               sortBy === 'win_rate'
-                ? 'bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-600/30 dark:border-emerald-500/30 shadow-xs'
+                ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
-            Win %
+            Win Rate
           </button>
           <button
             onClick={() => setSortBy('highest_break')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
+            className={`min-h-[36px] px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition active:scale-[0.97] cursor-pointer ${
               sortBy === 'highest_break'
-                ? 'bg-emerald-600 text-white dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-600/30 dark:border-emerald-500/30 shadow-xs'
+                ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
@@ -192,207 +197,327 @@ export const Leaderboard: React.FC = () => {
           </button>
         </div>
 
+        {/* Search Field */}
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search players..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full min-h-[40px] pl-10 pr-9 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.08] border border-black/[0.06] dark:border-white/[0.08] text-zinc-900 dark:text-[#f5f5f7] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0091ff]/40 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer p-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Leaderboard Table / Cards */}
       {loading ? (
-        <div className="text-center py-12 text-emerald-600 dark:text-emerald-400 font-semibold animate-pulse">
-          Loading group rankings...
+        <div className="text-center py-16 text-emerald-600 dark:text-[#30d158] font-semibold text-sm animate-pulse">
+          Loading rankings...
         </div>
       ) : filteredEntries.length === 0 ? (
-        <div className="text-center py-12 glass-panel rounded-2xl text-zinc-500 dark:text-zinc-400 border border-black/[0.08] dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
-          <p className="text-sm">No players found matching your criteria.</p>
+        <div className="text-center py-16 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1c1c1e] text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm font-medium">No players found matching your criteria.</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {filteredEntries.map((player, index) => {
-            const rank = index + 1;
-            const isTop3 = rank <= 3;
-            const medalColor = 
-              rank === 1 ? 'text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400' :
-              rank === 2 ? 'text-slate-400 fill-slate-400 dark:text-slate-300 dark:fill-slate-300' :
-              rank === 3 ? 'text-amber-700 fill-amber-700 dark:text-amber-600 dark:fill-amber-600' : 'text-zinc-400 dark:text-zinc-500';
+        <>
+          {/* Apple Fitness / Health Style Podium for Top 3 */}
+          {top1 && !searchQuery && (
+            <div className="space-y-2">
+              <div className="text-[11px] sm:text-xs uppercase font-semibold text-zinc-500 dark:text-zinc-400 tracking-wider px-1">
+                Top Performers
+              </div>
 
-            return (
-              <div
-                key={player.id}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                  rank === 1
-                    ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/[0.03] to-emerald-500/[0.04] dark:from-amber-500/[0.08] dark:via-[#0c1f14]/80 dark:to-[#070e0a]/90 border-amber-500/40 dark:border-amber-500/30 shadow-md'
-                    : 'glass-panel hover:border-black/20 dark:hover:border-white/[0.12] bg-white/85 dark:bg-[#0c130f]/70 border-black/[0.08] dark:border-white/[0.08] shadow-xs dark:shadow-none'
-                }`}
-              >
-                {/* Left: Rank & Player info */}
-                <div className="flex items-center space-x-3 min-w-0">
-                  <div className="w-8 flex-shrink-0 text-center font-mono font-black text-sm sm:text-base flex items-center justify-center">
-                    {isTop3 ? (
-                      <Medal className={`w-6 h-6 ${medalColor}`} />
-                    ) : (
-                      <span className="text-zinc-400 dark:text-zinc-500">#{rank}</span>
-                    )}
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-4 items-end pt-2 pb-1">
+                
+                {/* 2nd Place Podium Card */}
+                {top2 ? (
+                  <div className="rounded-2xl p-3.5 sm:p-4 bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex flex-col items-center text-center transition hover:border-black/20 dark:hover:border-white/20">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-400/15 border border-slate-400/30 flex items-center justify-center text-slate-500 dark:text-slate-300 shadow-xs mb-2">
+                      <Medal className="w-4 h-4" />
+                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={top2.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${top2.name}`}
+                      alt={top2.name}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-slate-300 dark:border-slate-600 shadow-xs mb-2"
+                    />
+                    <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f5f5f7] truncate max-w-full">
+                      {top2.name}
+                    </h3>
+                    <div className="text-base sm:text-xl font-bold font-mono tabular-nums text-zinc-900 dark:text-white mt-1">
+                      {getMetricDisplay(top2).value}
+                    </div>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">
+                      {getMetricDisplay(top2).label}
+                    </span>
+                    <div className="mt-2 text-[10px] sm:text-xs font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
+                      Hi: {top2.highest_break} • {top2.matches_won}W
+                    </div>
                   </div>
+                ) : <div />}
 
-                  {/* Avatar */}
+                {/* 1st Place Podium Hero Card (Taller, Prominent) */}
+                <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-amber-400/10 via-white to-white dark:from-amber-400/10 dark:via-[#1c1c1e] dark:to-[#1c1c1e] border-2 border-amber-400/40 dark:border-amber-400/30 shadow-md flex flex-col items-center text-center relative -translate-y-1 sm:-translate-y-2">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-xs mb-2">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400" />
+                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={player.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.name}`}
-                    alt={player.name}
-                    className={`w-10 h-10 rounded-full object-cover flex-shrink-0 ${
-                      rank === 1 ? 'border-2 border-amber-400/80 ring-2 ring-amber-400/20' : 'border border-black/10 dark:border-white/10'
-                    }`}
+                    src={top1.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${top1.name}`}
+                    alt={top1.name}
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-amber-400 shadow-sm ring-4 ring-amber-400/20 mb-2"
                   />
+                  <span className="inline-block px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] uppercase tracking-wider mb-1">
+                    Rank 1
+                  </span>
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-[#f5f5f7] truncate max-w-full">
+                    {top1.name}
+                  </h3>
+                  <div className="text-xl sm:text-2xl font-black font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-1">
+                    {getMetricDisplay(top1).value}
+                  </div>
+                  <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-tight font-medium">
+                    {getMetricDisplay(top1).label}
+                  </span>
+                  <div className="mt-2 text-[10px] sm:text-xs font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
+                    Hi: {top1.highest_break} • {top1.matches_won}W - {top1.matches_lost}L
+                  </div>
+                </div>
 
-                  <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate">
-                      {player.name}
+                {/* 3rd Place Podium Card */}
+                {top3 ? (
+                  <div className="rounded-2xl p-3.5 sm:p-4 bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex flex-col items-center text-center transition hover:border-black/20 dark:hover:border-white/20">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-700/15 border border-amber-700/30 flex items-center justify-center text-amber-700 dark:text-amber-500 shadow-xs mb-2">
+                      <Medal className="w-4 h-4" />
+                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={top3.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${top3.name}`}
+                      alt={top3.name}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-amber-700/40 dark:border-amber-700/60 shadow-xs mb-2"
+                    />
+                    <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f5f5f7] truncate max-w-full">
+                      {top3.name}
                     </h3>
+                    <div className="text-base sm:text-xl font-bold font-mono tabular-nums text-zinc-900 dark:text-white mt-1">
+                      {getMetricDisplay(top3).value}
+                    </div>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">
+                      {getMetricDisplay(top3).label}
+                    </span>
+                    <div className="mt-2 text-[10px] sm:text-xs font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
+                      Hi: {top3.highest_break} • {top3.matches_won}W
+                    </div>
                   </div>
-                </div>
-
-                {/* Right: Stats Grid */}
-                <div className="mt-3 sm:mt-0 grid grid-cols-4 sm:flex sm:items-center gap-2 sm:gap-6 text-center border-t sm:border-t-0 border-black/[0.06] dark:border-white/[0.06] pt-2 sm:pt-0">
-                  
-                  {/* Matches W - L */}
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold block">
-                      Matches
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 font-mono tabular-nums">
-                      {player.matches_won}W - {player.matches_lost}L
-                    </span>
-                  </div>
-
-                  {/* Win % */}
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold block">
-                      Win %
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
-                      {player.win_rate}%
-                    </span>
-                  </div>
-
-                  {/* Frames W - L */}
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold block">
-                      Frames
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 font-mono tabular-nums">
-                      {player.frames_won}-{player.frames_lost}
-                    </span>
-                  </div>
-
-                  {/* High Break */}
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold block">
-                      High Break
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 font-mono tabular-nums flex items-center justify-center gap-0.5">
-                      <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
-                      {player.highest_break}
-                    </span>
-                  </div>
-
-                </div>
+                ) : <div />}
 
               </div>
-            );
-          })}
-        </div>
+            </div>
+          )}
+
+          {/* Inset Grouped Table (Settings-Style) for all members */}
+          <div className="space-y-2">
+            <div className="text-[11px] sm:text-xs uppercase font-semibold text-zinc-500 dark:text-zinc-400 tracking-wider px-1">
+              All Members ({filteredEntries.length})
+            </div>
+
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm overflow-hidden">
+              {/* Header labels for table */}
+              <div className="hidden sm:grid grid-cols-12 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 border-b border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02]">
+                <div className="col-span-1 text-center">Rank</div>
+                <div className="col-span-4 pl-2">Player</div>
+                <div className="col-span-2 text-right">Matches</div>
+                <div className="col-span-2 text-right">Win Rate</div>
+                <div className="col-span-1 text-right">Frames</div>
+                <div className="col-span-2 text-right pr-2">High Break</div>
+              </div>
+
+              {/* Rows */}
+              <div className="divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+                {filteredEntries.map((player, index) => {
+                  const rank = index + 1;
+                  const isGold = rank === 1;
+                  const isSilver = rank === 2;
+                  const isBronze = rank === 3;
+
+                  return (
+                    <div
+                      key={player.id}
+                      className="min-h-[52px] px-3.5 sm:px-4 py-3 flex flex-col sm:grid sm:grid-cols-12 items-start sm:items-center gap-2 sm:gap-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition active:scale-[0.99] cursor-default"
+                    >
+                      {/* Rank (Col 1) */}
+                      <div className="col-span-1 flex items-center justify-start sm:justify-center">
+                        {isGold ? (
+                          <span className="w-6 h-6 rounded-full bg-amber-400/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center border border-amber-400/30">
+                            1
+                          </span>
+                        ) : isSilver ? (
+                          <span className="w-6 h-6 rounded-full bg-slate-400/20 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center border border-slate-400/30">
+                            2
+                          </span>
+                        ) : isBronze ? (
+                          <span className="w-6 h-6 rounded-full bg-amber-700/20 text-amber-700 dark:text-amber-500 font-bold text-xs flex items-center justify-center border border-amber-700/30">
+                            3
+                          </span>
+                        ) : (
+                          <span className="text-zinc-400 dark:text-zinc-500 font-mono font-semibold text-xs sm:text-sm pl-1">
+                            #{rank}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Player Info (Col 4) */}
+                      <div className="col-span-4 flex items-center space-x-3 min-w-0 pl-1 sm:pl-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={player.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.name}`}
+                          alt={player.name}
+                          className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-black/10 dark:border-white/10"
+                        />
+                        <div className="min-w-0">
+                          <span className="text-sm font-semibold text-zinc-900 dark:text-[#f5f5f7] truncate block">
+                            {player.name}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 sm:hidden">
+                            {player.matches_won}W - {player.matches_lost}L • {player.win_rate}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Matches (Col 2) */}
+                      <div className="col-span-2 hidden sm:block text-right font-mono tabular-nums text-xs sm:text-sm text-zinc-700 dark:text-zinc-300">
+                        {player.matches_won}W - {player.matches_lost}L
+                      </div>
+
+                      {/* Win Rate (Col 2) */}
+                      <div className="col-span-2 hidden sm:block text-right font-mono tabular-nums text-xs sm:text-sm font-bold text-emerald-600 dark:text-[#30d158]">
+                        {player.win_rate}%
+                      </div>
+
+                      {/* Frames (Col 1) */}
+                      <div className="col-span-1 hidden sm:block text-right font-mono tabular-nums text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+                        {player.frames_won}-{player.frames_lost}
+                      </div>
+
+                      {/* High Break (Col 2) */}
+                      <div className="col-span-2 flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto pr-0 sm:pr-2 text-right">
+                        <span className="text-zinc-400 text-xs sm:hidden">High Break:</span>
+                        <div className="flex items-center space-x-1 font-mono tabular-nums text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                          <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400" />
+                          <span>{player.highest_break}</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* ADD PLAYER MODAL */}
+      {/* APPLE BOTTOM SHEET: ADD PLAYER MODAL                          */}
       {/* ------------------------------------------------------------- */}
       {isAddPlayerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-panel max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4 bg-white dark:bg-[#0c140f] border border-black/[0.08] dark:border-white/10 text-zinc-900 dark:text-white rounded-3xl">
-            <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] pb-3">
-              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                Add New Friend
-              </h3>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-t-[26px] sm:rounded-[26px] p-5 shadow-2xl border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white space-y-4">
+            {/* Grabber Pill */}
+            <div className="w-9 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto" />
+
+            {/* Navigation Bar */}
+            <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] pb-3">
+              <button
+                type="button"
                 onClick={() => setIsAddPlayerOpen(false)}
-                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-1 rounded-lg transition hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer"
-                aria-label="Close"
+                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm font-medium transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-[#f5f5f7]">
+                New Player
+              </h3>
+              <button
+                type="submit"
+                form="add-player-form"
+                disabled={savingPlayer || !newPlayerName.trim()}
+                className="text-emerald-600 dark:text-[#30d158] font-bold text-sm hover:opacity-80 disabled:opacity-40 transition cursor-pointer"
+              >
+                {savingPlayer ? 'Saving...' : 'Done'}
               </button>
             </div>
 
-            <form onSubmit={handleAddPlayer} className="space-y-3.5">
+            <form id="add-player-form" onSubmit={handleAddPlayer} className="space-y-4 pt-1">
               <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Full Name *
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1.5">
+                  Player Name
                 </label>
                 <input
                   type="text"
                   required
+                  autoFocus
                   placeholder="e.g. John Doe"
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/[0.08] text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/30 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                  className="w-full min-h-[44px] px-4 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0091ff]/40 transition placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddPlayerOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-black/[0.1] dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-sm font-semibold transition active:scale-[0.98] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingPlayer || !newPlayerName.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black text-sm font-bold shadow-md shadow-emerald-950/40 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                >
-                  {savingPlayer ? 'Saving...' : 'Save Friend'}
-                </button>
-              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                The new player will be immediately added to the roster and ranked on the chart board.
+              </p>
             </form>
           </div>
         </div>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* HEAD TO HEAD MODAL */}
+      {/* APPLE BOTTOM SHEET: HEAD TO HEAD MODAL                        */}
       {/* ------------------------------------------------------------- */}
       {isH2HOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-panel max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 bg-white dark:bg-[#0c140f] border border-black/[0.08] dark:border-white/10 text-zinc-900 dark:text-white rounded-3xl">
-            
-            <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] pb-3">
-              <div className="flex items-center space-x-2">
-                <Swords className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-                <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
-                  Head-to-Head Comparison
-                </h3>
-              </div>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-white dark:bg-[#1c1c1e] rounded-t-[26px] sm:rounded-[26px] p-5 shadow-2xl border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Grabber Pill */}
+            <div className="w-9 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto" />
+
+            {/* Navigation Header */}
+            <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] pb-3">
+              <span className="w-12" />
+              <h3 className="text-base font-bold text-zinc-900 dark:text-[#f5f5f7] flex items-center gap-1.5">
+                <Swords className="w-4 h-4 text-emerald-600 dark:text-[#30d158]" />
+                <span>Head-to-Head</span>
+              </h3>
+              <button
+                type="button"
                 onClick={() => setIsH2HOpen(false)}
-                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-1 rounded-lg transition hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer"
-                aria-label="Close"
+                className="text-[#0091ff] font-bold text-sm hover:opacity-80 transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                Done
               </button>
             </div>
 
             {/* Player Selection Dropdowns */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1">
                   Player 1
                 </label>
                 <select
                   value={h2hPlayer1Id}
                   onChange={(e) => setH2HPlayer1Id(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/60"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0091ff]/40"
                 >
                   {players.map((p) => (
-                    <option key={p.id} value={p.id} disabled={p.id === h2hPlayer2Id} className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white">
+                    <option key={p.id} value={p.id} disabled={p.id === h2hPlayer2Id} className="bg-white dark:bg-[#1c1c1e] text-zinc-900 dark:text-white">
                       {p.name}
                     </option>
                   ))}
@@ -400,16 +525,16 @@ export const Leaderboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1">
                   Player 2
                 </label>
                 <select
                   value={h2hPlayer2Id}
                   onChange={(e) => setH2HPlayer2Id(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/60"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0091ff]/40"
                 >
                   {players.map((p) => (
-                    <option key={p.id} value={p.id} disabled={p.id === h2hPlayer1Id} className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white">
+                    <option key={p.id} value={p.id} disabled={p.id === h2hPlayer1Id} className="bg-white dark:bg-[#1c1c1e] text-zinc-900 dark:text-white">
                       {p.name}
                     </option>
                   ))}
@@ -419,73 +544,63 @@ export const Leaderboard: React.FC = () => {
 
             {/* Comparison Stats */}
             {loadingH2H ? (
-              <div className="py-8 text-center text-emerald-600 dark:text-emerald-400 text-sm animate-pulse">
+              <div className="py-8 text-center text-emerald-600 dark:text-[#30d158] text-xs font-semibold animate-pulse">
                 Crunching head-to-head statistics...
               </div>
             ) : h2hStats ? (
-              <div className="space-y-3 pt-2">
-                
-                {/* Match Wins Visual comparison */}
-                <div className="p-4 rounded-2xl glass-panel border border-black/[0.08] dark:border-white/[0.06] text-center space-y-2 bg-zinc-50/80 dark:bg-[#09110d]/80">
-                  <div className="text-xs uppercase text-zinc-500 dark:text-zinc-400 font-bold tracking-wider">
+              <div className="space-y-3 pt-1">
+                {/* Visual Wins Comparison Card */}
+                <div className="p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] text-center space-y-2">
+                  <div className="text-[10px] uppercase text-zinc-400 dark:text-zinc-500 font-semibold tracking-wider">
                     Total Matches Played: {h2hStats.matchesPlayed}
                   </div>
-                  <div className="flex items-center justify-around">
+                  <div className="flex items-center justify-around py-1">
                     <div>
                       <div className="text-sm font-bold text-zinc-900 dark:text-white truncate max-w-[120px]">
                         {h2hStats.player1.name}
                       </div>
-                      <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-1">
+                      <div className="text-3xl font-black text-emerald-600 dark:text-[#30d158] font-mono tabular-nums mt-0.5">
                         {h2hStats.p1MatchWins}
                       </div>
-                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Wins</div>
+                      <div className="text-[11px] text-zinc-500">Wins</div>
                     </div>
 
-                    <div className="text-xl font-bold text-zinc-400 dark:text-zinc-600">vs</div>
+                    <div className="text-lg font-bold text-zinc-400 dark:text-zinc-600">vs</div>
 
                     <div>
                       <div className="text-sm font-bold text-zinc-900 dark:text-white truncate max-w-[120px]">
                         {h2hStats.player2.name}
                       </div>
-                      <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums mt-1">
+                      <div className="text-3xl font-black text-emerald-600 dark:text-[#30d158] font-mono tabular-nums mt-0.5">
                         {h2hStats.p2MatchWins}
                       </div>
-                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Wins</div>
+                      <div className="text-[11px] text-zinc-500">Wins</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Granular Stats breakdown */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 glass-panel rounded-xl border border-black/[0.06] dark:border-white/[0.06] text-center bg-white dark:bg-black/30 shadow-xs">
-                    <span className="text-zinc-500 dark:text-zinc-400 block mb-0.5">Total Frames Won</span>
-                    <span className="font-bold text-zinc-900 dark:text-white font-mono tabular-nums">
+                  <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] text-center">
+                    <span className="text-zinc-500 dark:text-zinc-400 block mb-0.5 text-[11px]">Total Frames Won</span>
+                    <span className="font-bold text-zinc-900 dark:text-white font-mono tabular-nums text-sm">
                       {h2hStats.p1FrameWins} - {h2hStats.p2FrameWins}
                     </span>
                   </div>
 
-                  <div className="p-2.5 glass-panel rounded-xl border border-black/[0.06] dark:border-white/[0.06] text-center bg-white dark:bg-black/30 shadow-xs">
-                    <span className="text-zinc-500 dark:text-zinc-400 block mb-0.5">High Break in H2H</span>
-                    <span className="font-bold text-amber-600 dark:text-amber-400 font-mono tabular-nums">
+                  <div className="p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] text-center">
+                    <span className="text-zinc-500 dark:text-zinc-400 block mb-0.5 text-[11px]">High Break in H2H</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400 font-mono tabular-nums text-sm">
                       {h2hStats.p1HighestBreak} vs {h2hStats.p2HighestBreak}
                     </span>
                   </div>
                 </div>
-
               </div>
             ) : (
               <div className="py-6 text-center text-zinc-500 dark:text-zinc-400 text-xs">
                 No head-to-head matches recorded between these two players yet.
               </div>
             )}
-
-            <button
-              onClick={() => setIsH2HOpen(false)}
-              className="w-full py-2.5 rounded-xl border border-black/[0.1] dark:border-white/[0.08] hover:bg-zinc-100 dark:hover:bg-white/[0.06] text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition active:scale-[0.98] cursor-pointer"
-            >
-              Close
-            </button>
-
           </div>
         </div>
       )}

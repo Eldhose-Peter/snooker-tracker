@@ -124,8 +124,8 @@ export default function Home() {
   const hasActiveMatch = Boolean(currentMatch && matchPlayers.length >= 2);
 
   return (
-    <div className="min-h-[100dvh] bg-[#f4f6f5] dark:bg-[#070908] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased">
-      {/* Navigation (Sticky Header on desktop + Fixed Bottom Bar on mobile) */}
+    <div className="min-h-[100dvh] bg-[var(--bg)] text-[var(--label)] flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased relative">
+      {/* Liquid Glass Navigation: Floating Top Header & Floating Bottom Tab Bar */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
@@ -133,23 +133,23 @@ export default function Home() {
         onOpenRules={() => setIsRulesOpen(true)}
       />
 
-      {/* Persistent Live Match Return Banner (Visible when browsing other tabs while game is in progress) */}
+      {/* Persistent Live Match Return Banner (Liquid Glass Callout when browsing other tabs) */}
       {hasActiveMatch && activeTab !== 'live' && (
         <aside 
           aria-label="Active match notice"
-          className="sticky top-[calc(3rem+env(safe-area-inset-top,0px))] sm:top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 max-w-5xl mx-auto w-full px-3 sm:px-4 pt-2.5"
+          className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4rem+env(safe-area-inset-top,0px))] z-30 max-w-4xl mx-auto w-full px-3 sm:px-4 pt-2"
         >
-          <div className="glass-panel p-2.5 sm:p-3 flex items-center justify-between shadow-xl border-emerald-500/40 bg-white/90 dark:bg-emerald-950/30 backdrop-blur-2xl">
-            <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+          <div className="glass p-3 sm:p-3.5 flex items-center justify-between shadow-xl border border-emerald-500/30 rounded-2xl">
+            <div className="flex items-center space-x-3 min-w-0 pr-2">
               <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
               <div className="min-w-0">
-                <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate block tracking-tight">
+                <span className="text-xs sm:text-sm font-semibold text-[var(--label)] truncate block tracking-tight">
                   Match Active: {matchPlayers.map(p => p.name).join(' vs ')}
                 </span>
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-400/90 font-medium block">
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium block">
                   Live frame in progress • Tap to resume scoring
                 </span>
               </div>
@@ -158,17 +158,21 @@ export default function Home() {
             <button
               type="button"
               onClick={() => handleTabChange('live')}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black font-bold text-xs shadow-md shadow-emerald-950/60 transition active:scale-[0.98] flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+              className="btn-filled px-4 py-2 text-xs font-semibold shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer flex-shrink-0"
             >
-              <Play className="w-3.5 h-3.5 fill-black" />
+              <Play className="w-3.5 h-3.5 fill-white text-white" />
               <span>Resume</span>
             </button>
           </div>
         </aside>
       )}
 
-      {/* Main Content Area (Flexible viewport distribution to fit iPhone screens without vertical dead zones) */}
-      <main className={`flex-1 flex flex-col ${activeTab === 'live' ? 'py-0.5 sm:py-2 pb-20 sm:pb-24 md:pb-6' : 'py-2 sm:py-4 pb-20 sm:pb-24 md:pb-6'}`}>
+      {/* Edge-to-edge Content Container scrolling smoothly behind floating bars */}
+      <main className={`flex-1 flex flex-col w-full max-w-5xl mx-auto px-2 sm:px-4 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4.25rem+env(safe-area-inset-top,0px))] ${
+        activeTab === 'live' 
+          ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom,16px))] sm:pb-[calc(6rem+env(safe-area-inset-bottom,16px))] md:pb-8' 
+          : 'pb-[calc(5.5rem+env(safe-area-inset-bottom,16px))] sm:pb-[calc(6rem+env(safe-area-inset-bottom,16px))] md:pb-10'
+      }`}>
         {activeTab === 'live' && hasActiveMatch && currentMatch && (
           <LiveScoreboard
             key={currentMatch.id}
@@ -199,8 +203,8 @@ export default function Home() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-black/[0.06] dark:border-white/[0.04] py-4 text-center text-xs text-zinc-500 dark:text-zinc-600 hidden md:block">
-        <p>Snooker Tracker & Leaderboard • Built with Next.js, Supabase & Vercel</p>
+      <footer className="border-t border-[var(--separator)] py-4 text-center text-xs text-[var(--label-3)] hidden md:block">
+        <p>SnookerTrack • Liquid Glass Human Interface</p>
       </footer>
     </div>
   );

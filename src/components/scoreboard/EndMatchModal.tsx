@@ -3,10 +3,8 @@
 import React, { useState } from 'react';
 import { Player } from '@/types/snooker';
 import { 
-  X, 
-  Flag, 
   Award, 
-  AlertOctagon, 
+  Flag, 
   Trash2, 
   CheckCircle2, 
 } from 'lucide-react';
@@ -48,7 +46,6 @@ export const EndMatchModal: React.FC<EndMatchModalProps> = ({
 
   let suggestedWinnerIdx = framesLeaders[0] ?? 0;
   if (framesLeaders.length > 1) {
-    // Frames are tied, look at current frame score
     const maxScore = Math.max(...playerScores);
     const scoreLeader = playerScores.indexOf(maxScore);
     if (scoreLeader !== -1) {
@@ -77,97 +74,103 @@ export const EndMatchModal: React.FC<EndMatchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl bg-white dark:bg-[#0c140f] border border-black/[0.08] dark:border-white/10 text-zinc-900 dark:text-white space-y-4 max-h-[92vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-lg bg-[#f2f2f7] dark:bg-[#1c1c1e] text-zinc-900 dark:text-[#f5f5f7] rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-black/[0.08] dark:border-white/[0.1] shadow-2xl p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto pb-safe animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] pb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-              <AlertOctagon className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
-                End Match In Between
-              </h2>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Frame {currentFrameNum} in progress • Choose how to conclude
-              </p>
-            </div>
-          </div>
+        {/* Apple 36x5px Grabber Pill */}
+        <div className="w-9 h-[5px] rounded-full bg-black/20 dark:bg-white/20 mx-auto flex-shrink-0" />
+
+        {/* Apple Navigation Header: Cancel leading, Title centered */}
+        <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] dark:border-white/[0.08]">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="p-1.5 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition cursor-pointer"
-            aria-label="Close"
+            className="text-[17px] text-[#007aff] dark:text-[#0a84ff] font-normal hover:opacity-70 transition cursor-pointer select-none"
           >
-            <X className="w-5 h-5" />
+            Cancel
           </button>
+          
+          <div className="text-center">
+            <h3 className="text-[17px] font-semibold text-zinc-900 dark:text-white leading-tight">
+              End Match
+            </h3>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+              Frame {currentFrameNum} in progress
+            </p>
+          </div>
+
+          <div className="w-12" />
         </div>
 
-        {/* Current Standing Summary */}
-        <div className="bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-3 flex items-center justify-between text-xs">
+        {/* Standings Summary - Apple Inset Grouped Card */}
+        <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-3 border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
           <span className="text-zinc-500 dark:text-zinc-400 font-medium">Current Standings:</span>
           <div className="flex items-center space-x-3 font-mono font-bold">
             {players.map((p, idx) => (
               <div key={p.id} className="flex items-center space-x-1">
                 <span className="text-zinc-700 dark:text-zinc-300">{p.name}:</span>
-                <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">{playerFrames[idx] || 0}F</span>
+                <span className="text-emerald-600 dark:text-emerald-400 tabular-nums">{playerFrames[idx] || 0}F</span>
                 <span className="text-zinc-400 dark:text-zinc-500 tabular-nums">({playerScores[idx] || 0}pts)</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Action Options */}
-        <div className="space-y-3 pt-1">
+        {/* Apple Action Confirmation Options */}
+        <div className="space-y-3">
           
-          {/* OPTION 1: Finish & Save with Leader */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-400/50 dark:border-emerald-500/30 space-y-2">
+          {/* Option 1 (Primary / Recommended): Crown Current Leader */}
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                  Finish & Crown Leader ({suggestedWinner?.name})
+                <span className="text-sm font-semibold text-zinc-900 dark:text-white">
+                  Crown Leader ({suggestedWinner?.name})
                 </span>
               </div>
-              <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/25">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/25 px-2 py-0.5 rounded-full">
                 Recommended
               </span>
             </div>
-            <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-snug">
-              Concludes the match now and awards victory to <strong className="text-emerald-800 dark:text-emerald-300">{suggestedWinner?.name}</strong> based on current frame and point lead. Result is saved to match history and leaderboard.
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              Award match victory to <strong className="text-zinc-900 dark:text-white">{suggestedWinner?.name}</strong> based on current standing. Result will be saved to match history and leaderboard.
             </p>
             <button
               type="button"
               disabled={submitting}
               onClick={handleFinishLeader}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
+              className="w-full py-3 px-5 rounded-full bg-[#007aff] hover:bg-[#0062cc] text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center space-x-1.5 transition active:scale-[0.98] cursor-pointer disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{submitting ? 'Concluding…' : `Crown ${suggestedWinner?.name} & Finish Match`}</span>
             </button>
           </div>
 
-          {/* OPTION 2: Concede Entire Match */}
-          <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] space-y-2.5">
-            <div className="flex items-center space-x-2">
-              <Flag className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
-              <span className="text-sm font-bold text-zinc-900 dark:text-white">
+          {/* Option 2 (Destructive Option 1): Player Concedes Match */}
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] space-y-2.5">
+            <div className="flex items-center space-x-2 text-zinc-900 dark:text-white">
+              <Flag className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span className="text-sm font-semibold">
                 Player Concedes Match
               </span>
             </div>
-            <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug">
-              If a player has to forfeit or leave, award the match win to their opponent(s).
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              A player forfeits, awarding the victory to their opponent(s).
             </p>
 
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium">Conceding Player:</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Conceding:</span>
               <select
                 value={selectedConceder}
                 onChange={(e) => setSelectedConceder(Number(e.target.value))}
-                className="bg-white dark:bg-black/50 border border-black/[0.1] dark:border-white/10 text-zinc-900 dark:text-white text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 flex-1 font-semibold"
+                className="bg-black/[0.05] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/10 text-zinc-900 dark:text-white text-xs rounded-xl px-2.5 py-1.5 focus:outline-none flex-1 font-semibold"
               >
                 {players.map((p, idx) => (
                   <option key={p.id} value={idx} className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white">
@@ -181,35 +184,35 @@ export const EndMatchModal: React.FC<EndMatchModalProps> = ({
               type="button"
               disabled={submitting}
               onClick={handleConcede}
-              className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition flex items-center justify-center space-x-1 cursor-pointer disabled:opacity-50 active:scale-95"
+              className="w-full py-3 px-5 rounded-full bg-[#ff9500] hover:bg-[#d97f00] text-white font-semibold text-xs sm:text-sm shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5 transition active:scale-[0.98] cursor-pointer disabled:opacity-50"
             >
-              <Flag className="w-3.5 h-3.5" />
-              <span>{submitting ? 'Saving…' : `Confirm ${players[selectedConceder]?.name} Concedes Match`}</span>
+              <Flag className="w-4 h-4" />
+              <span>{submitting ? 'Saving…' : `End & Concede (${players[selectedConceder]?.name})`}</span>
             </button>
           </div>
 
-          {/* OPTION 3: Abandon Match */}
-          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 space-y-2">
-            <div className="flex items-center space-x-2 text-rose-600 dark:text-rose-400">
+          {/* Option 3 (Destructive Option 2): Abandon Match */}
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-4 border border-rose-500/20 dark:border-rose-500/30 space-y-2.5">
+            <div className="flex items-center space-x-2 text-[#ff3b30] dark:text-[#ff453a]">
               <Trash2 className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm font-bold">
+              <span className="text-sm font-semibold">
                 Abandon Match (Discard)
               </span>
             </div>
-            <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug">
-              Discard this match without recording frame wins, losses, or breaks to the leaderboard.
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              Discard this match completely without recording frame wins, losses, or breaks to the leaderboard.
             </p>
 
             {confirmAbandon ? (
               <div className="space-y-2 pt-1">
-                <p className="text-xs text-rose-600 dark:text-rose-300 font-bold">
-                  Are you absolutely sure? This will wipe the in-progress session.
+                <p className="text-xs text-[#ff3b30] dark:text-[#ff453a] font-semibold">
+                  Are you absolutely sure? This cannot be undone.
                 </p>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setConfirmAbandon(false)}
-                    className="flex-1 py-1.5 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] cursor-pointer"
+                    className="flex-1 py-2.5 px-4 rounded-full bg-black/[0.06] hover:bg-black/[0.1] dark:bg-white/[0.08] text-xs font-semibold text-zinc-800 dark:text-white cursor-pointer transition active:scale-[0.98]"
                   >
                     Cancel
                   </button>
@@ -217,7 +220,7 @@ export const EndMatchModal: React.FC<EndMatchModalProps> = ({
                     type="button"
                     disabled={submitting}
                     onClick={handleAbandon}
-                    className="flex-1 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition shadow-md shadow-rose-950/40 disabled:opacity-50 active:scale-95 cursor-pointer"
+                    className="flex-1 py-2.5 px-4 rounded-full bg-[#ff3b30] hover:bg-[#d7342a] text-white text-xs font-bold transition shadow-md shadow-rose-950/20 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
                   >
                     {submitting ? 'Discarding…' : 'Yes, Discard Match'}
                   </button>
@@ -227,13 +230,25 @@ export const EndMatchModal: React.FC<EndMatchModalProps> = ({
               <button
                 type="button"
                 onClick={() => setConfirmAbandon(true)}
-                className="w-full py-2 px-3 rounded-xl bg-rose-100 dark:bg-rose-950/40 hover:bg-rose-200 dark:hover:bg-rose-900/40 border border-rose-300 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 font-bold text-xs transition cursor-pointer active:scale-95"
+                className="w-full py-3 px-5 rounded-full bg-[#ff3b30]/15 hover:bg-[#ff3b30]/25 text-[#ff3b30] dark:text-[#ff453a] border border-[#ff3b30]/30 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
               >
-                Discard & Abandon Match
+                Abandon Match
               </button>
             )}
           </div>
 
+        </div>
+
+        {/* Bottom Cancel Capsule Button */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="w-full py-3 px-5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-800 dark:text-white font-semibold text-xs sm:text-sm transition active:scale-[0.98] cursor-pointer"
+          >
+            Cancel
+          </button>
         </div>
 
       </div>

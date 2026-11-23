@@ -29,212 +29,218 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* ----------------------------------------------------------------- */}
-      {/* TOP HEADER (Brand, Cloud Status, Rules Help, Desktop Nav)        */}
+      {/* PROGRESSIVE SCROLL-EDGE BLUR EFFECT (CONTENT FADES UNDER BARS)    */}
       {/* ----------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full flex-shrink-0 bg-white/90 dark:bg-[#070908]/90 backdrop-blur-2xl border-b border-zinc-200/80 dark:border-white/[0.06] pt-[env(safe-area-inset-top,0px)] will-change-transform transform-gpu">
-        <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between">
-          
-          {/* Brand */}
-          <div 
-            onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-            className="flex items-center space-x-2.5 cursor-pointer select-none group"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-700 via-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-950/60 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform">
-              <span className="text-base leading-none">🎱</span>
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-extrabold tracking-tight text-zinc-900 dark:text-white flex items-center gap-1.5 leading-none">
-                Snooker<span className="text-emerald-600 dark:text-emerald-400">Track</span>
-                {hasActiveMatch && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[9px] font-bold flex items-center gap-1 uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" /> Live
-                  </span>
-                )}
-              </h1>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400/80 font-medium hidden sm:block mt-0.5">
-                Tournament Scorer & Club Leaderboard
-              </p>
-            </div>
-          </div>
+      <div className="scroll-edge" aria-hidden="true" />
 
-          {/* Desktop Navigation Tabs (Hidden on mobile, mobile uses bottom bar) */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {hasActiveMatch && (
+      {/* ----------------------------------------------------------------- */}
+      {/* FLOATING TOP NAVIGATION HEADER (LIQUID GLASS CAPSULE ISLAND)       */}
+      {/* ----------------------------------------------------------------- */}
+      <header className="fixed top-0 left-0 right-0 z-40 w-full pt-[env(safe-area-inset-top,0px)] pointer-events-none">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 pointer-events-auto">
+          <div className="w-full glass rounded-full px-3.5 sm:px-5 h-11 sm:h-12 flex items-center justify-between border border-white/20 dark:border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            
+            {/* Brand (SnookerTrack + Live Status) */}
+            <div 
+              onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
+              className="flex items-center space-x-2.5 cursor-pointer select-none group min-h-[44px]"
+              role="button"
+              tabIndex={0}
+              aria-label="SnookerTrack Home"
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-950/40 ring-1 ring-white/20 flex-shrink-0 group-active:scale-95 transition-transform duration-200">
+                <span className="text-sm sm:text-base leading-none select-none">🎱</span>
+              </div>
+              <div>
+                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-[var(--label)] flex items-center gap-1.5 leading-none">
+                  Snooker<span className="text-emerald-500 dark:text-emerald-400">Track</span>
+                  {hasActiveMatch && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-[9px] font-semibold flex items-center gap-1 tracking-wide">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" /> Live
+                    </span>
+                  )}
+                </h1>
+                <p className="text-[10px] text-[var(--label-3)] font-medium hidden sm:block mt-0.5 tracking-tight">
+                  Tournament Scorer & Club Leaderboard
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop Navigation Tabs (Styled as Apple segmented Liquid Glass pills) */}
+            <nav aria-label="Desktop Navigation" className="hidden md:flex items-center space-x-1">
+              {hasActiveMatch && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('live')}
+                  aria-current={activeTab === 'live' ? 'page' : undefined}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer min-h-[36px] active:scale-[0.97] active:opacity-80 ${
+                    activeTab === 'live'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'
+                      : 'text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <PlayCircle className="w-4 h-4" />
+                  <span>Live Frame</span>
+                </button>
+              )}
+
               <button
-                onClick={() => setActiveTab('live')}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'live'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-                    : 'text-zinc-600 hover:text-zinc-900 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.05]'
+                type="button"
+                onClick={() => setActiveTab('new-match')}
+                aria-current={activeTab === 'new-match' ? 'page' : undefined}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer min-h-[36px] active:scale-[0.97] active:opacity-80 ${
+                  activeTab === 'new-match'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'
+                    : 'text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                <PlayCircle className="w-4 h-4" />
-                <span>Live Frame</span>
+                <PlusCircle className="w-4 h-4" />
+                <span>Start Match</span>
               </button>
-            )}
 
-            <button
-              onClick={() => setActiveTab('new-match')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'new-match'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Start Match</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('leaderboard')}
+                aria-current={activeTab === 'leaderboard' ? 'page' : undefined}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer min-h-[36px] active:scale-[0.97] active:opacity-80 ${
+                  activeTab === 'leaderboard'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'
+                    : 'text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                }`}
+              >
+                <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <span>Leaderboard</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('leaderboard')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'leaderboard'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              <span>Leaderboard</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                aria-current={activeTab === 'history' ? 'page' : undefined}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 cursor-pointer min-h-[36px] active:scale-[0.97] active:opacity-80 ${
+                  activeTab === 'history'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'
+                    : 'text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                <span>History</span>
+              </button>
+            </nav>
 
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'history'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.05]'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              <span>History</span>
-            </button>
-          </nav>
+            {/* Right Tools: Supabase Cloud Connectivity & Rules Help */}
+            <div className="flex items-center space-x-1.5">
+              {/* Cloud Status */}
+              <div 
+                title={isSupabaseConfigured ? 'Connected to Supabase Cloud' : 'Running in Offline mode'}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-medium border ${
+                  isSupabaseConfigured
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                    : 'bg-black/[0.04] dark:bg-white/[0.06] text-[var(--label-2)] border-black/[0.06] dark:border-white/[0.08]'
+                }`}
+              >
+                <Database className="w-3 h-3" />
+                <span className="hidden sm:inline">{isSupabaseConfigured ? 'Cloud' : 'Offline'}</span>
+                {isSupabaseConfigured ? (
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-[var(--label-3)]" />
+                )}
+              </div>
 
-          {/* Right Tools: Supabase Status & Rules Help */}
-          <div className="flex items-center space-x-1.5">
-            {/* Cloud Status */}
-            <div 
-              title={isSupabaseConfigured ? 'Connected to Supabase Cloud' : 'Running in Offline mode'}
-              className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                isSupabaseConfigured
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                  : 'bg-zinc-100 dark:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/[0.06]'
-              }`}
-            >
-              <Database className="w-3 h-3" />
-              <span className="hidden sm:inline">{isSupabaseConfigured ? 'Cloud' : 'Offline'}</span>
-              {isSupabaseConfigured ? (
-                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <AlertCircle className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
-              )}
+              {/* Rules Guide Modal Trigger (44x44pt hit target) */}
+              <button
+                type="button"
+                onClick={onOpenRules}
+                className="w-11 h-11 flex items-center justify-center text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-transform duration-200 active:scale-95 cursor-pointer"
+                title="Snooker Rules & Guide"
+                aria-label="Snooker Rules & Guide"
+              >
+                <HelpCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </button>
             </div>
 
-            <button
-              onClick={onOpenRules}
-              className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer active:scale-95"
-              title="Snooker Rules & Guide"
-              aria-label="Snooker Rules & Guide"
-            >
-              <HelpCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400/90" />
-            </button>
           </div>
-
         </div>
       </header>
 
-      {/* Non-collapsible layout placeholder to lock in rigid height and prevent scroll jump/underlap */}
-      <div 
-        className="w-full flex-shrink-0 pointer-events-none select-none h-[calc(3rem+env(safe-area-inset-top,0px))] sm:h-[calc(3.5rem+env(safe-area-inset-top,0px))]" 
-        aria-hidden="true" 
-      />
-
       {/* ----------------------------------------------------------------- */}
-      {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-optimized iOS app bar)        */}
+      {/* FLOATING BOTTOM LIQUID GLASS TAB BAR (APPLE CAPSULE ISLAND)       */}
       {/* ----------------------------------------------------------------- */}
       <nav 
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-[#070908]/90 backdrop-blur-2xl border-t border-zinc-200/80 dark:border-white/[0.07] md:hidden pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+        className="fixed left-1/2 -translate-x-1/2 bottom-[max(16px,env(safe-area-inset-bottom,16px))] z-40 flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full glass border border-white/25 dark:border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.65)] select-none pointer-events-auto md:hidden"
       >
-        <div className="grid grid-cols-4 h-14 max-w-md mx-auto px-2">
-          
-          {/* TAB 1: LIVE MATCH */}
-          <button
-            type="button"
-            onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
-            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
-              activeTab === 'live'
-                ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-            }`}
-          >
-            <div className="relative">
-              <PlayCircle className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'live' ? 'text-emerald-600 dark:text-emerald-400 scale-105' : 'text-zinc-500 dark:text-zinc-400'}`} />
-              {hasActiveMatch && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              )}
-            </div>
-            <span className="text-[10px] tracking-tight font-medium">
-              {hasActiveMatch ? 'Live Game' : 'Live'}
-            </span>
-            {activeTab === 'live' && (
-              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+        {/* TAB 1: LIVE MATCH */}
+        <button
+          type="button"
+          onClick={() => setActiveTab(hasActiveMatch ? 'live' : 'new-match')}
+          aria-label={hasActiveMatch ? "Live Game" : "Live"}
+          aria-current={activeTab === 'live' ? 'page' : undefined}
+          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+            activeTab === 'live'
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+              : 'text-[var(--label-2)] hover:text-[var(--label)]'
+          }`}
+        >
+          <div className="relative">
+            <PlayCircle className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'live' ? 'scale-110 text-emerald-600 dark:text-emerald-400' : 'text-[var(--label-2)]'}`} />
+            {hasActiveMatch && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
             )}
-          </button>
+          </div>
+          <span className="text-[10px] tracking-tight font-medium mt-0.5">
+            {hasActiveMatch ? 'Live Game' : 'Live'}
+          </span>
+        </button>
 
-          {/* TAB 2: START GAME / NEW MATCH */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('new-match')}
-            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
-              activeTab === 'new-match'
-                ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-            }`}
-          >
-            <PlusCircle className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'new-match' ? 'text-emerald-600 dark:text-emerald-400 scale-105' : 'text-zinc-500 dark:text-zinc-400'}`} />
-            <span className="text-[10px] tracking-tight font-medium">Start Game</span>
-            {activeTab === 'new-match' && (
-              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-            )}
-          </button>
+        {/* TAB 2: START MATCH */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('new-match')}
+          aria-label="Start Game"
+          aria-current={activeTab === 'new-match' ? 'page' : undefined}
+          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+            activeTab === 'new-match'
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+              : 'text-[var(--label-2)] hover:text-[var(--label)]'
+          }`}
+        >
+          <PlusCircle className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'new-match' ? 'scale-110 text-emerald-600 dark:text-emerald-400' : 'text-[var(--label-2)]'}`} />
+          <span className="text-[10px] tracking-tight font-medium mt-0.5">Start Game</span>
+        </button>
 
-          {/* TAB 3: LEADERBOARD */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('leaderboard')}
-            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
-              activeTab === 'leaderboard'
-                ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-            }`}
-          >
-            <Trophy className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'leaderboard' ? 'text-amber-500 dark:text-amber-400 scale-105' : 'text-zinc-500 dark:text-zinc-400'}`} />
-            <span className="text-[10px] tracking-tight font-medium">Rankings</span>
-            {activeTab === 'leaderboard' && (
-              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-            )}
-          </button>
+        {/* TAB 3: LEADERBOARD */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('leaderboard')}
+          aria-label="Rankings"
+          aria-current={activeTab === 'leaderboard' ? 'page' : undefined}
+          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+            activeTab === 'leaderboard'
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+              : 'text-[var(--label-2)] hover:text-[var(--label)]'
+          }`}
+        >
+          <Trophy className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'leaderboard' ? 'scale-110 text-amber-500 dark:text-amber-400' : 'text-[var(--label-2)]'}`} />
+          <span className="text-[10px] tracking-tight font-medium mt-0.5">Rankings</span>
+        </button>
 
-          {/* TAB 4: HISTORY */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('history')}
-            className={`flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer relative active:scale-95 ${
-              activeTab === 'history'
-                ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-            }`}
-          >
-            <History className={`w-5 h-5 transition-transform duration-150 ${activeTab === 'history' ? 'text-emerald-600 dark:text-emerald-400 scale-105' : 'text-zinc-500 dark:text-zinc-400'}`} />
-            <span className="text-[10px] tracking-tight font-medium">History</span>
-            {activeTab === 'history' && (
-              <span className="absolute bottom-1 w-5 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-            )}
-          </button>
-
-        </div>
+        {/* TAB 4: HISTORY */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('history')}
+          aria-label="History"
+          aria-current={activeTab === 'history' ? 'page' : undefined}
+          className={`min-w-[64px] min-h-[44px] h-[48px] px-3 flex flex-col items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-[0.96] active:opacity-80 ${
+            activeTab === 'history'
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+              : 'text-[var(--label-2)] hover:text-[var(--label)]'
+          }`}
+        >
+          <History className={`w-5 h-5 transition-transform duration-200 ${activeTab === 'history' ? 'scale-110 text-emerald-600 dark:text-emerald-400' : 'text-[var(--label-2)]'}`} />
+          <span className="text-[10px] tracking-tight font-medium mt-0.5">History</span>
+        </button>
       </nav>
     </>
   );
