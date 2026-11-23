@@ -91,6 +91,8 @@ function setLocal<T>(key: string, value: T): void {
 // Ensure roster is initialized and actual played matches are restored and preserved
 function ensureLocalSeed(): void {
   if (typeof window === 'undefined') return;
+  // When Supabase is configured, Supabase is the primary store (do not seed mock matches into localStorage)
+  if (isSupabaseConfigured) return;
 
   // Clear any legacy cleared flags that may prevent actual match restoration
   try {
@@ -221,11 +223,34 @@ export async function fetchPlayers(): Promise<Player[]> {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('players').select('*').order('name');
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.error('Supabase fetchPlayers error:', error);
+        return [];
+      }
+      if (data && data.length > 0) {
         return data as Player[];
       }
+      // If table exists but is empty, automatically seed friend group members to Supabase once
+      try {
+        const { data: seeded, error: seedErr } = await supabase
+          .from('players')
+          .insert(INITIAL_PLAYERS.map(p => ({
+            id: p.id,
+            name: p.name,
+            nickname: p.nickname,
+            avatar_url: p.avatar_url,
+          })))
+          .select();
+        if (!seedErr && seeded && seeded.length > 0) {
+          return seeded as Player[];
+        }
+      } catch (seedErr) {
+        console.warn('Auto-seed initial players to Supabase error:', seedErr);
+      }
+      return (data || []) as Player[];
     } catch (err) {
-      console.warn('Supabase fetchPlayers error, falling back to local storage', err);
+      console.error('Supabase fetchPlayers exception:', err);
+      return [];
     }
   }
 
@@ -245,17 +270,21 @@ export async function createPlayer(name: string, nickname?: string, avatarUrl?: 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('players').insert({
+        id: newPlayer.id,
         name: newPlayer.name,
         nickname: newPlayer.nickname,
         avatar_url: newPlayer.avatar_url,
       }).select().single();
 
-      if (!error && data) {
+      if (error) {
+        console.error('Supabase createPlayer error:', error);
+      } else if (data) {
         return data as Player;
       }
     } catch (err) {
-      console.warn('Supabase createPlayer error, falling back to local storage', err);
+      console.error('Supabase createPlayer exception:', err);
     }
+    return newPlayer;
   }
 
   ensureLocalSeed();
@@ -278,11 +307,50 @@ export async function fetchMatches(): Promise<Match[]> {
         `)
         .order('started_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return data as Match[];
+      if (error) {
+        console.error('Supabase fetchMatches error:', error);
+        return [];
       }
+
+      const rawMatches = (data || []) as any[];
+      if (rawMatches.length === 0) {
+        return [];
+      }
+
+      const players = await fetchPlayers();
+      const playerMap = new Map(players.map(p => [p.id, p]));
+
+      return rawMatches.map(m => {
+        const playerIds: string[] = m.player_ids && m.player_ids.length > 0
+          ? m.player_ids
+          : [m.player1_id, m.player2_id].filter(Boolean);
+
+        const hydratedPlayers = playerIds
+          .map(id => playerMap.get(id))
+          .filter((p): p is Player => Boolean(p));
+
+        const finalPlayers = hydratedPlayers.length > 0
+          ? hydratedPlayers
+          : playerIds.map((id, idx) => ({
+              id,
+              name: id === m.player1_id ? (m.player1?.name || 'Player 1') : (m.player2?.name || `Player ${idx + 1}`),
+              created_at: new Date().toISOString(),
+            }));
+
+        const frames = (m.frames || []).sort((a: Frame, b: Frame) => a.frame_number - b.frame_number);
+
+        return {
+          ...m,
+          player_ids: playerIds,
+          players: finalPlayers,
+          player1: finalPlayers[0] || m.player1 || { id: m.player1_id, name: 'Player 1', created_at: '' },
+          player2: finalPlayers[1] || m.player2 || { id: m.player2_id, name: 'Player 2', created_at: '' },
+          frames,
+        };
+      });
     } catch (err) {
-      console.warn('Supabase fetchMatches error, falling back to local storage', err);
+      console.error('Supabase fetchMatches exception:', err);
+      return [];
     }
   }
 
@@ -659,36 +727,7 @@ export function clearLiveSession(): void {
   }
 }
 
-/**
- * Calculates current leaderboard from matches and frame records.
- * Supports multiplayer matches with any number of participants.
- */
-export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('player_leaderboard').select('*');
-      if (!error && data && data.length > 0) {
-        return data as LeaderboardEntry[];
-      }
-    } catch (err) {
-      console.warn('Supabase fetchLeaderboard error, calculating locally', err);
-    }
-  }
-
-  ensureLocalSeed();
-  const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
-  let rawMatches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
-  if (!rawMatches || rawMatches.length === 0) {
-    rawMatches = ACTUAL_MATCHES;
-    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
-  }
-  const matches = rawMatches.filter(m => m.status === 'completed');
-  const completedMatchIds = new Set(matches.map(m => m.id));
-  let frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES).filter(f => completedMatchIds.has(f.match_id));
-  if (frames.length === 0) {
-    frames = ACTUAL_FRAMES.filter(f => completedMatchIds.has(f.match_id));
-  }
-
+function computeLeaderboard(players: Player[], matches: Match[], frames: Frame[]): LeaderboardEntry[] {
   const leaderboard: LeaderboardEntry[] = players.map(player => {
     const playerMatches = matches.filter(m => {
       if (m.player_ids && m.player_ids.length > 0) {
@@ -750,6 +789,49 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
     if (b.win_rate !== a.win_rate) return b.win_rate - a.win_rate;
     return b.highest_break - a.highest_break;
   });
+}
+
+/**
+ * Calculates current leaderboard from matches and frame records.
+ * Supports multiplayer matches with any number of participants.
+ */
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('player_leaderboard').select('*');
+      if (!error && data && data.length > 0) {
+        return data as LeaderboardEntry[];
+      }
+    } catch (err) {
+      console.warn('Supabase fetchLeaderboard error, computing from Supabase records', err);
+    }
+
+    // Dynamic calculation from Supabase players, completed matches, and frames
+    const [players, matches] = await Promise.all([
+      fetchPlayers(),
+      fetchMatches(),
+    ]);
+    const completedMatches = matches.filter(m => m.status === 'completed');
+    const allFrames = completedMatches.flatMap(m => m.frames || []);
+
+    return computeLeaderboard(players, completedMatches, allFrames);
+  }
+
+  ensureLocalSeed();
+  const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
+  let rawMatches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
+  if (!rawMatches || rawMatches.length === 0) {
+    rawMatches = ACTUAL_MATCHES;
+    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
+  }
+  const matches = rawMatches.filter(m => m.status === 'completed');
+  const completedMatchIds = new Set(matches.map(m => m.id));
+  let frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES).filter(f => completedMatchIds.has(f.match_id));
+  if (frames.length === 0) {
+    frames = ACTUAL_FRAMES.filter(f => completedMatchIds.has(f.match_id));
+  }
+
+  return computeLeaderboard(players, matches, frames);
 }
 
 export async function fetchHeadToHead(player1Id: string, player2Id: string): Promise<HeadToHeadStats | null> {

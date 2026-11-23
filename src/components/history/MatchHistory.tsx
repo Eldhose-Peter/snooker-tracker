@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Match, Player } from '@/types/snooker';
-import { fetchMatches, restoreActualMatches, clearAllMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
+import { fetchMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
 import { FrameInsightsView } from './insights/FrameInsightsView';
-import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3, Sparkles, RotateCcw, Play } from 'lucide-react';
+import { History, Trophy, Calendar, ChevronDown, ChevronUp, Flame, BarChart3, Play } from 'lucide-react';
 
 interface MatchHistoryProps {
   onNavigateTab?: (tab: 'live' | 'leaderboard' | 'history' | 'new-match') => void;
@@ -13,7 +13,6 @@ interface MatchHistoryProps {
 export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
   const [liveSession, setLiveSession] = useState<ActiveLiveSession | null>(null);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [selectedFrameByMatch, setSelectedFrameByMatch] = useState<Record<string, string>>({});
@@ -38,29 +37,6 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
   useEffect(() => {
     reloadMatches();
   }, [reloadMatches]);
-
-  const handleRestoreActualMatches = async () => {
-    setActionLoading(true);
-    try {
-      await restoreActualMatches(true);
-      await reloadMatches();
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleClearHistory = async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Reset match records back to the group actual matches?')) {
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await clearAllMatches();
-      await reloadMatches();
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const toggleExpand = (id: string) => {
     setExpandedMatchId((prev) => (prev === id ? null : id));
@@ -95,33 +71,6 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
           <p className="text-xs sm:text-sm text-emerald-400/80 mt-0.5">
             Log of completed matches, series results, and multiplayer frame breakdowns
           </p>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleRestoreActualMatches}
-            disabled={actionLoading}
-            className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-            title="Restore actual played matches featuring shot-by-shot visual insights"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Restore Actual Matches</span>
-          </button>
-
-          {matches.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearHistory}
-              disabled={actionLoading}
-              className="px-3 py-1.5 bg-gray-900/80 hover:bg-red-950/50 text-gray-400 hover:text-red-400 border border-gray-800 hover:border-red-900/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
-              title="Clear all recorded match histories"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -179,19 +128,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
           <div className="space-y-1.5">
             <p className="text-sm sm:text-base font-bold text-gray-200">No completed matches recorded yet</p>
             <p className="text-xs text-gray-400 max-w-md mx-auto">
-              Your match records are currently empty. Click below to restore your actual matches with complete shot-by-shot insights, or start a new match!
+              Your match records are currently empty. Start a new match to record scores and track visual insights!
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleRestoreActualMatches}
-              disabled={actionLoading}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer disabled:opacity-50"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Restore Actual Matches with Visual Insights</span>
-            </button>
+          <div className="flex items-center justify-center pt-2">
             <button
               type="button"
               onClick={() => {
@@ -201,9 +141,10 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                   window.location.reload();
                 }
               }}
-              className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700/80 rounded-xl text-xs font-bold transition cursor-pointer"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-950 cursor-pointer"
             >
-              Start New Match
+              <Play className="w-4 h-4 fill-current" />
+              <span>Start New Match</span>
             </button>
           </div>
         </div>

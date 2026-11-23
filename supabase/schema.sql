@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. PLAYERS TABLE
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS players (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name VARCHAR(100) NOT NULL,
     nickname VARCHAR(50),
     avatar_url TEXT,
@@ -24,14 +24,14 @@ CREATE INDEX IF NOT EXISTS idx_players_name ON players(name);
 -- 2. MATCHES TABLE
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS matches (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    player1_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    player2_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    player_ids UUID[] DEFAULT ARRAY[]::UUID[],
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    player1_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    player2_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    player_ids TEXT[] DEFAULT ARRAY[]::TEXT[],
     player_frames INT[] DEFAULT ARRAY[]::INT[],
     best_of INT NOT NULL DEFAULT 1 CHECK (best_of > 0 AND best_of % 2 = 1),
     status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'abandoned')),
-    winner_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    winner_id TEXT REFERENCES players(id) ON DELETE SET NULL,
     player1_frames INT NOT NULL DEFAULT 0,
     player2_frames INT NOT NULL DEFAULT 0,
     reds_count INT NOT NULL DEFAULT 15 CHECK (reds_count IN (6, 10, 15)),
@@ -49,15 +49,15 @@ CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
 -- 3. FRAMES TABLE
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS frames (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     frame_number INT NOT NULL,
     player1_score INT NOT NULL DEFAULT 0,
     player2_score INT NOT NULL DEFAULT 0,
     scores INT[] DEFAULT ARRAY[]::INT[],
-    winner_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    winner_id TEXT REFERENCES players(id) ON DELETE SET NULL,
     highest_break INT NOT NULL DEFAULT 0,
-    highest_break_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
+    highest_break_player_id TEXT REFERENCES players(id) ON DELETE SET NULL,
     events JSONB DEFAULT '[]'::jsonb,
     started_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     completed_at TIMESTAMPTZ,
@@ -74,10 +74,10 @@ CREATE INDEX IF NOT EXISTS idx_frames_winner ON frames(winner_id);
 -- 4. BREAKS / HIGH RUNS LOG (Optional granular tracking for breaks >= 20)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS breaks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    frame_id UUID REFERENCES frames(id) ON DELETE CASCADE,
-    match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
-    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    frame_id TEXT REFERENCES frames(id) ON DELETE CASCADE,
+    match_id TEXT REFERENCES matches(id) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     points INT NOT NULL CHECK (points > 0),
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
