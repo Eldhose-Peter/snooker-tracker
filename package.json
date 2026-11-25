@@ -11,6 +11,7 @@
     "db:setup": "node scripts/setup-db.mjs"
   },
   "dependencies": {
+    "@google/genai": "^3.6.1",
     "@supabase/supabase-js": "^2.119.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",

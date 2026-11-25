@@ -6,7 +6,7 @@ import {
   History, 
   PlayCircle, 
   PlusCircle, 
-  HelpCircle, 
+  Sparkles, 
   Database, 
   CheckCircle2, 
   AlertCircle
@@ -18,14 +18,14 @@ interface NavbarProps {
   activeTab: 'live' | 'leaderboard' | 'history' | 'new-match';
   setActiveTab: (tab: 'live' | 'leaderboard' | 'history' | 'new-match') => void;
   hasActiveMatch: boolean;
-  onOpenRules: () => void;
+  onOpenAssistant: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   hasActiveMatch,
-  onOpenRules,
+  onOpenAssistant,
 }) => {
   return (
     <>
@@ -143,15 +143,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </div>
 
-              {/* Rules Guide Modal Trigger (44x44pt hit target) */}
+              {/* AI Referee Assistant Modal Trigger (44x44pt hit target) */}
               <button
                 type="button"
-                onClick={onOpenRules}
-                className="w-10 h-10 flex items-center justify-center text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-transform duration-200 active:scale-95 cursor-pointer flex-shrink-0"
-                title="Snooker Rules & Guide"
-                aria-label="Snooker Rules & Guide"
+                onClick={onOpenAssistant}
+                className="relative w-11 h-11 flex items-center justify-center text-[var(--label-2)] hover:text-[var(--label)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-transform duration-200 active:scale-95 cursor-pointer flex-shrink-0"
+                title="AI Referee Assistant"
+                aria-label="AI Referee Assistant"
               >
-                <HelpCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                {hasActiveMatch && (
+                  <span
+                    className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-black"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
             </div>
 

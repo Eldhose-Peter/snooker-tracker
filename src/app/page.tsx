@@ -7,7 +7,7 @@ import { LiveScoreboard } from '@/components/scoreboard/LiveScoreboard';
 import { Leaderboard } from '@/components/leaderboard/Leaderboard';
 import { MatchSetup } from '@/components/match/MatchSetup';
 import { MatchHistory } from '@/components/history/MatchHistory';
-import { RulesModal } from '@/components/modals/RulesModal';
+import { AIAssistantModal } from '@/components/modals/AIAssistantModal';
 import { getLiveSession, clearLiveSession } from '@/lib/storage';
 import { Play } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export default function Home() {
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
   const [matchPlayers, setMatchPlayers] = useState<Player[]>([]);
   const [activeTab, setActiveTab] = useState<'live' | 'leaderboard' | 'history' | 'new-match'>('new-match');
-  const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
   // Restore active live tracking session from localStorage on client mount (safe from SSR hydration mismatches)
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         hasActiveMatch={hasActiveMatch}
-        onOpenRules={() => setIsRulesOpen(true)}
+        onOpenAssistant={() => setIsAssistantOpen(true)}
       />
 
       {/* Persistent Live Match Return Banner (Liquid Glass Callout when browsing other tabs) */}
@@ -196,10 +196,10 @@ export default function Home() {
         {activeTab === 'history' && <MatchHistory onNavigateTab={handleTabChange} />}
       </main>
 
-      {/* Snooker Rules & Engine Guide Modal */}
-      <RulesModal
-        isOpen={isRulesOpen}
-        onClose={() => setIsRulesOpen(false)}
+      {/* Context-Aware AI Referee Assistant Modal */}
+      <AIAssistantModal
+        isOpen={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
       />
 
       {/* Footer */}

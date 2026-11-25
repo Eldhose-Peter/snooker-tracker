@@ -835,6 +835,84 @@ async function testAbandon() {
   assert.strictEqual(earlyInsights.timeline.length, 4); // init + 3 events
   console.log('✓ Early match ending telemetry retention and visual insights verified.');
 
+  // 33. Verifying AI Referee Context Serialization & System Prompt Generation
+  console.log('\n[33] Verifying AI Referee Context & Prompt Builder...');
+  const {
+    buildRefereeMatchContext,
+    formatRefereeSystemPrompt,
+    getQuickRefereeSuggestions,
+  } = await import('../src/lib/referee-context');
+
+  const idleCtx = buildRefereeMatchContext(null);
+  assert.strictEqual(idleCtx.hasActiveMatch, false);
+  const idlePrompt = formatRefereeSystemPrompt(idleCtx);
+  assert(idlePrompt.includes('No active match is currently in progress'));
+  assert.strictEqual(getQuickRefereeSuggestions(idleCtx).length, 4);
+
+  const foulFrameState = {
+    ...handleFoul(
+      createInitialFrameState(3, 10, ['Eldho', 'Thoma', 'Raju']),
+      6,
+      'next_player',
+      true,
+      false,
+      1
+    ),
+    events: [
+      {
+        id: 'evt-ref-foul-1',
+        timestamp: Date.now(),
+        frameNumber: 2,
+        type: 'foul' as const,
+        playerIndex: 0,
+        playerName: 'Eldho',
+        foulPoints: 6,
+        awardedTo: [1],
+        freeBallAwarded: true,
+        passBack: false,
+        redsPocketedOnFoul: 1,
+        redsRemainingAfter: 9,
+        scoresAfter: [0, 6, 0],
+        detail: 'Eldho fouled on Pink (+6 pts) • 1 red pocketed. Turn to Thoma.',
+      },
+    ],
+  };
+
+  const liveRefCtx = buildRefereeMatchContext({
+    match: {
+      ...earlyMatch,
+      best_of: 3,
+      reds_count: 10,
+      player_ids: ['p1', 'p2', 'p3'],
+      player_frames: [1, 0, 0],
+    },
+    players: INITIAL_PLAYERS.slice(0, 3),
+    currentFrameNum: 2,
+    playerFrames: [1, 0, 0],
+    frameState: foulFrameState,
+    undoStack: [],
+    redoStack: [],
+    updatedAt: Date.now(),
+  });
+
+  assert.strictEqual(liveRefCtx.hasActiveMatch, true);
+  assert.strictEqual(liveRefCtx.activePlayerName, 'Thoma');
+  assert.strictEqual(liveRefCtx.freeBallActive, true);
+  assert.strictEqual(liveRefCtx.redsRemaining, 9);
+  assert.strictEqual(liveRefCtx.foulEvents?.length, 1);
+  assert.deepStrictEqual(liveRefCtx.foulEvents?.[0].awardedToNames, ['Thoma']);
+
+  const liveSuggestions = getQuickRefereeSuggestions(liveRefCtx);
+  assert(liveSuggestions.some((s) => s.toLowerCase().includes('foul')));
+  assert(liveSuggestions.some((s) => s.toLowerCase().includes('free ball')));
+
+  const livePrompt = formatRefereeSystemPrompt(liveRefCtx);
+  assert(livePrompt.includes('Active Striker: Thoma'));
+  assert(livePrompt.includes('Free Ball Active: YES'));
+  assert(livePrompt.includes('Eldho fouled on Pink (+6 pts)'));
+  assert(livePrompt.includes('awardedTo=Thoma'));
+  console.log('✓ AI Referee context serialization, foul attribution, and prompt builder verified.');
+
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
   console.log('======================================================');
