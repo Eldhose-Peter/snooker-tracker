@@ -508,10 +508,10 @@ async function testAbandon() {
   assert.strictEqual(memberLb.length, 6, 'Leaderboard must include all 6 members');
   const eldhoEntry = memberLb.find(e => e.name === 'Eldho');
   assert(eldhoEntry, 'Eldho must be in leaderboard');
-  assert.strictEqual(eldhoEntry.highest_break, 61, 'Eldho highest break must be 61');
+  assert.strictEqual(eldhoEntry.highest_break, 66, 'Eldho highest break must be 66');
   const thomaEntry = memberLb.find(e => e.name === 'Thoma');
   assert(thomaEntry, 'Thoma must be in leaderboard');
-  assert.strictEqual(thomaEntry.highest_break, 52, 'Thoma highest break must be 52');
+  assert.strictEqual(thomaEntry.highest_break, 54, 'Thoma highest break must be 54');
   console.log('✓ All 6 members present with accurately restored match statistics and breaks.');
 
   // 23. Verify Restored Actual Match History
@@ -912,6 +912,251 @@ async function testAbandon() {
   assert(livePrompt.includes('Eldho fouled on Pink (+6 pts)'));
   assert(livePrompt.includes('awardedTo=Thoma'));
   console.log('✓ AI Referee context serialization, foul attribution, and prompt builder verified.');
+
+  // 34. Verifying Break Count Extraction, Secondary High Breaks, Ties, & Visit Tracking
+  console.log('\n[34] Verifying Break Counts, Single-Ball High Breaks, Switch Visits & Leaderboard Attribution...');
+  const {
+    extractFrameTelemetry,
+    extractDBBreaksForFrame,
+  } = await import('../src/lib/break-utils');
+  const { computeMatchInsights } = await import('../src/components/history/insights/analytics');
+  const { fetchHeadToHead } = await import('../src/lib/storage');
+
+  // 34.1 handleConcede resets active currentBreak
+  let concedeBreakState = createInitialFrameState(2, 15, ['Eldho', 'Thoma']);
+  concedeBreakState = handlePot(concedeBreakState, 'red');
+  assert.strictEqual(concedeBreakState.currentBreak, 1);
+  concedeBreakState = handleConcede(concedeBreakState, 0);
+  assert.strictEqual(concedeBreakState.currentBreak, 0, 'handleConcede must reset currentBreak to 0');
+  assert.deepStrictEqual(concedeBreakState.currentBreakBalls, [], 'handleConcede must clear currentBreakBalls');
+
+  // 34.2 Single-ball high break (Black = 7) vs 2-ball break (Red+Yellow = 3) & trailing frame-end pot
+  const bmId = 'p5000000-0000-0000-0000-000000000005';
+  const eldhoId = 'p1000000-0000-0000-0000-000000000001';
+  const twoPPlayers = [
+    { id: bmId, name: 'BM' },
+    { id: eldhoId, name: 'Eldho' },
+  ];
+  const singleBallEvents: MatchEvent[] = [
+    // BM pots single Black (7) then misses
+    {
+      id: 'sb-1', timestamp: now, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      ball: 'black', points: 7, breakScore: 7, breakBalls: ['black'],
+      scoresAfter: [7, 0], detail: 'BM potted Black',
+    },
+    {
+      id: 'sb-2', timestamp: now + 1000, frameNumber: 1, type: 'miss',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      breakScore: 7, isBreakEnd: true, breakBalls: ['black'],
+      scoresAfter: [7, 0], detail: 'BM missed',
+    },
+    // Multiple idle switch taps must NOT inflate visit counts
+    {
+      id: 'sb-3', timestamp: now + 2000, frameNumber: 1, type: 'switch',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      scoresAfter: [7, 0], detail: 'Switch to BM',
+    },
+    {
+      id: 'sb-4', timestamp: now + 3000, frameNumber: 1, type: 'switch',
+      playerIndex: 1, playerId: eldhoId, playerName: 'Eldho',
+      scoresAfter: [7, 0], detail: 'Switch to Eldho',
+    },
+    // Eldho pots Red (1) + Yellow (2) = 3 pts, then ends turn via card-tap switch to BM
+    {
+      id: 'sb-5', timestamp: now + 4000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: eldhoId, playerName: 'Eldho',
+      ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'],
+      scoresAfter: [7, 1], detail: 'Eldho potted Red',
+    },
+    {
+      id: 'sb-6', timestamp: now + 5000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: eldhoId, playerName: 'Eldho',
+      ball: 'yellow', points: 2, breakScore: 3, breakBalls: ['red', 'yellow'],
+      scoresAfter: [7, 3], detail: 'Eldho potted Yellow',
+    },
+    {
+      id: 'sb-7', timestamp: now + 6000, frameNumber: 1, type: 'switch',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      breakScore: 3, isBreakEnd: true, breakBalls: ['red', 'yellow'],
+      scoresAfter: [7, 3], detail: 'Switch to BM',
+    },
+    // BM pots final single Pink (6) to end frame (must NOT sneak into notableBreaks)
+    {
+      id: 'sb-8', timestamp: now + 7000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      ball: 'pink', points: 6, breakScore: 6, breakBalls: ['pink'],
+      scoresAfter: [13, 3], detail: 'BM potted Pink',
+    },
+  ];
+
+  const singleBallFrame = { highest_break: 7, highest_break_player_id: bmId };
+  const singleInsights = computeFrameInsights(singleBallEvents, twoPPlayers, [13, 3], singleBallFrame);
+  assert.strictEqual(singleInsights.topBreak.points, 7, 'Frame topBreak must report 7 (not 3 from 2-ball break)');
+  assert.strictEqual(singleInsights.topBreak.playerName, 'BM');
+  assert.strictEqual(singleInsights.visitStats[0].highestBreak, 7, 'BM high break must be 7');
+  assert.strictEqual(singleInsights.visitStats[1].highestBreak, 3, 'Eldho high break must be 3');
+  assert.strictEqual(singleInsights.breaks.length, 1, 'Only multi-ball or 10+ breaks appear in notable breaks');
+  assert.strictEqual(singleInsights.breaks[0].totalPoints, 3);
+  assert.strictEqual(singleInsights.visitStats[0].totalVisits, 2, 'BM had 2 visits (7, then frame-winning 6)');
+  assert.strictEqual(singleInsights.visitStats[0].scoringVisits, 2);
+  assert.strictEqual(singleInsights.visitStats[1].totalVisits, 1, 'Eldho had 1 scoring visit ended by switch (idle switches ignored)');
+  assert.strictEqual(singleInsights.visitStats[1].scoringVisits, 1);
+
+  // 34.3 Consecutive pots by different players flush previous break
+  const directSwitchPots: MatchEvent[] = [
+    {
+      id: 'ds-1', timestamp: now, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      ball: 'blue', points: 5, scoresAfter: [5, 0], detail: 'BM Blue',
+    },
+    {
+      id: 'ds-2', timestamp: now + 1000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: bmId, playerName: 'BM',
+      ball: 'black', points: 7, scoresAfter: [12, 0], detail: 'BM Black',
+    },
+    {
+      id: 'ds-3', timestamp: now + 2000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: eldhoId, playerName: 'Eldho',
+      ball: 'red', points: 1, scoresAfter: [12, 1], detail: 'Eldho Red',
+    },
+  ];
+  const directTelemetry = extractFrameTelemetry(directSwitchPots, twoPPlayers);
+  assert.strictEqual(directTelemetry.notableBreaks.length, 1, 'BM 12-pt break must be flushed when Eldho pots next');
+  assert.strictEqual(directTelemetry.notableBreaks[0].totalPoints, 12);
+  assert.strictEqual(directTelemetry.playerHighestBreaks[0], 12);
+  assert.strictEqual(directTelemetry.playerHighestBreaks[1], 1);
+
+  // 34.4 Secondary high breaks & ties preserved in Leaderboard, Head-to-Head, and DB breaks extraction
+  const { createPlayer: createBreakTestPlayer } = await import('../src/lib/storage');
+  const pBreakA = await createBreakTestPlayer('BreakTesterA');
+  const pBreakB = await createBreakTestPlayer('BreakTesterB');
+  const secondaryMatch = await saveNewMatch([pBreakA.id, pBreakB.id], 1, 15);
+  const secondaryEvents: MatchEvent[] = [
+    {
+      id: 'sec-1', timestamp: now, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'],
+      scoresAfter: [1, 0], detail: 'A Red',
+    },
+    {
+      id: 'sec-2', timestamp: now + 1000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'black', points: 7, breakScore: 8, breakBalls: ['red', 'black'],
+      scoresAfter: [8, 0], detail: 'A Black',
+    },
+    {
+      id: 'sec-3', timestamp: now + 2000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'red', points: 1, breakScore: 9, breakBalls: ['red', 'black', 'red'],
+      scoresAfter: [9, 0], detail: 'A Red',
+    },
+    {
+      id: 'sec-4', timestamp: now + 3000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'black', points: 7, breakScore: 16, breakBalls: ['red', 'black', 'red', 'black'],
+      scoresAfter: [16, 0], detail: 'A Black',
+    },
+    {
+      id: 'sec-5', timestamp: now + 4000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'blue', points: 5, breakScore: 21, breakBalls: ['red', 'black', 'red', 'black', 'blue'],
+      scoresAfter: [21, 0], detail: 'A Blue',
+    },
+    {
+      id: 'sec-6', timestamp: now + 5000, frameNumber: 1, type: 'miss',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      breakScore: 21, isBreakEnd: true,
+      scoresAfter: [21, 0], detail: 'A miss',
+    },
+    {
+      id: 'sec-7', timestamp: now + 6000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      ball: 'red', points: 1, breakScore: 1, scoresAfter: [21, 1], detail: 'B Red',
+    },
+    {
+      id: 'sec-8', timestamp: now + 7000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      ball: 'black', points: 7, breakScore: 8, scoresAfter: [21, 8], detail: 'B Black',
+    },
+    {
+      id: 'sec-9', timestamp: now + 8000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      ball: 'red', points: 1, breakScore: 9, scoresAfter: [21, 9], detail: 'B Red',
+    },
+    {
+      id: 'sec-10', timestamp: now + 9000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      ball: 'black', points: 7, breakScore: 16, scoresAfter: [21, 16], detail: 'B Black',
+    },
+    {
+      id: 'sec-11', timestamp: now + 10000, frameNumber: 1, type: 'pot',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      ball: 'pink', points: 6, breakScore: 22, scoresAfter: [21, 22], detail: 'B Pink',
+    },
+  ];
+
+  const dbBreaks = extractDBBreaksForFrame(secondaryEvents, 22, pBreakB.id);
+  assert.strictEqual(dbBreaks.length, 2, 'Both 20+ breaks in the frame must be extracted for DB persistence');
+  assert.deepStrictEqual(dbBreaks.map(b => b.points), [21, 22]);
+
+  // A finishes frame with higher break (25) while B made 22 -> B must appear on BOTH Leaderboard and H2H with 22 (NOT 0!)
+  const h2hEvents: MatchEvent[] = [
+    ...secondaryEvents,
+    {
+      id: 'sec-12', timestamp: now + 11000, frameNumber: 1, type: 'miss',
+      playerIndex: 1, playerId: pBreakB.id, playerName: pBreakB.name,
+      breakScore: 22, isBreakEnd: true, scoresAfter: [21, 22], detail: 'B miss',
+    },
+    {
+      id: 'sec-13', timestamp: now + 12000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'black', points: 7, breakScore: 7, scoresAfter: [28, 22], detail: 'A Black',
+    },
+    {
+      id: 'sec-14', timestamp: now + 13000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'black', points: 7, breakScore: 14, scoresAfter: [35, 22], detail: 'A Black',
+    },
+    {
+      id: 'sec-15', timestamp: now + 14000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'black', points: 7, breakScore: 21, scoresAfter: [42, 22], detail: 'A Black',
+    },
+    {
+      id: 'sec-16', timestamp: now + 15000, frameNumber: 1, type: 'pot',
+      playerIndex: 0, playerId: pBreakA.id, playerName: pBreakA.name,
+      ball: 'brown', points: 4, breakScore: 25, scoresAfter: [46, 22], detail: 'A Brown',
+    },
+  ];
+  await recordFrameCompleted(secondaryMatch.id, 1, [46, 22], pBreakA.id, 25, pBreakA.id, h2hEvents);
+  await finishMatch(secondaryMatch.id, pBreakA.id, [1, 0]);
+
+  const lbWithBreaks = await fetchLeaderboard();
+  const entryA = lbWithBreaks.find(e => e.id === pBreakA.id);
+  const entryB = lbWithBreaks.find(e => e.id === pBreakB.id);
+  assert(entryA && entryB, 'Both break test players must appear on leaderboard');
+  assert.strictEqual(entryA.highest_break, 25, 'Primary break holder leaderboard high break must be 25');
+  assert.strictEqual(entryB.highest_break, 22, 'Secondary break holder leaderboard high break must be 22 (not 0)');
+
+  const h2h = await fetchHeadToHead(pBreakA.id, pBreakB.id);
+  assert(h2h, 'Head-to-Head stats must be computed');
+  assert.strictEqual(h2h.p1HighestBreak, 25, 'Player A H2H high break must be 25');
+  assert.strictEqual(h2h.p2HighestBreak, 22, 'Player B secondary break of 22 must appear in H2H (not 0)');
+
+  // Test Match Insights visitStats highBreak when secondary player only made a single 7-pt ball
+  const singleOnlyInsights = computeMatchInsights(
+    [{
+      id: 'f-single-1', match_id: secondaryMatch.id, frame_number: 1,
+      scores: [13, 3], player1_score: 13, player2_score: 3, winner_id: bmId,
+      highest_break: 7, highest_break_player_id: bmId, events: singleBallEvents,
+    }],
+    twoPPlayers
+  );
+  assert.strictEqual(singleOnlyInsights.topBreak.points, 7);
+  assert.strictEqual(singleOnlyInsights.visitStats[0].highestBreak, 7);
+  assert.strictEqual(singleOnlyInsights.visitStats[1].highestBreak, 3);
+  console.log('✓ Break counts, single-ball high breaks, switch visit tracking, and H2H/Leaderboard attribution verified.');
 
   console.log('\n======================================================');
   console.log('ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');

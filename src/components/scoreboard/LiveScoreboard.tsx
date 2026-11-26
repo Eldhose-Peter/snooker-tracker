@@ -36,8 +36,7 @@ import {
   ShieldAlert, 
   Users,
   LogOut,
-  MoreVertical,
-  X
+  MoreVertical
 } from 'lucide-react';
 
 const getScoreIncreaseColor = (points: number): string => {
@@ -152,6 +151,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       return {
         ...fresh,
         activePlayerIndex: initBreakOff,
+        activePlayer: (initBreakOff === 1 ? 2 : 1) as 1 | 2,
         lastActionDescription: `Frame ${currentFrameNum} started. Break-off shot by ${breakOffName}.`,
         activities: [
           {
@@ -472,6 +472,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       redsRemainingAfter: nextState.redsRemaining,
       breakScore: state.currentBreak,
       isBreakEnd: state.currentBreak > 0,
+      breakBalls: state.currentBreak > 0 ? state.currentBreakBalls : [],
       scoresAfter: [...nextState.playerScores],
       detail: passBack 
         ? `${activeName} fouled (+${points} pts)${redsPocketedDesc}. Turn passed back.` 
@@ -571,6 +572,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       passBack: false,
       breakScore: state.currentBreak,
       isBreakEnd: state.currentBreak > 0,
+      breakBalls: state.currentBreak > 0 ? state.currentBreakBalls : [],
       scoresAfter: [...nextState.playerScores],
       detail: `${activeName} committed standard foul (+4 pts). Turn to ${nextPlayerName}.`,
     };
@@ -605,6 +607,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
         playerIndex: state.activePlayerIndex,
         playerId: playerAtTable?.id,
         playerName: playerAtTable.name,
+        breakScore: state.currentBreak,
+        isBreakEnd: state.currentBreak > 0,
+        breakBalls: state.currentBreak > 0 ? state.currentBreakBalls : [],
         scoresAfter: [...nextState.playerScores],
         detail: `${playerAtTable.name} conceded Frame ${currentFrameNum}. ${winnerName} wins.`,
       };
@@ -730,6 +735,9 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
       playerIndex: targetIndex,
       playerId: resolvedPlayers[targetIndex]?.id,
       playerName: targetName,
+      breakScore: state.currentBreak,
+      isBreakEnd: state.currentBreak > 0,
+      breakBalls: state.currentBreak > 0 ? state.currentBreakBalls : undefined,
       scoresAfter: [...nextState.playerScores],
       detail: `Active player switched to ${targetName}.`,
     };
@@ -795,6 +803,7 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
     setState({
       ...freshState,
       activePlayerIndex: nextBreakOffIndex,
+      activePlayer: (nextBreakOffIndex === 1 ? 2 : 1) as 1 | 2,
       lastActionDescription: `Frame ${nextFrameNum} started. Break-off shot by ${breakOffName}.`,
       activities: [
         {

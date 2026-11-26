@@ -105,6 +105,8 @@ frame_stats AS (
         p.id AS player_id,
         COALESCE(SUM(
             CASE 
+                WHEN array_length(m.player_ids, 1) > 0 AND array_position(m.player_ids, p.id) IS NOT NULL
+                    THEN COALESCE(m.player_frames[array_position(m.player_ids, p.id)], 0)
                 WHEN m.player1_id = p.id THEN m.player1_frames
                 WHEN m.player2_id = p.id THEN m.player2_frames
                 ELSE 0
@@ -112,6 +114,12 @@ frame_stats AS (
         ), 0) AS frames_won,
         COALESCE(SUM(
             CASE 
+                WHEN array_length(m.player_ids, 1) > 0 AND array_position(m.player_ids, p.id) IS NOT NULL
+                    THEN GREATEST(
+                        COALESCE((SELECT SUM(v) FROM unnest(m.player_frames) AS v), 0)
+                        - COALESCE(m.player_frames[array_position(m.player_ids, p.id)], 0),
+                        0
+                    )
                 WHEN m.player1_id = p.id THEN m.player2_frames
                 WHEN m.player2_id = p.id THEN m.player1_frames
                 ELSE 0
@@ -124,9 +132,32 @@ frame_stats AS (
 break_stats AS (
     SELECT 
         p.id AS player_id,
-        COALESCE(MAX(f.highest_break), 0) AS highest_break
+        GREATEST(
+            COALESCE(MAX(f.highest_break) FILTER (WHERE f.highest_break_player_id = p.id), 0),
+            COALESCE(MAX(b.points), 0),
+            COALESCE(MAX(
+                CASE
+                    WHEN evt->>'type' = 'pot' AND (
+                        evt->>'playerId' = p.id
+                        OR (
+                            evt->>'playerId' IS NULL
+                            AND (evt->>'playerIndex')::INT = COALESCE(
+                                array_position(m.player_ids, p.id) - 1,
+                                CASE WHEN m.player1_id = p.id THEN 0 WHEN m.player2_id = p.id THEN 1 ELSE -1 END
+                            )
+                        )
+                    )
+                    THEN COALESCE((evt->>'breakScore')::INT, (evt->>'points')::INT, 0)
+                    ELSE 0
+                END
+            ), 0)
+        ) AS highest_break
     FROM players p
-    LEFT JOIN frames f ON f.highest_break_player_id = p.id
+    LEFT JOIN matches m ON (p.id = m.player1_id OR p.id = m.player2_id OR p.id = ANY(m.player_ids))
+        AND m.status = 'completed'
+    LEFT JOIN frames f ON f.match_id = m.id
+    LEFT JOIN breaks b ON b.frame_id = f.id AND b.player_id = p.id
+    LEFT JOIN LATERAL jsonb_array_elements(COALESCE(f.events, '[]'::jsonb)) AS evt ON true
     GROUP BY p.id
 )
 SELECT 

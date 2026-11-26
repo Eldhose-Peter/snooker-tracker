@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { MatchEvent, Player, BALL_CONFIGS } from '@/types/snooker';
+import { extractFrameTelemetry, isNotableBreak } from '@/lib/break-utils';
 import { 
   ListFilter, 
   Target, 
@@ -37,23 +38,32 @@ export const EventTimelineFeed: React.FC<EventTimelineFeedProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'pot' | 'foul' | 'break'>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<number | 'all'>('all');
 
-  const filteredEvents = useMemo(() => {
-    return events.filter((evt) => {
-      // Player filter
-      if (selectedPlayer !== 'all' && evt.playerIndex !== selectedPlayer) {
-        return false;
-      }
+  const telemetry = useMemo(() => extractFrameTelemetry(events, players), [events, players]);
 
-      // Type filter
-      if (filterType === 'all') return true;
-      if (filterType === 'pot') return evt.type === 'pot';
-      if (filterType === 'foul') return evt.type === 'foul';
-      if (filterType === 'break') {
-        return (evt.type === 'pot' && (evt.breakScore || 0) >= 10) || (evt.isBreakEnd && (evt.breakScore || 0) >= 10);
-      }
-      return true;
-    });
-  }, [events, filterType, selectedPlayer]);
+  const filteredEvents = useMemo(() => {
+    return events
+      .map((evt, index) => ({ evt, index }))
+      .filter(({ evt, index }) => {
+        // Player filter
+        if (selectedPlayer !== 'all' && evt.playerIndex !== selectedPlayer) {
+          return false;
+        }
+
+        // Type filter
+        if (filterType === 'all') return true;
+        if (filterType === 'pot') return evt.type === 'pot';
+        if (filterType === 'foul') return evt.type === 'foul';
+        if (filterType === 'break') {
+          if (telemetry.notableBreakEventIndices.has(index)) {
+            return true;
+          }
+          const runPts = evt.breakScore ?? telemetry.runningBreakByEventIndex[index] ?? 0;
+          const ballCount = evt.breakBalls?.length ?? 0;
+          return (evt.type === 'pot' || Boolean(evt.isBreakEnd)) && isNotableBreak(runPts, ballCount);
+        }
+        return true;
+      });
+  }, [events, filterType, selectedPlayer, telemetry]);
 
   if (events.length === 0) {
     return (
@@ -131,9 +141,10 @@ export const EventTimelineFeed: React.FC<EventTimelineFeedProps> = ({
 
       {/* Feed List */}
       <div className={`space-y-1.5 ${maxHeightClassName} overflow-y-auto pr-1`}>
-        {filteredEvents.map((evt, idx) => {
+        {filteredEvents.map(({ evt, index }, idx) => {
           const accentColor = getApplePlayerColor(evt.playerIndex);
           const ballConfig = evt.ball ? BALL_CONFIGS[evt.ball] : null;
+          const runScore = evt.breakScore ?? telemetry.runningBreakByEventIndex[index] ?? 0;
 
           return (
             <div
@@ -205,9 +216,9 @@ export const EventTimelineFeed: React.FC<EventTimelineFeedProps> = ({
 
               {/* Right: Score after shot */}
               <div className="flex items-center space-x-2 flex-shrink-0">
-                {evt.breakScore && evt.breakScore > 1 ? (
+                {runScore > 1 ? (
                   <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-400/15 px-2 py-0.5 rounded-full border border-amber-400/30">
-                    Run {evt.breakScore}
+                    Run {runScore}
                   </span>
                 ) : null}
 

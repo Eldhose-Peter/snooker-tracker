@@ -144,7 +144,7 @@ export const MatchInsightsPage: React.FC<MatchInsightsPageProps> = ({ matchId })
     if (!activeFrame || !activeFrame.events || activeFrame.events.length === 0) {
       return null;
     }
-    return computeFrameInsights(activeFrame.events, matchPlayers, activeFrameScores);
+    return computeFrameInsights(activeFrame.events, matchPlayers, activeFrameScores, activeFrame);
   }, [activeFrame, matchPlayers, activeFrameScores]);
 
   const winner = match ? matchPlayers.find((p) => p.id === match.winner_id) : undefined;
@@ -159,6 +159,9 @@ export const MatchInsightsPage: React.FC<MatchInsightsPageProps> = ({ matchId })
 
   // Determine match-level top break
   const matchTopBreak = useMemo(() => {
+    if (matchInsights && matchInsights.topBreak.points > 0) {
+      return matchInsights.topBreak;
+    }
     let points = 0;
     let playerName = '';
     let frameNumber: number | undefined;
@@ -168,11 +171,6 @@ export const MatchInsightsPage: React.FC<MatchInsightsPageProps> = ({ matchId })
         playerName = matchPlayers.find((p) => p.id === f.highest_break_player_id)?.name || '';
         frameNumber = f.frame_number;
       }
-    }
-    if (matchInsights && matchInsights.breaks.length > 0 && matchInsights.breaks[0].totalPoints > points) {
-      points = matchInsights.breaks[0].totalPoints;
-      playerName = matchInsights.breaks[0].playerName;
-      frameNumber = matchInsights.breaks[0].frameNumber;
     }
     return { points, playerName, frameNumber };
   }, [frames, matchPlayers, matchInsights]);
@@ -192,10 +190,10 @@ export const MatchInsightsPage: React.FC<MatchInsightsPageProps> = ({ matchId })
 
   const kpiTopBreak = useMemo(() => {
     if (isOverview) return matchTopBreak;
-    if (frameInsights && frameInsights.breaks.length > 0) {
+    if (frameInsights && frameInsights.topBreak.points > 0) {
       return {
-        points: frameInsights.breaks[0].totalPoints,
-        playerName: frameInsights.breaks[0].playerName,
+        points: frameInsights.topBreak.points,
+        playerName: frameInsights.topBreak.playerName,
         frameNumber: activeFrame?.frame_number,
       };
     }
@@ -673,6 +671,7 @@ export const MatchInsightsPage: React.FC<MatchInsightsPageProps> = ({ matchId })
                             breaks={matchInsights.breaks}
                             visitStats={matchInsights.visitStats}
                             maxListHeightClass="max-h-96"
+                            scope="match"
                           />
                         </div>
 

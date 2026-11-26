@@ -61,7 +61,7 @@ function makeEvent(
 
 /**
  * Creates realistic event sequences for Frame 1 of Match 1: Eldho (68) vs Thoma (42)
- * High break 47 by Eldho
+ * High break 40 by Eldho
  */
 function createFrame1Events(): MatchEvent[] {
   const events: MatchEvent[] = [];
@@ -112,7 +112,7 @@ function createFrame1Events(): MatchEvent[] {
     timestampOffsetMs: t,
   }));
 
-  // Eldho visit 3: 47 Break Run (Red, Black, Red, Black, Red, Pink, Red, Blue, Red, Black, Red, Yellow)
+  // Eldho visit 3: 40 Break Run (Red, Black, Red, Black, Red, Pink, Red, Blue, Red, Black, Red, Yellow)
   advance();
   events.push(makeEvent(1, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Red (+1 pt) • Break: 1', [29, 14], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -166,7 +166,7 @@ function createFrame1Events(): MatchEvent[] {
 }
 
 /**
- * Creates events for Frame 2: Thoma 71 - 35 Eldho. High break 52 by Thoma!
+ * Creates events for Frame 2: Thoma 71 - 35 Eldho. High break 54 by Thoma!
  */
 function createFrame2Events(): MatchEvent[] {
   const events: MatchEvent[] = [];
@@ -186,7 +186,7 @@ function createFrame2Events(): MatchEvent[] {
   advance();
   events.push(makeEvent(2, 'miss', 0, P_ELDHO, 'Eldho', 'Eldho missed', [13, 0], { timestampOffsetMs: t }));
 
-  // Thoma big 52 break run!
+  // Thoma big 54 break run!
   advance();
   events.push(makeEvent(2, 'pot', 1, P_THOMA, 'Thoma', 'Thoma potted Red (+1 pt)', [13, 1], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -218,7 +218,7 @@ function createFrame2Events(): MatchEvent[] {
   advance();
   events.push(makeEvent(2, 'pot', 1, P_THOMA, 'Thoma', 'Thoma potted Brown (+4 pts)', [13, 54], { ball: 'brown', points: 4, breakScore: 54, breakBalls: ['red', 'black', 'red', 'black', 'red', 'pink', 'red', 'black', 'red', 'blue', 'red', 'black', 'yellow', 'green', 'brown'], timestampOffsetMs: t }));
   advance();
-  events.push(makeEvent(2, 'miss', 1, P_THOMA, 'Thoma', 'Thoma missed Blue • Break ends at 52', [13, 54], { timestampOffsetMs: t }));
+  events.push(makeEvent(2, 'miss', 1, P_THOMA, 'Thoma', 'Thoma missed Blue • Break ends at 54', [13, 54], { timestampOffsetMs: t }));
 
   advance();
   events.push(makeEvent(2, 'foul', 0, P_ELDHO, 'Eldho', 'Eldho foul (+4 pts to Thoma)', [13, 58], { foulPoints: 4, awardedTo: [1], timestampOffsetMs: t }));
@@ -248,7 +248,7 @@ function createFrame2Events(): MatchEvent[] {
 }
 
 /**
- * Creates events for Frame 3: Eldho 75 - 29 Thoma. High break 61 by Eldho! Decider!
+ * Creates events for Frame 3: Eldho 75 - 29 Thoma. High break 66 by Eldho! Decider!
  */
 function createFrame3Events(): MatchEvent[] {
   const events: MatchEvent[] = [];
@@ -270,7 +270,7 @@ function createFrame3Events(): MatchEvent[] {
   advance();
   events.push(makeEvent(3, 'miss', 1, P_THOMA, 'Thoma', 'Thoma missed Pink', [0, 17], { timestampOffsetMs: t }));
 
-  // Eldho 61 Break run!
+  // Eldho 66 Break run!
   advance();
   events.push(makeEvent(3, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Red (+1 pt)', [1, 17], { ball: 'red', points: 1, breakScore: 1, breakBalls: ['red'], timestampOffsetMs: t }));
   advance();
@@ -312,6 +312,8 @@ function createFrame3Events(): MatchEvent[] {
   events.push(makeEvent(3, 'pot', 1, P_THOMA, 'Thoma', 'Thoma potted Blue (+5 pts)', [70, 22], { ball: 'blue', points: 5, timestampOffsetMs: t }));
   advance();
   events.push(makeEvent(3, 'pot', 1, P_THOMA, 'Thoma', 'Thoma potted Black (+7 pts)', [70, 29], { ball: 'black', points: 7, timestampOffsetMs: t }));
+  advance();
+  events.push(makeEvent(3, 'miss', 1, P_THOMA, 'Thoma', 'Thoma missed • Turn to Eldho', [70, 29], { timestampOffsetMs: t }));
   advance();
   events.push(makeEvent(3, 'pot', 0, P_ELDHO, 'Eldho', 'Eldho potted Blue (+5 pts)', [75, 29], { ball: 'blue', points: 5, timestampOffsetMs: t }));
   advance();
@@ -631,7 +633,7 @@ export const ACTUAL_FRAMES: Frame[] = [
     player1_score: 68,
     player2_score: 42,
     winner_id: P_ELDHO,
-    highest_break: 47,
+    highest_break: 40,
     highest_break_player_id: P_ELDHO,
     completed_at: new Date(Date.now() - 3 * 86400000 + 15 * 60000).toISOString(),
     events: createFrame1Events(),
@@ -644,7 +646,7 @@ export const ACTUAL_FRAMES: Frame[] = [
     player1_score: 35,
     player2_score: 71,
     winner_id: P_THOMA,
-    highest_break: 52,
+    highest_break: 54,
     highest_break_player_id: P_THOMA,
     completed_at: new Date(Date.now() - 3 * 86400000 + 30 * 60000).toISOString(),
     events: createFrame2Events(),
@@ -657,7 +659,7 @@ export const ACTUAL_FRAMES: Frame[] = [
     player1_score: 75,
     player2_score: 29,
     winner_id: P_ELDHO,
-    highest_break: 61,
+    highest_break: 66,
     highest_break_player_id: P_ELDHO,
     completed_at: new Date(Date.now() - 3 * 86400000 + 45 * 60000).toISOString(),
     events: createFrame3Events(),

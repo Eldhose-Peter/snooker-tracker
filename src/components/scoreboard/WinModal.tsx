@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Trophy, Award, Flame, ArrowRight, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Player } from '@/types/snooker';
@@ -17,8 +17,8 @@ interface WinModalProps {
   highestBreakPlayer: Player | null;
   isMatchWon: boolean;
   matchWinner: Player | null;
-  onNextFrame: () => void;
-  onFinishMatch: () => void;
+  onNextFrame: () => void | Promise<void>;
+  onFinishMatch: () => void | Promise<void>;
   onUndo?: () => void;
 
   // Backwards compatibility props:
@@ -46,6 +46,18 @@ export const WinModal: React.FC<WinModalProps> = ({
   onFinishMatch,
   onUndo,
 }) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleAction = async (action: () => void | Promise<void>) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await action();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       // Fire celebration confetti
@@ -87,8 +99,9 @@ export const WinModal: React.FC<WinModalProps> = ({
         <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] dark:border-white/[0.08]">
           <button
             type="button"
-            onClick={isMatchWon ? onFinishMatch : onNextFrame}
-            className="text-[17px] text-[#007aff] dark:text-[#0a84ff] font-normal hover:opacity-70 transition cursor-pointer select-none"
+            disabled={submitting}
+            onClick={() => void handleAction(isMatchWon ? onFinishMatch : onNextFrame)}
+            className="text-[17px] text-[#007aff] dark:text-[#0a84ff] font-normal hover:opacity-70 disabled:opacity-40 transition cursor-pointer select-none"
           >
             Close
           </button>
@@ -99,8 +112,9 @@ export const WinModal: React.FC<WinModalProps> = ({
 
           <button
             type="button"
-            onClick={isMatchWon ? onFinishMatch : onNextFrame}
-            className="text-[17px] text-[#007aff] dark:text-[#0a84ff] font-semibold hover:opacity-70 transition cursor-pointer select-none"
+            disabled={submitting}
+            onClick={() => void handleAction(isMatchWon ? onFinishMatch : onNextFrame)}
+            className="text-[17px] text-[#007aff] dark:text-[#0a84ff] font-semibold hover:opacity-70 disabled:opacity-40 transition cursor-pointer select-none"
           >
             {isMatchWon ? 'Done' : 'Next'}
           </button>
@@ -188,27 +202,30 @@ export const WinModal: React.FC<WinModalProps> = ({
           {isMatchWon ? (
             <button
               type="button"
-              onClick={onFinishMatch}
-              className="w-full py-3.5 px-6 rounded-full bg-[#007aff] hover:bg-[#0062cc] text-white font-semibold text-sm sm:text-base shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2 transition active:scale-[0.98] cursor-pointer"
+              disabled={submitting}
+              onClick={() => void handleAction(onFinishMatch)}
+              className="w-full py-3.5 px-6 rounded-full bg-[#007aff] hover:bg-[#0062cc] text-white font-semibold text-sm sm:text-base shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>View Match Summary</span>
+              <span>{submitting ? 'Saving Match…' : 'View Match Summary'}</span>
             </button>
           ) : (
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
-                onClick={onFinishMatch}
-                className="flex-1 py-3 px-5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-800 dark:text-white font-semibold text-xs sm:text-sm transition active:scale-[0.98] cursor-pointer"
+                disabled={submitting}
+                onClick={() => void handleAction(onFinishMatch)}
+                className="flex-1 py-3 px-5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-zinc-800 dark:text-white font-semibold text-xs sm:text-sm transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 View Match Summary
               </button>
               <button
                 type="button"
-                onClick={onNextFrame}
-                className="flex-1 py-3 px-5 rounded-full bg-[#007aff] hover:bg-[#0062cc] text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center space-x-1.5 transition active:scale-[0.98] cursor-pointer"
+                disabled={submitting}
+                onClick={() => void handleAction(onNextFrame)}
+                className="flex-1 py-3 px-5 rounded-full bg-[#007aff] hover:bg-[#0062cc] text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center space-x-1.5 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
-                <span>Start Next Frame</span>
+                <span>{submitting ? 'Saving Frame…' : 'Start Next Frame'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -218,8 +235,9 @@ export const WinModal: React.FC<WinModalProps> = ({
           {onUndo && (
             <button
               type="button"
+              disabled={submitting}
               onClick={onUndo}
-              className="w-full py-2 px-4 rounded-full text-xs text-[#007aff] dark:text-[#0a84ff] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition flex items-center justify-center space-x-1.5 cursor-pointer"
+              className="w-full py-2 px-4 rounded-full text-xs text-[#007aff] dark:text-[#0a84ff] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition flex items-center justify-center space-x-1.5 disabled:opacity-40 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Undo Last Shot / Resume Frame</span>

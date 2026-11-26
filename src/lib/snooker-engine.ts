@@ -582,6 +582,8 @@ export function handleConcede(prevState: FrameState, concedingPlayerIndex: numbe
 
   return syncFrameStateProps({
     ...prevState,
+    currentBreak: 0,
+    currentBreakBalls: [],
     isFrameOver: true,
     winnerIndex,
     winReason: `${concedingName} conceded the frame.`,

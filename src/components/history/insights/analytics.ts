@@ -1,4 +1,5 @@
 import { MatchEvent, BallType, Player, Frame, BALL_CONFIGS } from '@/types/snooker';
+import { extractFrameTelemetry } from '@/lib/break-utils';
 
 export interface ScoreTimelinePoint {
   index: number;
@@ -70,6 +71,12 @@ export interface FrameInsightsData {
   timeline: ScoreTimelinePoint[];
   scoringSources: PlayerScoringSource[];
   breaks: BreakRun[];
+  topBreak: {
+    points: number;
+    playerIndex: number | null;
+    playerId: string | null;
+    playerName: string;
+  };
   discipline: PlayerDiscipline[];
   visitStats: PlayerVisitStats[];
   totalEvents: number;
@@ -93,6 +100,11 @@ export interface MatchFrameSummary {
 export interface MatchInsightsData {
   scoringSources: PlayerScoringSource[];
   breaks: BreakRun[];
+  topBreak: {
+    points: number;
+    playerName: string;
+    frameNumber?: number;
+  };
   discipline: PlayerDiscipline[];
   visitStats: PlayerVisitStats[];
   frameSummaries: MatchFrameSummary[];
@@ -134,10 +146,12 @@ export function getPlayerColor(playerIndex: number): string {
 export function computeFrameInsights(
   events: MatchEvent[] = [],
   players: Player[] = [],
-  finalScores?: number[]
+  finalScores?: number[],
+  frameMeta?: Pick<Frame, 'highest_break' | 'highest_break_player_id'> | null
 ): FrameInsightsData {
   const playerCount = Math.max(2, players.length);
   const playerNames = players.map((p, idx) => p.name || `Player ${idx + 1}`);
+  const telemetry = extractFrameTelemetry(events, players, frameMeta);
 
   // Initialize per-player tracking structures
   const ballCountsByPlayer: Record<BallType, number>[] = Array.from({ length: playerCount }, () => ({
@@ -162,16 +176,6 @@ export function computeFrameInsights(
   }));
   const freeBallsConceded: number[] = new Array(playerCount).fill(0);
 
-  const breaks: BreakRun[] = [];
-  interface ActiveRun {
-    playerIndex: number;
-    points: number;
-    balls: BallType[];
-    startTime: number;
-    startIdx: number;
-  }
-  let currentRun: ActiveRun | null = null;
-
   const timeline: ScoreTimelinePoint[] = [];
   let prevLeader = -1;
   let leadChanges = 0;
@@ -188,15 +192,12 @@ export function computeFrameInsights(
     actorPlayerName: playerNames[0] || 'Player 1',
   });
 
-  const totalVisits: number[] = new Array(playerCount).fill(0);
-  const scoringVisits: number[] = new Array(playerCount).fill(0);
-  let hasScoredInCurrentTurn = false;
-
-  // Process all events sequentially
+  // Process all events sequentially for scoring sources, timeline, and discipline
   for (let idx = 0; idx < events.length; idx++) {
     const evt = events[idx];
     const actorIdx = evt.playerIndex >= 0 && evt.playerIndex < playerCount ? evt.playerIndex : 0;
     const actorName = playerNames[actorIdx] || evt.playerName || `Player ${actorIdx + 1}`;
+    const derivedBreak = evt.breakScore ?? (telemetry.runningBreakByEventIndex[idx] || undefined);
 
     // Timeline entry
     const scores = evt.scoresAfter && evt.scoresAfter.length === playerCount
@@ -213,7 +214,7 @@ export function computeFrameInsights(
       actorPlayerIndex: actorIdx,
       actorPlayerName: actorName,
       pointsDelta: evt.points || evt.foulPoints,
-      breakScore: evt.breakScore,
+      breakScore: derivedBreak,
       ball: evt.ball,
       foulPoints: evt.foulPoints,
     });
@@ -228,50 +229,11 @@ export function computeFrameInsights(
       prevLeader = leaders[0];
     }
 
-    // Process event specifics
+    // Process scoring & discipline specifics
     if (evt.type === 'pot' && evt.ball) {
       ballCountsByPlayer[actorIdx][evt.ball] += 1;
       const pts = evt.points ?? BALL_CONFIGS[evt.ball]?.points ?? 1;
       pointsFromPots[actorIdx] += pts;
-      hasScoredInCurrentTurn = true;
-
-      // Track break run
-      if (!currentRun || currentRun.playerIndex !== actorIdx) {
-        currentRun = {
-          playerIndex: actorIdx,
-          points: pts,
-          balls: [evt.ball],
-          startTime: evt.timestamp,
-          startIdx: idx,
-        };
-      } else {
-        currentRun.points += pts;
-        currentRun.balls.push(evt.ball);
-      }
-    } else if (evt.type === 'miss') {
-      totalVisits[actorIdx] += 1;
-      if (hasScoredInCurrentTurn) {
-        scoringVisits[actorIdx] += 1;
-      }
-      hasScoredInCurrentTurn = false;
-
-      // Close out break run
-      if (currentRun && currentRun.playerIndex === actorIdx) {
-        if (currentRun.points >= 10 || currentRun.balls.length >= 2) {
-          breaks.push({
-            id: `break-${breaks.length}-${currentRun.startTime}`,
-            playerIndex: currentRun.playerIndex,
-            playerName: playerNames[currentRun.playerIndex] || `Player ${currentRun.playerIndex + 1}`,
-            totalPoints: currentRun.points,
-            balls: [...currentRun.balls],
-            startTime: currentRun.startTime,
-            endTime: evt.timestamp,
-            eventIndexStart: currentRun.startIdx,
-            eventIndexEnd: idx,
-          });
-        }
-        currentRun = null;
-      }
     } else if (evt.type === 'foul') {
       foulsCommitted[actorIdx] += 1;
       const fPts = evt.foulPoints || 4;
@@ -296,65 +258,20 @@ export function computeFrameInsights(
           }
         }
       }
-
-      totalVisits[actorIdx] += 1;
-      if (hasScoredInCurrentTurn) {
-        scoringVisits[actorIdx] += 1;
-      }
-      hasScoredInCurrentTurn = false;
-
-      if (currentRun && currentRun.playerIndex === actorIdx) {
-        if (currentRun.points >= 10 || currentRun.balls.length >= 2) {
-          breaks.push({
-            id: `break-${breaks.length}-${currentRun.startTime}`,
-            playerIndex: currentRun.playerIndex,
-            playerName: playerNames[currentRun.playerIndex] || `Player ${currentRun.playerIndex + 1}`,
-            totalPoints: currentRun.points,
-            balls: [...currentRun.balls],
-            startTime: currentRun.startTime,
-            endTime: evt.timestamp,
-            eventIndexStart: currentRun.startIdx,
-            eventIndexEnd: idx,
-          });
-        }
-        currentRun = null;
-      }
-    } else if (evt.type === 'switch') {
-      totalVisits[actorIdx] += 1;
-      hasScoredInCurrentTurn = false;
-      if (currentRun) {
-        if (currentRun.points >= 10 || currentRun.balls.length >= 2) {
-          breaks.push({
-            id: `break-${breaks.length}-${currentRun.startTime}`,
-            playerIndex: currentRun.playerIndex,
-            playerName: playerNames[currentRun.playerIndex] || `Player ${currentRun.playerIndex + 1}`,
-            totalPoints: currentRun.points,
-            balls: [...currentRun.balls],
-            startTime: currentRun.startTime,
-            endTime: evt.timestamp,
-            eventIndexStart: currentRun.startIdx,
-            eventIndexEnd: idx,
-          });
-        }
-        currentRun = null;
-      }
     }
   }
 
-  // Close lingering break at frame end
-  if (currentRun) {
-    breaks.push({
-      id: `break-${breaks.length}-${currentRun.startTime}`,
-      playerIndex: currentRun.playerIndex,
-      playerName: playerNames[currentRun.playerIndex] || `Player ${currentRun.playerIndex + 1}`,
-      totalPoints: currentRun.points,
-      balls: [...currentRun.balls],
-      startTime: currentRun.startTime,
-      endTime: events[events.length - 1]?.timestamp,
-      eventIndexStart: currentRun.startIdx,
-      eventIndexEnd: events.length - 1,
-    });
-  }
+  const breaks: BreakRun[] = telemetry.notableBreaks.map((run) => ({
+    id: run.id,
+    playerIndex: run.playerIndex,
+    playerName: run.playerName,
+    totalPoints: run.totalPoints,
+    balls: run.balls,
+    startTime: run.startTime,
+    endTime: run.endTime,
+    eventIndexStart: run.eventIndexStart,
+    eventIndexEnd: run.eventIndexEnd,
+  }));
 
   // Construct Scoring Sources breakdown
   const scoringSources: PlayerScoringSource[] = players.map((p, idx) => {
@@ -401,9 +318,9 @@ export function computeFrameInsights(
 
   // Construct Visit & Efficiency Stats
   const visitStats: PlayerVisitStats[] = players.map((p, idx) => {
-    const visits = Math.max(1, totalVisits[idx] || 1);
+    const recordedVisits = telemetry.totalVisits[idx] || 0;
     const playerBreaks = breaks.filter(b => b.playerIndex === idx);
-    const highBreak = playerBreaks.length > 0 ? Math.max(...playerBreaks.map(b => b.totalPoints)) : 0;
+    const highBreak = telemetry.playerHighestBreaks[idx] || 0;
     const avgBreak = playerBreaks.length > 0
       ? Math.round(playerBreaks.reduce((acc, b) => acc + b.totalPoints, 0) / playerBreaks.length)
       : 0;
@@ -411,9 +328,11 @@ export function computeFrameInsights(
     return {
       playerIndex: idx,
       playerName: p.name || `Player ${idx + 1}`,
-      totalVisits: visits,
-      scoringVisits: scoringVisits[idx] || 0,
-      averagePointsPerVisit: Math.round(((pointsFromPots[idx] || 0) / visits) * 10) / 10,
+      totalVisits: recordedVisits,
+      scoringVisits: telemetry.scoringVisits[idx] || 0,
+      averagePointsPerVisit: recordedVisits > 0
+        ? Math.round(((pointsFromPots[idx] || 0) / recordedVisits) * 10) / 10
+        : 0,
       averageBreak: avgBreak,
       highestBreak: highBreak,
     };
@@ -430,7 +349,8 @@ export function computeFrameInsights(
   return {
     timeline,
     scoringSources,
-    breaks: breaks.sort((a, b) => b.totalPoints - a.totalPoints),
+    breaks,
+    topBreak: telemetry.topBreak,
     discipline,
     visitStats,
     totalEvents: events.length,
@@ -474,6 +394,7 @@ export function computeMatchInsights(
 
   const totalVisitsByPlayer = new Array(playerCount).fill(0);
   const scoringVisitsByPlayer = new Array(playerCount).fill(0);
+  const highestBreakByPlayer = new Array(playerCount).fill(0);
 
   const allBreaks: BreakRun[] = [];
   const frameSummaries: MatchFrameSummary[] = [];
@@ -482,6 +403,7 @@ export function computeMatchInsights(
   let totalLeadChanges = 0;
   let totalDurationSeconds = 0;
   let framesWithTelemetry = 0;
+  let matchTopBreak = { points: 0, playerName: '', frameNumber: undefined as number | undefined };
 
   for (const frame of frames) {
     const scores = frame.scores && frame.scores.length === players.length
@@ -493,7 +415,7 @@ export function computeMatchInsights(
 
     if (hasEvents) {
       framesWithTelemetry += 1;
-      const frameInsights = computeFrameInsights(events, players, scores);
+      const frameInsights = computeFrameInsights(events, players, scores, frame);
       totalEvents += frameInsights.totalEvents;
       totalLeadChanges += frameInsights.leadChanges;
       totalDurationSeconds += frameInsights.durationSeconds;
@@ -522,6 +444,9 @@ export function computeMatchInsights(
         if (idx >= playerCount) return;
         totalVisitsByPlayer[idx] += vs.totalVisits;
         scoringVisitsByPlayer[idx] += vs.scoringVisits;
+        if (vs.highestBreak > highestBreakByPlayer[idx]) {
+          highestBreakByPlayer[idx] = vs.highestBreak;
+        }
       });
 
       frameInsights.breaks.forEach((b) => {
@@ -532,13 +457,22 @@ export function computeMatchInsights(
         });
       });
 
+      const frameTop = frameInsights.topBreak;
+      if (frameTop.points > matchTopBreak.points) {
+        matchTopBreak = {
+          points: frameTop.points,
+          playerName: frameTop.playerName || highBreakPlayer?.name || '',
+          frameNumber: frame.frame_number,
+        };
+      }
+
       frameSummaries.push({
         frameId: frame.id,
         frameNumber: frame.frame_number,
         scores,
         winnerId: frame.winner_id,
-        highestBreak: frame.highest_break,
-        highestBreakPlayerName: highBreakPlayer?.name || '',
+        highestBreak: frameTop.points,
+        highestBreakPlayerName: frameTop.playerName || highBreakPlayer?.name || '',
         durationSeconds: frameInsights.durationSeconds,
         totalEvents: frameInsights.totalEvents,
         hasEvents: true,
@@ -550,6 +484,20 @@ export function computeMatchInsights(
           totalPointsByPlayer[idx] += s || 0;
         }
       });
+
+      if (frame.highest_break > 0 && frame.highest_break_player_id) {
+        const hpIdx = players.findIndex(p => p.id === frame.highest_break_player_id);
+        if (hpIdx !== -1 && frame.highest_break > highestBreakByPlayer[hpIdx]) {
+          highestBreakByPlayer[hpIdx] = frame.highest_break;
+        }
+      }
+      if (frame.highest_break > matchTopBreak.points) {
+        matchTopBreak = {
+          points: frame.highest_break,
+          playerName: highBreakPlayer?.name || '',
+          frameNumber: frame.frame_number,
+        };
+      }
 
       frameSummaries.push({
         frameId: frame.id,
@@ -605,6 +553,7 @@ export function computeMatchInsights(
       .filter(f => f.highest_break_player_id === p.id)
       .map(f => f.highest_break);
     const highBreak = Math.max(
+      highestBreakByPlayer[idx] || 0,
       playerBreaks.length > 0 ? Math.max(...playerBreaks.map(b => b.totalPoints)) : 0,
       frameHighBreaks.length > 0 ? Math.max(...frameHighBreaks) : 0
     );
@@ -628,6 +577,7 @@ export function computeMatchInsights(
   return {
     scoringSources,
     breaks: sortedBreaks,
+    topBreak: matchTopBreak,
     discipline,
     visitStats,
     frameSummaries,

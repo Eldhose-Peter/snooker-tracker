@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Match, Player } from '@/types/snooker';
 import { fetchMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
+import { getFrameTopBreak } from '@/lib/break-utils';
 import { 
   History, 
   Trophy, 
@@ -213,8 +214,9 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                   let matchHighBreak = 0;
                   let totalShots = 0;
                   for (const f of frames) {
-                    if (f.highest_break > matchHighBreak) {
-                      matchHighBreak = f.highest_break;
+                    const frameTop = getFrameTopBreak(f, matchPlayers).points;
+                    if (frameTop > matchHighBreak) {
+                      matchHighBreak = frameTop;
                     }
                     if (f.events) {
                       totalShots += f.events.length;
@@ -317,7 +319,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                           </div>
 
                           {matchHighBreak > 0 && (
-                            <div className="hidden sm:flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-mono font-semibold">
+                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-xs text-amber-600 dark:text-amber-400 font-mono font-semibold flex-shrink-0">
                               <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                               <span>{matchHighBreak}</span>
                             </div>

@@ -9,6 +9,7 @@ interface BreakAnalyticsCardProps {
   breaks: BreakRun[];
   visitStats: PlayerVisitStats[];
   maxListHeightClass?: string;
+  scope?: 'frame' | 'match';
 }
 
 const APPLE_PLAYER_COLORS = [
@@ -28,6 +29,7 @@ export const BreakAnalyticsCard: React.FC<BreakAnalyticsCardProps> = ({
   breaks,
   visitStats,
   maxListHeightClass = 'max-h-60',
+  scope = 'frame',
 }) => {
   return (
     <div className="bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm font-sans">
@@ -93,7 +95,7 @@ export const BreakAnalyticsCard: React.FC<BreakAnalyticsCardProps> = ({
 
         {breaks.length === 0 ? (
           <div className="text-center py-6 bg-black/[0.02] dark:bg-black/30 rounded-xl border border-black/[0.04] dark:border-white/[0.04] text-xs text-zinc-500 italic">
-            No continuous breaks of 10+ points in this frame.
+            No multi-ball breaks or runs of 10+ points in this {scope === 'match' ? 'match' : 'frame'}.
           </div>
         ) : (
           <div className={`space-y-2 ${maxListHeightClass} overflow-y-auto pr-1`}>

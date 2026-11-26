@@ -10,10 +10,7 @@ import {
   Search, 
   Swords, 
   X,
-  Medal,
-  Percent,
-  Check,
-  ChevronRight
+  Medal
 } from 'lucide-react';
 
 export const Leaderboard: React.FC = () => {
@@ -32,8 +29,12 @@ export const Leaderboard: React.FC = () => {
   const [isH2HOpen, setIsH2HOpen] = useState(false);
   const [h2hPlayer1Id, setH2HPlayer1Id] = useState('');
   const [h2hPlayer2Id, setH2HPlayer2Id] = useState('');
-  const [h2hStats, setH2HStats] = useState<HeadToHeadStats | null>(null);
-  const [loadingH2H, setLoadingH2H] = useState(false);
+  const [h2hResult, setH2HResult] = useState<{ key: string; stats: HeadToHeadStats | null } | null>(null);
+  const h2hPairKey = isH2HOpen && h2hPlayer1Id && h2hPlayer2Id && h2hPlayer1Id !== h2hPlayer2Id
+    ? `${h2hPlayer1Id}:${h2hPlayer2Id}`
+    : null;
+  const h2hStats = h2hPairKey && h2hResult?.key === h2hPairKey ? h2hResult.stats : null;
+  const loadingH2H = Boolean(h2hPairKey && h2hResult?.key !== h2hPairKey);
 
   // Load data
   const loadData = async () => {
@@ -67,19 +68,16 @@ export const Leaderboard: React.FC = () => {
 
   // Handle H2H query
   useEffect(() => {
+    if (!h2hPairKey) return;
     let isMounted = true;
-    if (isH2HOpen && h2hPlayer1Id && h2hPlayer2Id && h2hPlayer1Id !== h2hPlayer2Id) {
-      setLoadingH2H(true);
-      fetchHeadToHead(h2hPlayer1Id, h2hPlayer2Id).then((res) => {
-        if (!isMounted) return;
-        setH2HStats(res);
-        setLoadingH2H(false);
-      });
-    }
+    fetchHeadToHead(h2hPlayer1Id, h2hPlayer2Id).then((res) => {
+      if (!isMounted) return;
+      setH2HResult({ key: h2hPairKey, stats: res });
+    });
     return () => {
       isMounted = false;
     };
-  }, [isH2HOpen, h2hPlayer1Id, h2hPlayer2Id]);
+  }, [h2hPairKey, h2hPlayer1Id, h2hPlayer2Id]);
 
   // Handle Add Player
   const handleAddPlayer = async (e: React.FormEvent) => {

@@ -1,6 +1,7 @@
 import { Player, Match, Frame, LeaderboardEntry, HeadToHeadStats, FrameState, MatchEvent } from '@/types/snooker';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getSampleMatchesAndFrames, ACTUAL_MATCHES, ACTUAL_FRAMES } from './sample-data';
+import { extractDBBreaksForFrame, getFramePlayerHighBreaks } from './break-utils';
 
 const PLAYERS_KEY = 'snooker_tracker_players_v3';
 const MATCHES_KEY = 'snooker_tracker_matches_v3';
@@ -588,7 +589,7 @@ export async function recordFrameCompleted(
 
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('frames').insert({
+      const { error: frameError } = await supabase.from('frames').insert({
         id: frame.id,
         match_id: matchId,
         frame_number: frameNumber,
@@ -602,13 +603,27 @@ export async function recordFrameCompleted(
         events: frame.events,
       });
 
-      if (highestBreak >= 20 && highestBreakPlayerId) {
-        await supabase.from('breaks').insert({
-          frame_id: frame.id,
-          match_id: matchId,
-          player_id: highestBreakPlayerId,
-          points: highestBreak,
-        });
+      if (frameError) {
+        console.warn('Supabase frame insert error', frameError);
+      } else {
+        const dbBreaks = extractDBBreaksForFrame(
+          frameEvents,
+          highestBreak,
+          highestBreakPlayerId
+        );
+        if (dbBreaks.length > 0) {
+          const { error: breakError } = await supabase.from('breaks').insert(
+            dbBreaks.map((b) => ({
+              frame_id: frame.id,
+              match_id: matchId,
+              player_id: b.playerId,
+              points: b.points,
+            }))
+          );
+          if (breakError) {
+            console.warn('Supabase breaks insert error', breakError);
+          }
+        }
       }
     } catch (err) {
       console.warn('Supabase recordFrameCompleted error', err);
@@ -756,6 +771,27 @@ export function clearLiveSession(): void {
 }
 
 function computeLeaderboard(players: Player[], matches: Match[], frames: Frame[]): LeaderboardEntry[] {
+  const playerMap = new Map(players.map(p => [p.id, p]));
+  const matchMap = new Map(matches.map(m => [m.id, m]));
+  const highBreaksByPlayerId: Record<string, number> = {};
+
+  for (const f of frames) {
+    const m = matchMap.get(f.match_id);
+    const matchPlayerIds = m
+      ? (m.player_ids && m.player_ids.length > 0 ? m.player_ids : [m.player1_id, m.player2_id].filter(Boolean))
+      : [];
+    const matchPlayers = m?.players && m.players.length > 0
+      ? m.players
+      : matchPlayerIds.map((id, idx) => playerMap.get(id) || { id, name: `Player ${idx + 1}` });
+    const frameHighs = getFramePlayerHighBreaks(f, matchPlayerIds, matchPlayers);
+
+    for (const [playerId, breakPts] of Object.entries(frameHighs)) {
+      if (breakPts > (highBreaksByPlayerId[playerId] ?? 0)) {
+        highBreaksByPlayerId[playerId] = breakPts;
+      }
+    }
+  }
+
   const leaderboard: LeaderboardEntry[] = players.map(player => {
     const playerMatches = matches.filter(m => {
       if (m.player_ids && m.player_ids.length > 0) {
@@ -792,10 +828,7 @@ function computeLeaderboard(players: Player[], matches: Match[], frames: Frame[]
       }
     }
 
-    const playerHighBreaks = frames
-      .filter(f => f.highest_break_player_id === player.id)
-      .map(f => f.highest_break);
-    const highestBreak = playerHighBreaks.length > 0 ? Math.max(...playerHighBreaks) : 0;
+    const highestBreak = highBreaksByPlayerId[player.id] ?? 0;
 
     return {
       id: player.id,
@@ -825,23 +858,34 @@ function computeLeaderboard(players: Player[], matches: Match[], frames: Frame[]
 export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
   if (isSupabaseConfigured && supabase) {
     try {
+      // Compute dynamically from Supabase players, completed matches, and frame telemetry
+      // so every participant's breaks (from events + frame records) and multiplayer frames are counted accurately.
+      const [players, matches] = await Promise.all([
+        fetchPlayers(),
+        fetchMatches(),
+      ]);
+      const completedMatches = matches.filter(m => m.status === 'completed');
+      const allFrames = completedMatches.flatMap(m => m.frames || []);
+
+      if (players.length > 0) {
+        return computeLeaderboard(players, completedMatches, allFrames);
+      }
+
       const { data, error } = await supabase.from('player_leaderboard').select('*');
       if (!error && data && data.length > 0) {
         return data as LeaderboardEntry[];
       }
     } catch (err) {
-      console.warn('Supabase fetchLeaderboard error, computing from Supabase records', err);
+      console.warn('Supabase fetchLeaderboard error, falling back to view/local', err);
+      try {
+        const { data, error } = await supabase.from('player_leaderboard').select('*');
+        if (!error && data && data.length > 0) {
+          return data as LeaderboardEntry[];
+        }
+      } catch {
+        // fall through to local
+      }
     }
-
-    // Dynamic calculation from Supabase players, completed matches, and frames
-    const [players, matches] = await Promise.all([
-      fetchPlayers(),
-      fetchMatches(),
-    ]);
-    const completedMatches = matches.filter(m => m.status === 'completed');
-    const allFrames = completedMatches.flatMap(m => m.frames || []);
-
-    return computeLeaderboard(players, completedMatches, allFrames);
   }
 
   ensureLocalSeed();
@@ -900,13 +944,19 @@ export async function fetchHeadToHead(player1Id: string, player2Id: string): Pro
     }
 
     if (m.frames) {
+      const matchPlayerIds = m.player_ids && m.player_ids.length > 0
+        ? m.player_ids
+        : [m.player1_id, m.player2_id].filter(Boolean);
+      const matchPlayers = m.players && m.players.length > 0
+        ? m.players
+        : matchPlayerIds.map((id, idx) => players.find(p => p.id === id) || { id, name: `Player ${idx + 1}` });
+
       for (const f of m.frames) {
-        if (f.highest_break_player_id === player1Id && f.highest_break > p1HighestBreak) {
-          p1HighestBreak = f.highest_break;
-        }
-        if (f.highest_break_player_id === player2Id && f.highest_break > p2HighestBreak) {
-          p2HighestBreak = f.highest_break;
-        }
+        const frameHighs = getFramePlayerHighBreaks(f, matchPlayerIds, matchPlayers);
+        const p1Break = frameHighs[player1Id] ?? 0;
+        const p2Break = frameHighs[player2Id] ?? 0;
+        if (p1Break > p1HighestBreak) p1HighestBreak = p1Break;
+        if (p2Break > p2HighestBreak) p2HighestBreak = p2Break;
       }
     }
   }

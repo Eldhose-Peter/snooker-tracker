@@ -40,8 +40,8 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
 
   const insights = useMemo(() => {
     if (!hasEvents) return null;
-    return computeFrameInsights(events, players, scores);
-  }, [events, players, scores, hasEvents]);
+    return computeFrameInsights(events, players, scores, frame);
+  }, [events, players, scores, hasEvents, frame]);
 
   if (!hasEvents || !insights) {
     return (
@@ -115,7 +115,7 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
           </div>
         </div>
 
-        {insights.breaks.length > 0 ? (
+        {insights.topBreak.points > 0 ? (
           <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center space-x-3 col-span-2 sm:col-span-1">
             <div className="w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-500">
               <Flame className="w-4 h-4 fill-amber-500" />
@@ -125,7 +125,7 @@ export const FrameInsightsView: React.FC<FrameInsightsViewProps> = ({
                 Top Break
               </span>
               <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400">
-                {insights.breaks[0].totalPoints} pts <span className="text-xs font-normal text-zinc-400 font-sans">({insights.breaks[0].playerName})</span>
+                {insights.topBreak.points} pts{insights.topBreak.playerName ? <span className="text-xs font-normal text-zinc-400 font-sans"> ({insights.topBreak.playerName})</span> : null}
               </span>
             </div>
           </div>
