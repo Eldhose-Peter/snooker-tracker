@@ -7,13 +7,13 @@ import {
   Target, 
   AlertTriangle, 
   ArrowRightLeft, 
-  Flame,
   CheckCircle2
 } from 'lucide-react';
 
 interface EventTimelineFeedProps {
   events: MatchEvent[];
   players: Player[];
+  maxHeightClassName?: string;
 }
 
 const APPLE_PLAYER_COLORS = [
@@ -32,6 +32,7 @@ const getApplePlayerColor = (index: number) => {
 export const EventTimelineFeed: React.FC<EventTimelineFeedProps> = ({
   events,
   players,
+  maxHeightClassName = 'max-h-80',
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'pot' | 'foul' | 'break'>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<number | 'all'>('all');
@@ -129,7 +130,7 @@ export const EventTimelineFeed: React.FC<EventTimelineFeedProps> = ({
       </div>
 
       {/* Feed List */}
-      <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+      <div className={`space-y-1.5 ${maxHeightClassName} overflow-y-auto pr-1`}>
         {filteredEvents.map((evt, idx) => {
           const accentColor = getApplePlayerColor(evt.playerIndex);
           const ballConfig = evt.ball ? BALL_CONFIGS[evt.ball] : null;

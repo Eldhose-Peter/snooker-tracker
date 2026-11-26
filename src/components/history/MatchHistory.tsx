@@ -1,20 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { Match, Player } from '@/types/snooker';
 import { fetchMatches, getLiveSession, ActiveLiveSession } from '@/lib/storage';
-import { FrameInsightsView } from './insights/FrameInsightsView';
 import { 
   History, 
   Trophy, 
   Calendar, 
-  ChevronDown, 
-  ChevronUp, 
+  ChevronRight, 
   Flame, 
-  BarChart3, 
-  Play,
-  Clock,
-  Sparkles
+  Play
 } from 'lucide-react';
 
 interface MatchHistoryProps {
@@ -25,9 +21,6 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveSession, setLiveSession] = useState<ActiveLiveSession | null>(null);
-  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
-  const [selectedFrameByMatch, setSelectedFrameByMatch] = useState<Record<string, string>>({});
-  const [viewingInsightsByMatch, setViewingInsightsByMatch] = useState<Record<string, boolean>>({});
 
   const reloadMatches = useCallback(async () => {
     try {
@@ -49,10 +42,6 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
   useEffect(() => {
     reloadMatches();
   }, [reloadMatches]);
-
-  const toggleExpand = (id: string) => {
-    setExpandedMatchId((prev) => (prev === id ? null : id));
-  };
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Recently';
@@ -206,7 +195,6 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
               {/* Match Cards */}
               <div className="space-y-2.5">
                 {group.items.map((m) => {
-                  const isExpanded = expandedMatchId === m.id;
                   const rawPlayers = m.players && m.players.length > 0
                     ? m.players
                     : [m.player1, m.player2].filter((p): p is Player => Boolean(p));
@@ -221,30 +209,26 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                   const winner = matchPlayers.find((p) => p.id === m.winner_id);
                   const frames = m.frames || [];
 
-                  // High break calculation
+                  // High break & total shots calculation
                   let matchHighBreak = 0;
-                  let matchHighBreakPlayer = '';
+                  let totalShots = 0;
                   for (const f of frames) {
                     if (f.highest_break > matchHighBreak) {
                       matchHighBreak = f.highest_break;
-                      const hp = matchPlayers.find((p) => p.id === f.highest_break_player_id);
-                      matchHighBreakPlayer = hp?.name || '';
+                    }
+                    if (f.events) {
+                      totalShots += f.events.length;
                     }
                   }
 
-                  const selectedFrameId = selectedFrameByMatch[m.id] || frames[0]?.id;
-                  const isViewingInsights = viewingInsightsByMatch[m.id] ?? true;
-
                   return (
-                    <div
+                    <Link
                       key={m.id}
-                      className="rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm overflow-hidden transition-all"
+                      href={`/matches/${m.id}`}
+                      className="group block rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-sm overflow-hidden transition-all hover:border-emerald-500/30 dark:hover:border-emerald-400/30 hover:bg-black/[0.015] dark:hover:bg-white/[0.025] active:scale-[0.99]"
                     >
                       {/* Main Match Summary Row */}
-                      <div
-                        onClick={() => toggleExpand(m.id)}
-                        className="min-h-[56px] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition active:scale-[0.99]"
-                      >
+                      <div className="min-h-[56px] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         {/* Left: Players & Match Meta */}
                         <div className="flex items-center space-x-3 min-w-0">
                           <div className="w-10 h-10 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center flex-shrink-0 shadow-xs">
@@ -281,6 +265,18 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                               </span>
                               <span>•</span>
                               <span>{m.best_of === 1 ? 'Single Frame' : `Best of ${m.best_of}`}</span>
+                              {frames.length > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>{frames.length} {frames.length === 1 ? 'frame' : 'frames'}</span>
+                                </>
+                              )}
+                              {totalShots > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono">{totalShots} shots</span>
+                                </>
+                              )}
                               {winner && (
                                 <>
                                   <span>•</span>
@@ -293,7 +289,7 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                           </div>
                         </div>
 
-                        {/* Right: Score Pills & Chevron */}
+                        {/* Right: Score Pills & Navigation Chevron */}
                         <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 border-black/[0.04] dark:border-white/[0.04] pt-2 sm:pt-0">
                           {/* Score Pills */}
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -327,150 +323,12 @@ export const MatchHistory: React.FC<MatchHistoryProps> = ({ onNavigateTab }) => 
                             </div>
                           )}
 
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-[#30d158] group-hover:translate-x-0.5 transition-all">
+                            <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
                       </div>
-
-                      {/* Expanded Frame Breakdown & Visual Insights */}
-                      {isExpanded && (
-                        <div className="bg-black/[0.02] dark:bg-black/30 px-4 py-4 border-t border-black/[0.06] dark:border-white/[0.06] space-y-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                            <div className="text-[11px] uppercase font-semibold text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1.5">
-                              <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-[#30d158]" />
-                              <span>Frame Breakdown ({frames.length})</span>
-                            </div>
-
-                            {/* Frame Selector Tabs */}
-                            {frames.length > 1 && (
-                              <div className="inline-flex p-1 bg-black/[0.04] dark:bg-white/[0.06] rounded-full self-start sm:self-auto border border-black/[0.04] dark:border-white/[0.04]">
-                                {frames.map((f) => {
-                                  const isSelected = selectedFrameId === f.id;
-                                  return (
-                                    <button
-                                      key={f.id}
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedFrameByMatch((prev) => ({ ...prev, [m.id]: f.id }));
-                                      }}
-                                      className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition active:scale-[0.97] cursor-pointer ${
-                                        isSelected
-                                          ? 'bg-white dark:bg-[#2c2c2e] text-zinc-900 dark:text-[#f5f5f7] shadow-sm'
-                                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-                                      }`}
-                                    >
-                                      Frame {f.frame_number}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-
-                          {frames.length === 0 ? (
-                            <p className="text-xs text-zinc-500 italic py-2">
-                              No frame telemetry archived for this match.
-                            </p>
-                          ) : (
-                            <div className="space-y-3">
-                              {/* Settings-style Grouped Rows for Frames */}
-                              <div className="bg-white dark:bg-[#1c1c1e] rounded-xl border border-black/[0.06] dark:border-white/[0.08] divide-y divide-black/[0.06] dark:divide-white/[0.06] overflow-hidden">
-                                {frames.map((f) => {
-                                  const scores = f.scores && f.scores.length === matchPlayers.length
-                                    ? f.scores
-                                    : [f.player1_score, f.player2_score];
-                                  const isSelected = selectedFrameId === f.id;
-
-                                  return (
-                                    <div
-                                      key={f.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedFrameByMatch((prev) => ({ ...prev, [m.id]: f.id }));
-                                      }}
-                                      className={`min-h-[44px] px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer transition ${
-                                        isSelected
-                                          ? 'bg-emerald-500/[0.06] dark:bg-emerald-500/[0.08]'
-                                          : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
-                                      }`}
-                                    >
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`text-xs font-semibold ${isSelected ? 'text-emerald-700 dark:text-[#30d158]' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                                          Frame {f.frame_number}
-                                        </span>
-                                        {f.events && f.events.length > 0 && (
-                                          <span className="text-[10px] text-zinc-400 font-mono">
-                                            ({f.events.length} shots)
-                                          </span>
-                                        )}
-                                      </div>
-
-                                      <div className="flex flex-wrap items-center gap-2 font-mono tabular-nums text-xs">
-                                        {matchPlayers.map((p, idx) => {
-                                          const score = scores[idx] ?? 0;
-                                          const isWinner = f.winner_id === p.id;
-                                          return (
-                                            <span
-                                              key={p.id}
-                                              className={isWinner ? 'text-emerald-700 dark:text-[#30d158] font-bold' : 'text-zinc-600 dark:text-zinc-400'}
-                                            >
-                                              {p.name}: {score}
-                                              {idx < matchPlayers.length - 1 && <span className="text-zinc-300 dark:text-zinc-700 mx-1.5">•</span>}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-
-                                      <div className="flex items-center space-x-2 self-end sm:self-auto">
-                                        {f.highest_break > 0 && (
-                                          <span className="text-amber-600 dark:text-amber-400 text-xs font-mono font-semibold flex items-center gap-1">
-                                            <Flame className="w-3 h-3 fill-amber-500" />
-                                            {f.highest_break}
-                                          </span>
-                                        )}
-                                        {/* View Frame Insights Action Button */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedFrameByMatch((prev) => ({ ...prev, [m.id]: f.id }));
-                                            setViewingInsightsByMatch((prev) => ({ ...prev, [m.id]: true }));
-                                          }}
-                                          className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-[0.97] cursor-pointer ${
-                                            isSelected
-                                              ? 'bg-[#30d158] text-white shadow-xs'
-                                              : 'bg-black/[0.05] dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white'
-                                          }`}
-                                        >
-                                          <BarChart3 className="w-3 h-3" />
-                                          <span>View Frame Insights</span>
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-
-                              {/* Visual Insights Container for Selected Frame */}
-                              {(() => {
-                                const activeFrame = frames.find((f) => f.id === selectedFrameId) || frames[0];
-                                if (!activeFrame || !isViewingInsights) return null;
-                                return (
-                                  <div className="pt-2">
-                                    <FrameInsightsView
-                                      frame={activeFrame}
-                                      players={matchPlayers}
-                                    />
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

@@ -1,4 +1,4 @@
-import { MatchEvent, BallType, Player, BALL_CONFIGS } from '@/types/snooker';
+import { MatchEvent, BallType, Player, Frame, BALL_CONFIGS } from '@/types/snooker';
 
 export interface ScoreTimelinePoint {
   index: number;
@@ -44,6 +44,7 @@ export interface BreakRun {
   endTime?: number;
   eventIndexStart: number;
   eventIndexEnd: number;
+  frameNumber?: number;
 }
 
 export interface PlayerDiscipline {
@@ -74,6 +75,44 @@ export interface FrameInsightsData {
   totalEvents: number;
   leadChanges: number;
   durationSeconds: number;
+}
+
+export interface MatchFrameSummary {
+  frameId: string;
+  frameNumber: number;
+  scores: number[];
+  winnerId?: string | null;
+  highestBreak: number;
+  highestBreakPlayerName: string;
+  durationSeconds: number;
+  totalEvents: number;
+  hasEvents: boolean;
+  leadChanges: number;
+}
+
+export interface MatchInsightsData {
+  scoringSources: PlayerScoringSource[];
+  breaks: BreakRun[];
+  discipline: PlayerDiscipline[];
+  visitStats: PlayerVisitStats[];
+  frameSummaries: MatchFrameSummary[];
+  totalEvents: number;
+  totalLeadChanges: number;
+  totalDurationSeconds: number;
+  framesWithTelemetry: number;
+}
+
+export const APPLE_PLAYER_COLORS = [
+  '#0091ff', // System Blue
+  '#30d158', // System Green
+  '#ff9230', // System Orange
+  '#db34f2', // System Purple
+  '#ff375f', // System Pink
+  '#00d2e0', // System Teal
+];
+
+export function getApplePlayerColor(index: number): string {
+  return APPLE_PLAYER_COLORS[index % APPLE_PLAYER_COLORS.length];
 }
 
 const PLAYER_COLORS = [
@@ -397,5 +436,204 @@ export function computeFrameInsights(
     totalEvents: events.length,
     leadChanges,
     durationSeconds,
+  };
+}
+
+/**
+ * Aggregates frame-by-frame telemetry into match-wide analytics
+ */
+export function computeMatchInsights(
+  frames: Frame[] = [],
+  players: Player[] = []
+): MatchInsightsData {
+  const playerCount = Math.max(2, players.length);
+  const ballKeys: BallType[] = ['red', 'yellow', 'green', 'brown', 'blue', 'pink', 'black'];
+
+  const totalPointsByPlayer = new Array(playerCount).fill(0);
+  const potsPointsByPlayer = new Array(playerCount).fill(0);
+  const foulsPointsByPlayer = new Array(playerCount).fill(0);
+  const ballCountsByPlayer: Record<BallType, number>[] = Array.from({ length: playerCount }, () => ({
+    red: 0,
+    yellow: 0,
+    green: 0,
+    brown: 0,
+    blue: 0,
+    pink: 0,
+    black: 0,
+  }));
+
+  const foulsCommittedByPlayer = new Array(playerCount).fill(0);
+  const penaltyPointsByPlayer = new Array(playerCount).fill(0);
+  const freeBallsByPlayer = new Array(playerCount).fill(0);
+  const foulsByValueByPlayer: Record<number, number>[] = Array.from({ length: playerCount }, () => ({
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+  }));
+
+  const totalVisitsByPlayer = new Array(playerCount).fill(0);
+  const scoringVisitsByPlayer = new Array(playerCount).fill(0);
+
+  const allBreaks: BreakRun[] = [];
+  const frameSummaries: MatchFrameSummary[] = [];
+
+  let totalEvents = 0;
+  let totalLeadChanges = 0;
+  let totalDurationSeconds = 0;
+  let framesWithTelemetry = 0;
+
+  for (const frame of frames) {
+    const scores = frame.scores && frame.scores.length === players.length
+      ? frame.scores
+      : [frame.player1_score, frame.player2_score];
+    const events = frame.events || [];
+    const hasEvents = events.length > 0;
+    const highBreakPlayer = players.find(p => p.id === frame.highest_break_player_id);
+
+    if (hasEvents) {
+      framesWithTelemetry += 1;
+      const frameInsights = computeFrameInsights(events, players, scores);
+      totalEvents += frameInsights.totalEvents;
+      totalLeadChanges += frameInsights.leadChanges;
+      totalDurationSeconds += frameInsights.durationSeconds;
+
+      frameInsights.scoringSources.forEach((src, idx) => {
+        if (idx >= playerCount) return;
+        totalPointsByPlayer[idx] += src.totalPoints;
+        potsPointsByPlayer[idx] += src.pointsFromPots;
+        foulsPointsByPlayer[idx] += src.pointsFromFouls;
+        ballKeys.forEach((b) => {
+          ballCountsByPlayer[idx][b] += src.ballCounts[b] || 0;
+        });
+      });
+
+      frameInsights.discipline.forEach((disc, idx) => {
+        if (idx >= playerCount) return;
+        foulsCommittedByPlayer[idx] += disc.foulsCommitted;
+        penaltyPointsByPlayer[idx] += disc.penaltyPointsConceded;
+        freeBallsByPlayer[idx] += disc.freeBallsConceded;
+        [4, 5, 6, 7].forEach((val) => {
+          foulsByValueByPlayer[idx][val] += disc.foulsByValue[val] || 0;
+        });
+      });
+
+      frameInsights.visitStats.forEach((vs, idx) => {
+        if (idx >= playerCount) return;
+        totalVisitsByPlayer[idx] += vs.totalVisits;
+        scoringVisitsByPlayer[idx] += vs.scoringVisits;
+      });
+
+      frameInsights.breaks.forEach((b) => {
+        allBreaks.push({
+          ...b,
+          id: `f${frame.frame_number}-${b.id}`,
+          frameNumber: frame.frame_number,
+        });
+      });
+
+      frameSummaries.push({
+        frameId: frame.id,
+        frameNumber: frame.frame_number,
+        scores,
+        winnerId: frame.winner_id,
+        highestBreak: frame.highest_break,
+        highestBreakPlayerName: highBreakPlayer?.name || '',
+        durationSeconds: frameInsights.durationSeconds,
+        totalEvents: frameInsights.totalEvents,
+        hasEvents: true,
+        leadChanges: frameInsights.leadChanges,
+      });
+    } else {
+      scores.forEach((s, idx) => {
+        if (idx < playerCount) {
+          totalPointsByPlayer[idx] += s || 0;
+        }
+      });
+
+      frameSummaries.push({
+        frameId: frame.id,
+        frameNumber: frame.frame_number,
+        scores,
+        winnerId: frame.winner_id,
+        highestBreak: frame.highest_break,
+        highestBreakPlayerName: highBreakPlayer?.name || '',
+        durationSeconds: 0,
+        totalEvents: 0,
+        hasEvents: false,
+        leadChanges: 0,
+      });
+    }
+  }
+
+  const scoringSources: PlayerScoringSource[] = players.map((p, idx) => {
+    const tot = totalPointsByPlayer[idx] || 0;
+    const potsPts = potsPointsByPlayer[idx] || 0;
+    const foulsPts = foulsPointsByPlayer[idx] || 0;
+    const totalBalls = Object.values(ballCountsByPlayer[idx] || {}).reduce((a, b) => a + b, 0);
+
+    return {
+      playerIndex: idx,
+      playerId: p.id,
+      playerName: p.name || `Player ${idx + 1}`,
+      totalPoints: tot,
+      pointsFromPots: potsPts,
+      pointsFromFouls: foulsPts,
+      potPercentage: tot > 0 ? Math.round((potsPts / tot) * 100) : 0,
+      foulPercentage: tot > 0 ? Math.round((foulsPts / tot) * 100) : 0,
+      totalBallsPotted: totalBalls,
+      ballCounts: ballCountsByPlayer[idx],
+    };
+  });
+
+  const discipline: PlayerDiscipline[] = players.map((p, idx) => ({
+    playerIndex: idx,
+    playerName: p.name || `Player ${idx + 1}`,
+    foulsCommitted: foulsCommittedByPlayer[idx] || 0,
+    penaltyPointsConceded: penaltyPointsByPlayer[idx] || 0,
+    foulsByValue: foulsByValueByPlayer[idx],
+    freeBallsConceded: freeBallsByPlayer[idx] || 0,
+  }));
+
+  const sortedBreaks = allBreaks.sort((a, b) => b.totalPoints - a.totalPoints);
+
+  const visitStats: PlayerVisitStats[] = players.map((p, idx) => {
+    const visits = Math.max(1, totalVisitsByPlayer[idx] || 0);
+    const hasRecordedVisits = totalVisitsByPlayer[idx] > 0;
+    const playerBreaks = sortedBreaks.filter(b => b.playerIndex === idx);
+    const frameHighBreaks = frames
+      .filter(f => f.highest_break_player_id === p.id)
+      .map(f => f.highest_break);
+    const highBreak = Math.max(
+      playerBreaks.length > 0 ? Math.max(...playerBreaks.map(b => b.totalPoints)) : 0,
+      frameHighBreaks.length > 0 ? Math.max(...frameHighBreaks) : 0
+    );
+    const avgBreak = playerBreaks.length > 0
+      ? Math.round(playerBreaks.reduce((acc, b) => acc + b.totalPoints, 0) / playerBreaks.length)
+      : 0;
+
+    return {
+      playerIndex: idx,
+      playerName: p.name || `Player ${idx + 1}`,
+      totalVisits: totalVisitsByPlayer[idx] || 0,
+      scoringVisits: scoringVisitsByPlayer[idx] || 0,
+      averagePointsPerVisit: hasRecordedVisits
+        ? Math.round(((potsPointsByPlayer[idx] || 0) / visits) * 10) / 10
+        : 0,
+      averageBreak: avgBreak,
+      highestBreak: highBreak,
+    };
+  });
+
+  return {
+    scoringSources,
+    breaks: sortedBreaks,
+    discipline,
+    visitStats,
+    frameSummaries,
+    totalEvents,
+    totalLeadChanges,
+    totalDurationSeconds,
+    framesWithTelemetry,
   };
 }

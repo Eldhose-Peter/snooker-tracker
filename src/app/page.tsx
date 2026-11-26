@@ -17,20 +17,38 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'live' | 'leaderboard' | 'history' | 'new-match'>('new-match');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
-  // Restore active live tracking session from localStorage on client mount (safe from SSR hydration mismatches)
+  // Restore active tab from URL/history or active live session on client mount (safe from SSR hydration mismatches)
   useEffect(() => {
     const timer = setTimeout(() => {
       const session = getLiveSession();
-      if (session && session.match && session.players && session.players.length >= 2) {
+      const hasSession = Boolean(session && session.match && session.players && session.players.length >= 2);
+      if (hasSession && session) {
         setCurrentMatch(session.match);
         setMatchPlayers(session.players);
+      }
+
+      const urlTab = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : null;
+      const validTabs = ['live', 'leaderboard', 'history', 'new-match'] as const;
+      const requestedTab = validTabs.includes(urlTab as (typeof validTabs)[number])
+        ? (urlTab as (typeof validTabs)[number])
+        : null;
+
+      if (requestedTab === 'history' || requestedTab === 'leaderboard' || requestedTab === 'new-match') {
+        setActiveTab(requestedTab);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({ tab: requestedTab }, '', `/?tab=${requestedTab}`);
+        }
+      } else if (hasSession) {
         setActiveTab('live');
         if (typeof window !== 'undefined') {
-          window.history.replaceState({ tab: 'live' }, '');
+          window.history.replaceState({ tab: 'live' }, '', '/?tab=live');
         }
       } else {
+        setActiveTab('new-match');
         if (typeof window !== 'undefined' && window.history.state?.tab === undefined) {
-          window.history.replaceState({ tab: 'new-match' }, '');
+          window.history.replaceState({ tab: 'new-match' }, '', window.location.pathname);
         }
       }
     }, 0);
@@ -56,14 +74,16 @@ export default function Home() {
     }
 
     if (typeof window !== 'undefined') {
-      window.history.pushState({ tab }, '', window.location.pathname);
+      const nextUrl = tab === 'new-match' ? '/' : `/?tab=${tab}`;
+      window.history.pushState({ tab }, '', nextUrl);
     }
   }, []);
 
   // Handle browser back / forward navigation smoothly without losing match tracking
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      const targetTab = event.state?.tab;
+      const urlTab = new URLSearchParams(window.location.search).get('tab');
+      const targetTab = event.state?.tab || urlTab;
       const session = getLiveSession();
 
       if (targetTab === 'live') {
@@ -110,7 +130,7 @@ export default function Home() {
     setMatchPlayers(players);
     setActiveTab('live');
     if (typeof window !== 'undefined') {
-      window.history.pushState({ tab: 'live' }, '', window.location.pathname);
+      window.history.pushState({ tab: 'live' }, '', '/?tab=live');
     }
   };
 

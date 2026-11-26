@@ -8,6 +8,7 @@ import { Flame } from 'lucide-react';
 interface BreakAnalyticsCardProps {
   breaks: BreakRun[];
   visitStats: PlayerVisitStats[];
+  maxListHeightClass?: string;
 }
 
 const APPLE_PLAYER_COLORS = [
@@ -26,6 +27,7 @@ const getApplePlayerColor = (index: number) => {
 export const BreakAnalyticsCard: React.FC<BreakAnalyticsCardProps> = ({
   breaks,
   visitStats,
+  maxListHeightClass = 'max-h-60',
 }) => {
   return (
     <div className="bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm font-sans">
@@ -94,7 +96,7 @@ export const BreakAnalyticsCard: React.FC<BreakAnalyticsCardProps> = ({
             No continuous breaks of 10+ points in this frame.
           </div>
         ) : (
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <div className={`space-y-2 ${maxListHeightClass} overflow-y-auto pr-1`}>
             {breaks.map((b) => {
               const isMajor = b.totalPoints >= 20;
 
@@ -120,9 +122,16 @@ export const BreakAnalyticsCard: React.FC<BreakAnalyticsCardProps> = ({
                     </div>
 
                     <div>
-                      <span className="text-xs font-bold text-zinc-900 dark:text-white block">
-                        {b.playerName}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                          {b.playerName}
+                        </span>
+                        {b.frameNumber !== undefined && (
+                          <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-zinc-500 dark:text-zinc-400">
+                            F{b.frameNumber}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
                         {b.balls.length} balls potted
                       </span>

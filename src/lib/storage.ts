@@ -291,6 +291,40 @@ export async function createPlayer(name: string, avatarUrl?: string): Promise<Pl
   return savedPlayer;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hydrateMatchRecord(m: any, players: Player[], localFrames?: Frame[]): Match {
+  const playerIds: string[] = m.player_ids && m.player_ids.length > 0
+    ? m.player_ids
+    : [m.player1_id, m.player2_id].filter(Boolean);
+
+  const playerMap = new Map(players.map(p => [p.id, p]));
+  const hydratedPlayers = playerIds
+    .map(id => playerMap.get(id))
+    .filter((p): p is Player => Boolean(p));
+
+  const finalPlayers = hydratedPlayers.length > 0
+    ? hydratedPlayers
+    : playerIds.map((id, idx) => ({
+        id,
+        name: id === m.player1_id ? (m.player1?.name || 'Player 1') : (m.player2?.name || `Player ${idx + 1}`),
+        created_at: new Date().toISOString(),
+      }));
+
+  const rawFrames: Frame[] = localFrames
+    ? localFrames.filter(f => f.match_id === m.id)
+    : (m.frames || []);
+  const frames = [...rawFrames].sort((a: Frame, b: Frame) => a.frame_number - b.frame_number);
+
+  return {
+    ...m,
+    player_ids: playerIds,
+    players: finalPlayers,
+    player1: finalPlayers[0] || m.player1 || { id: m.player1_id, name: 'Player 1', created_at: '' },
+    player2: finalPlayers[1] || m.player2 || { id: m.player2_id, name: 'Player 2', created_at: '' },
+    frames,
+  };
+}
+
 export async function fetchMatches(): Promise<Match[]> {
   if (isSupabaseConfigured && supabase) {
     try {
@@ -309,42 +343,13 @@ export async function fetchMatches(): Promise<Match[]> {
         return [];
       }
 
-      const rawMatches = (data || []) as any[];
+      const rawMatches = (data || []) as unknown[];
       if (rawMatches.length === 0) {
         return [];
       }
 
       const players = await fetchPlayers();
-      const playerMap = new Map(players.map(p => [p.id, p]));
-
-      return rawMatches.map(m => {
-        const playerIds: string[] = m.player_ids && m.player_ids.length > 0
-          ? m.player_ids
-          : [m.player1_id, m.player2_id].filter(Boolean);
-
-        const hydratedPlayers = playerIds
-          .map(id => playerMap.get(id))
-          .filter((p): p is Player => Boolean(p));
-
-        const finalPlayers = hydratedPlayers.length > 0
-          ? hydratedPlayers
-          : playerIds.map((id, idx) => ({
-              id,
-              name: id === m.player1_id ? (m.player1?.name || 'Player 1') : (m.player2?.name || `Player ${idx + 1}`),
-              created_at: new Date().toISOString(),
-            }));
-
-        const frames = (m.frames || []).sort((a: Frame, b: Frame) => a.frame_number - b.frame_number);
-
-        return {
-          ...m,
-          player_ids: playerIds,
-          players: finalPlayers,
-          player1: finalPlayers[0] || m.player1 || { id: m.player1_id, name: 'Player 1', created_at: '' },
-          player2: finalPlayers[1] || m.player2 || { id: m.player2_id, name: 'Player 2', created_at: '' },
-          frames,
-        };
-      });
+      return rawMatches.map(m => hydrateMatchRecord(m, players));
     } catch (err) {
       console.error('Supabase fetchMatches exception:', err);
       return [];
@@ -365,32 +370,58 @@ export async function fetchMatches(): Promise<Match[]> {
     setLocal(FRAMES_KEY, ACTUAL_FRAMES);
   }
 
-  return matches.map(m => {
-    const playerIds = m.player_ids && m.player_ids.length > 0
-      ? m.player_ids
-      : [m.player1_id, m.player2_id];
+  return matches.map(m => hydrateMatchRecord(m, players, frames));
+}
 
-    const hydratedPlayers = playerIds
-      .map(id => players.find(p => p.id === id))
-      .filter((p): p is Player => Boolean(p));
+export async function fetchMatchById(matchId: string): Promise<Match | null> {
+  if (!matchId) return null;
 
-    const finalPlayers = hydratedPlayers.length > 0
-      ? hydratedPlayers
-      : playerIds.map((id, idx) => ({
-          id,
-          name: idx === 0 ? 'Player 1' : `Player ${idx + 1}`,
-          created_at: new Date().toISOString(),
-        }));
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .select(`
+          *,
+          player1:players!player1_id(*),
+          player2:players!player2_id(*),
+          frames(*)
+        `)
+        .eq('id', matchId)
+        .maybeSingle();
 
-    return {
-      ...m,
-      player_ids: playerIds,
-      players: finalPlayers,
-      player1: finalPlayers[0] || players.find(p => p.id === m.player1_id) || { id: m.player1_id, name: 'Player 1', created_at: '' },
-      player2: finalPlayers[1] || players.find(p => p.id === m.player2_id) || { id: m.player2_id, name: 'Player 2', created_at: '' },
-      frames: frames.filter(f => f.match_id === m.id).sort((a, b) => a.frame_number - b.frame_number),
-    };
-  });
+      if (error) {
+        console.error('Supabase fetchMatchById error:', error);
+        return null;
+      }
+
+      if (!data) return null;
+
+      const players = await fetchPlayers();
+      return hydrateMatchRecord(data, players);
+    } catch (err) {
+      console.error('Supabase fetchMatchById exception:', err);
+      return null;
+    }
+  }
+
+  ensureLocalSeed();
+  const players = getLocal<Player[]>(PLAYERS_KEY, INITIAL_PLAYERS);
+  let matches = getLocal<Match[]>(MATCHES_KEY, INITIAL_MATCHES);
+  let frames = getLocal<Frame[]>(FRAMES_KEY, INITIAL_FRAMES);
+
+  if (!matches || matches.length === 0) {
+    matches = ACTUAL_MATCHES;
+    setLocal(MATCHES_KEY, ACTUAL_MATCHES);
+  }
+  if (!frames || frames.length === 0) {
+    frames = ACTUAL_FRAMES;
+    setLocal(FRAMES_KEY, ACTUAL_FRAMES);
+  }
+
+  const found = matches.find(m => m.id === matchId);
+  if (!found) return null;
+
+  return hydrateMatchRecord(found, players, frames);
 }
 
 /**
