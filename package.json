@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npx tsx test/engine-multiplayer.test.ts",
-    "db:setup": "node scripts/setup-db.mjs"
+    "db:setup": "node scripts/setup-db.mjs",
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:restore": "node scripts/restore-db.mjs"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
