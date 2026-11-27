@@ -161,29 +161,6 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     [context]
   );
 
-  // Support Escape key to close and cancel active stream on close/unmount
-  useEffect(() => {
-    if (!isOpen) {
-      abortControllerRef.current?.abort();
-      abortControllerRef.current = null;
-      return;
-    }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  // Keep chat scrolled to newest streamed tokens
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, isStreaming, errorMessage]);
-
   const stopStreaming = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -193,9 +170,38 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   const handleClearChat = useCallback(() => {
     stopStreaming();
     setMessages([]);
+    setInput('');
     setErrorMessage(null);
     setContextTick((t) => t + 1);
   }, [stopStreaming]);
+
+  const handleClose = useCallback(() => {
+    handleClearChat();
+    onClose();
+  }, [handleClearChat, onClose]);
+
+  // Support Escape key to close and cancel active stream on close/unmount
+  useEffect(() => {
+    if (!isOpen) {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleClose]);
+
+  // Keep chat scrolled to newest streamed tokens
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, isStreaming, errorMessage]);
 
   const sendQuestion = useCallback(
     async (rawQuestion: string) => {
@@ -326,7 +332,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center bg-black/40 dark:bg-black/60 backdrop-blur-md animate-fade-in"
-      onClick={onClose}
+      onClick={handleClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="ai-referee-title"
@@ -376,7 +382,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
           <div className="min-w-[60px] flex items-center justify-end">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="text-emerald-600 dark:text-emerald-400 font-semibold text-[17px] hover:opacity-80 active:opacity-60 transition cursor-pointer min-h-[44px] min-w-[48px] flex items-center justify-end select-none"
             >
               Done
